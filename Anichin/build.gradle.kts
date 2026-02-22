@@ -13,8 +13,9 @@ android {
 }
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("com.google.android.material:material:1.13.0")
+    // Removed Android dependencies for cross-platform compatibility
+    // implementation("androidx.appcompat:appcompat:1.7.1")
+    // implementation("com.google.android.material:material:1.13.0")
 }
 
 
@@ -40,5 +41,5 @@ cloudstream {
 
     iconUrl = "https://www.google.com/s2/favicons?domain=anichin.cafe&sz=%size%"
     requiresResources = false
-    isCrossPlatform = false  // Changed: Contains Android imports
+    isCrossPlatform = true  // Cross-platform compatible
 }
