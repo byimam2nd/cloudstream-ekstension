@@ -3,6 +3,7 @@ name: CloudStream Optimized CI
 on:
   push:
     branches: [ main, master ]
+  workflow_dispatch:
 
 concurrency:
   group: build-${{ github.ref }}
@@ -35,13 +36,7 @@ jobs:
         run: |
           set -e
 
-          BEFORE="${{ github.event.before }}"
-          AFTER="${{ github.sha }}"
-
-          # Folder level pertama yang berubah
-          CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" | cut -d/ -f1 | sort -u)
-
-          # Extract module name dengan aman dari settings.gradle.kts
+          # Extract module names safely
           ALL_MODULES=$(grep 'include' settings.gradle.kts \
             | grep -oE '":([^"]+)"' \
             | sed 's/"//g' \
@@ -49,17 +44,27 @@ jobs:
 
           BUILD_LIST=""
 
-          for module in $ALL_MODULES; do
-            if [ -f "builds/$module.cs3" ] || [ -f "builds/$module.jar" ]; then
-              EXISTS=true
-            else
-              EXISTS=false
-            fi
+          # Jika manual run → build semua module
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BUILD_LIST="$ALL_MODULES"
+          else
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.sha }}"
 
-            if echo "$CHANGED" | grep -q "^$module$" || [ "$EXISTS" = false ]; then
-              BUILD_LIST="$BUILD_LIST $module"
-            fi
-          done
+            CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" | cut -d/ -f1 | sort -u)
+
+            for module in $ALL_MODULES; do
+              if [ -f "builds/$module.cs3" ] || [ -f "builds/$module.jar" ]; then
+                EXISTS=true
+              else
+                EXISTS=false
+              fi
+
+              if echo "$CHANGED" | grep -q "^$module$" || [ "$EXISTS" = false ]; then
+                BUILD_LIST="$BUILD_LIST $module"
+              fi
+            done
+          fi
 
           UNIQUE=$(printf "%s\n" $BUILD_LIST | sort -u | sed '/^$/d')
 
