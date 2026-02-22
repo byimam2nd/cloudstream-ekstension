@@ -36,15 +36,14 @@ jobs:
         run: |
           set -e
 
-          # Extract module names safely
-          ALL_MODULES=$(grep 'include' settings.gradle.kts \
-            | grep -oE '":([^"]+)"' \
+          # Ambil semua module (tahan multi-line include)
+          ALL_MODULES=$(grep -oE '":([^"]+)"' settings.gradle.kts \
             | sed 's/"//g' \
             | sed 's/^://')
 
           BUILD_LIST=""
 
-          # Jika manual run → build semua module
+          # ===== MANUAL RUN → BUILD SEMUA =====
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BUILD_LIST="$ALL_MODULES"
           else
