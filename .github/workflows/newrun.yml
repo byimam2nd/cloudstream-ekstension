@@ -1,166 +1,167 @@
-name: CloudStream Optimized CI
+name: Build
+
+# https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: "build"
+  cancel-in-progress: true
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:
-
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: write
+    branches:
+      # choose your default branch
+      - master
+      - main
+    paths-ignore:
+      - '*.md'
 
 jobs:
-
-  detect:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set.outputs.matrix }}
-
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Checkout builds branch
-        uses: actions/checkout@v4
-        with:
-          ref: builds
-          path: builds
-        continue-on-error: true
-
-      - id: set
-        run: |
-          set -e
-
-          # Ambil semua module (tahan multi-line include)
-          ALL_MODULES=$(grep -oE '":([^"]+)"' settings.gradle.kts \
-            | sed 's/"//g' \
-            | sed 's/^://')
-
-          BUILD_LIST=""
-
-          # ===== MANUAL RUN → BUILD SEMUA =====
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BUILD_LIST="$ALL_MODULES"
-          else
-            BEFORE="${{ github.event.before }}"
-            AFTER="${{ github.sha }}"
-
-            CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" | cut -d/ -f1 | sort -u)
-
-            for module in $ALL_MODULES; do
-              if [ -f "builds/$module.cs3" ] || [ -f "builds/$module.jar" ]; then
-                EXISTS=true
-              else
-                EXISTS=false
-              fi
-
-              if echo "$CHANGED" | grep -q "^$module$" || [ "$EXISTS" = false ]; then
-                BUILD_LIST="$BUILD_LIST $module"
-              fi
-            done
-          fi
-
-          UNIQUE=$(printf "%s\n" $BUILD_LIST | sort -u | sed '/^$/d')
-
-          if [ -z "$UNIQUE" ]; then
-            echo "matrix=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          JSON=$(printf '%s\n' $UNIQUE | jq -R . | jq -s -c .)
-
-          echo "matrix={\"module\":$JSON}" >> "$GITHUB_OUTPUT"
-
-
   build:
-    needs: detect
-    if: needs.detect.outputs.matrix != ''
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup JDK
-        uses: actions/setup-java@v4
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
-          distribution: temurin
+          path: "src"
+
+      - name: Checkout builds
+        uses: actions/checkout@v5
+        with:
+          ref: "builds"
+          path: "builds"
+
+      - name: Clean old builds
+        run: |
+          rm $GITHUB_WORKSPACE/builds/*.cs3 || true
+          rm $GITHUB_WORKSPACE/builds/*.jar || true
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v5
+        with:
           java-version: 17
+          distribution: adopt
           cache: gradle
 
-      - name: Build Module
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3.2.2
+
+      - name: Access Secrets
+        env:
+          TMDB_API: ${{ secrets.TMDB_API }}
+          DUMP_API: ${{ secrets.DUMP_API }}
+          DUMP_KEY: ${{ secrets.DUMP_KEY }}
+          ANICHI_API: ${{ secrets.ANICHI_API }}
+          ANICHI_SERVER: ${{ secrets.ANICHI_SERVER }}
+          ANICHI_ENDPOINT: ${{ secrets.ANICHI_ENDPOINT }}
+          ANICHI_APP: ${{ secrets.ANICHI_APP }}
+          ZSHOW_API: ${{ secrets.ZSHOW_API }}
+          SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
+          CINEMATV_API: ${{ secrets.CINEMATV_API }}
+          GHOSTX_API: ${{ secrets.GHOSTX_API }}
+          SUPERSTREAM_FIRST_API: ${{ secrets.SUPERSTREAM_FIRST_API }}
+          SUPERSTREAM_SECOND_API: ${{ secrets.SUPERSTREAM_SECOND_API }}
+          SUPERSTREAM_THIRD_API: ${{ secrets.SUPERSTREAM_THIRD_API }}
+          SUPERSTREAM_FOURTH_API: ${{ secrets.SUPERSTREAM_FOURTH_API }}
+          AsianDrama_API: ${{ secrets.AsianDrama_API }}
+          FanCode_API: ${{ secrets.FanCode_API }}
+          Whvx_API: ${{ secrets.Whvx_API }}
+          JapanIPTV: ${{ secrets.JapanIPTV }}
+          SonyIPTV: ${{ secrets.SonyIPTV }}
+          PirateIPTV: ${{ secrets.PirateIPTV }}
+          Su_sports: ${{ secrets.Su_sports }}
+          CatflixAPI: ${{ secrets.CatflixAPI }}
+          ConsumetAPI: ${{ secrets.ConsumetAPI }}
+          FlixHQAPI: ${{ secrets.FlixHQAPI }}
+          WhvxAPI: ${{ secrets.WhvxAPI }}
+          WhvxT: ${{ secrets.WhvxT }}
+          SharmaflixApikey: ${{ secrets.SharmaflixApikey }}
+          SharmaflixApi: ${{ secrets.SharmaflixApi }}
+          Theyallsayflix: ${{ secrets.Theyallsayflix }}
+          HianimeAPI: ${{ secrets.HianimeAPI }}
+          Vidsrccc: ${{ secrets.Vidsrccc }}
+          WASMAPI: ${{ secrets.WASMAPI }}
+          KissKh: ${{ secrets.KissKh }}
+          KisskhSub: ${{ secrets.KisskhSub }}
+          StreamPlayAPI: ${{ secrets.StreamPlayAPI }}
+          PROXYAPI: ${{ secrets.PROXYAPI }}
+          KAISVA: ${{ secrets.KAISVA }}
+          MAL_API: ${{ secrets.MAL_API }}
+          MOVIEBOX_SECRET_KEY_ALT: ${{ secrets.MOVIEBOX_SECRET_KEY_ALT }}
+          MOVIEBOX_SECRET_KEY_DEFAULT: ${{ secrets.MOVIEBOX_SECRET_KEY_DEFAULT }}
+          SuperToken: ${{ secrets.SuperToken }}
+          KAIDEC: ${{ secrets.KAIDEC }}
+          KAIENC: ${{ secrets.KAIENC }}
+          KAIMEG: ${{ secrets.KAIMEG }}
+          NuvioStreams: ${{ secrets.NuvioStreams }}
+          YFXENC: ${{ secrets.YFXENC }}
+          YFXDEC: ${{ secrets.YFXDEC }}
+          VideasyDEC: ${{ secrets.VideasyDEC }}
+          NuvFeb: ${{ secrets.NuvFeb }}
         run: |
+          cd $GITHUB_WORKSPACE/src
+          echo TMDB_API=$TMDB_API >> local.properties
+          echo DUMP_API=$DUMP_API >> local.properties
+          echo DUMP_KEY=$DUMP_KEY >> local.properties
+          echo ANICHI_API=$ANICHI_API >> local.properties
+          echo ANICHI_SERVER=$ANICHI_SERVER >> local.properties
+          echo ANICHI_ENDPOINT=$ANICHI_ENDPOINT >> local.properties
+          echo ANICHI_APP=$ANICHI_APP >> local.properties
+          echo ZSHOW_API=$ZSHOW_API >> local.properties
+          echo SFMOVIES_API=$SFMOVIES_API >> local.properties
+          echo CINEMATV_API=$CINEMATV_API >> local.properties
+          echo GHOSTX_API=$GHOSTX_API >> local.properties
+          echo SUPERSTREAM_FIRST_API=$SUPERSTREAM_FIRST_API >> local.properties
+          echo SUPERSTREAM_SECOND_API=$SUPERSTREAM_SECOND_API >> local.properties
+          echo SUPERSTREAM_THIRD_API=$SUPERSTREAM_THIRD_API >> local.properties
+          echo SUPERSTREAM_FOURTH_API=$SUPERSTREAM_FOURTH_API >> local.properties
+          echo AsianDrama_API=$AsianDrama_API >> local.properties
+          echo FanCode_API=$FanCode_API >> local.properties
+          echo Whvx_API=$Whvx_API >> local.properties
+          echo Su_sports=$Su_sports >> local.properties
+          echo PirateIPTV=$PirateIPTV >> local.properties
+          echo SonyIPTV=$SonyIPTV >> local.properties
+          echo JapanIPTV=$JapanIPTV >> local.properties
+          echo CatflixAPI=$CatflixAPI >> local.properties
+          echo ConsumetAPI=$ConsumetAPI >> local.properties
+          echo FlixHQAPI=$FlixHQAPI >> local.properties
+          echo WhvxAPI=$WhvxAPI >> local.properties
+          echo WhvxT=$WhvxT >> local.properties
+          echo SharmaflixApi=$SharmaflixApi >> local.properties
+          echo SharmaflixApikey=$SharmaflixApikey >> local.properties
+          echo HianimeAPI=$HianimeAPI >> local.properties
+          echo Vidsrccc=$Vidsrccc >> local.properties
+          echo WASMAPI=$WASMAPI >> local.properties
+          echo KissKh=$KissKh >> local.properties
+          echo KisskhSub=$KisskhSub >> local.properties
+          echo StreamPlayAPI=$StreamPlayAPI >> local.properties
+          echo PROXYAPI=$PROXYAPI >> local.properties
+          echo KAISVA=$KAISVA >> local.properties
+          echo MAL_API=$MAL_API >> local.properties
+          echo MOVIEBOX_SECRET_KEY_DEFAULT=$MOVIEBOX_SECRET_KEY_DEFAULT >> local.properties
+          echo MOVIEBOX_SECRET_KEY_ALT=$MOVIEBOX_SECRET_KEY_ALT >> local.properties
+          echo SuperToken=$SuperToken >> local.properties
+          echo KAIDEC=$KAIDEC >> local.properties
+          echo KAIENC=$KAIENC >> local.properties
+          echo KAIMEG=$KAIMEG >> local.properties
+          echo NuvioStreams=$NuvioStreams >> local.properties
+          echo YFXDEC=$YFXDEC >> local.properties
+          echo YFXENC=$YFXENC >> local.properties
+          echo VideasyDEC=$VideasyDEC >> local.properties
+          echo NuvFeb=$NuvFeb >> local.properties
+      - name: Build Plugins
+        run: |
+          cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          ./gradlew :${{ matrix.module }}:make
+          ./gradlew make makePluginsJson
+          ./gradlew ensureJarCompatibility
+          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
+          cp **/build/*.jar $GITHUB_WORKSPACE/builds
+          cp build/plugins.json $GITHUB_WORKSPACE/builds
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.module }}
-          path: |
-            ${{ matrix.module }}/build/*.cs3
-            ${{ matrix.module }}/build/*.jar
-
-
-  publish:
-    needs: [detect, build]
-    if: needs.detect.outputs.matrix != ''
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout builds branch
-        uses: actions/checkout@v4
-        with:
-          ref: builds
-          path: builds
-        continue-on-error: true
-
-      - name: Checkout source
-        uses: actions/checkout@v4
-        with:
-          path: src
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: builds
-
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-          cache: gradle
-
-      - name: Regenerate plugins.json
-        working-directory: src
+      - name: Push builds
         run: |
-          chmod +x gradlew
-          ./gradlew makePluginsJson
-
-      - name: Move plugins.json
-        run: |
-          cp src/build/plugins.json builds/
-
-      - name: Commit Once
-        working-directory: builds
-        run: |
-          git config user.email "actions@github.com"
-          git config user.name "github-actions"
-
+          cd $GITHUB_WORKSPACE/builds
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
           git add .
-          if git diff --cached --quiet; then
-            echo "No changes."
-            exit 0
-          fi
-
-          git commit -m "CI Build @ $GITHUB_SHA"
-          git push origin HEAD:builds --force
+          git commit --amend -m "Build $GITHUB_SHA" || exit 0   # do not error if nothing to commit
+          git push --force
