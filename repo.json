@@ -1,0 +1,9 @@
+{
+    "name": "Phisher Repo",
+    "iconUrl": "",
+    "description": "byimam2nd Repository",
+    "manifestVersion": 1,
+    "pluginLists": [
+      "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/refs/heads/builds/plugins.json"
+    ]
+}
