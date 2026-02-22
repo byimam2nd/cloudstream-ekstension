@@ -40,5 +40,5 @@ cloudstream {
 
     iconUrl = "https://www.google.com/s2/favicons?domain=anichin.cafe&sz=%size%"
     requiresResources = false
-    isCrossPlatform = true
+    isCrossPlatform = false  // Changed: Contains Android imports
 }
