@@ -15,7 +15,7 @@ enum class ServerList(val link: Pair<String, Boolean>) {
 }
 
 @CloudstreamPlugin
-class AnichinProviderPlugin : Plugin() {
+class AnichinPlugin : Plugin() {
 
     override fun load(context: Context) {
         registerMainAPI(Anichin())
