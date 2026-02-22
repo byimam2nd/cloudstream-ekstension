@@ -1,4 +1,4 @@
-package com.AnichinCafe
+package com.Anichin
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -52,8 +52,8 @@ import java.net.URI
 import okhttp3.OkHttpClient
 import org.json.JSONObject
 
-class AnichinCafe : MainAPI() {
-    override var mainUrl = AnichinCafePlugin.currentAnichinServer
+class Anichin : MainAPI() {
+    override var mainUrl = AnichinPlugin.currentAnichinServer
     override var name = "Anichin"
     override val hasQuickSearch = true
     override val hasMainPage = true
@@ -289,7 +289,7 @@ class AnichinCafe : MainAPI() {
             scripts.forEach { script ->
                 val html = script.html()
                 // Look for m3u8 or mp4 URLs
-                val videoUrl = Regex("""(https?://[^\s"'<>]+\.(?:m3u8|mp4)""").find(html)?.groupValues?.get(1)
+                val videoUrl = Regex("""https?://[^\s"'<>]+\.(?:m3u8|mp4)""").find(html)?.value
                 if (videoUrl != null) {
                     callback.invoke(
                         newExtractorLink(

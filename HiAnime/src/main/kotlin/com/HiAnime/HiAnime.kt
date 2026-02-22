@@ -166,8 +166,6 @@ class HiAnime : MainAPI() {
         val dubCount = document.selectFirst(".anisc-detail .tick-dub")?.text()?.toIntOrNull()
         val dubEpisodes = emptyList<Episode>().toMutableList()
         val subEpisodes = emptyList<Episode>().toMutableList()
-        val responseBody = app.get("$mainUrl/ajax/v2/episode/list/$animeId").body.string()
-        val epRes = responseBody.stringParse<Response>()?.getDocument()
         val malId = syncData?.malId ?: "0"
         val anilistId = syncData?.aniListId ?: "0"
 
@@ -179,8 +177,40 @@ class HiAnime : MainAPI() {
             appLangCode = "en"
         )
 
+        // Fetch all episode pages (for anime with 100+ episodes like Renegade Immortal)
+        val allEpisodes = mutableListOf<Element>()
+        var page = 1
+        var hasMorePages = true
+        
+        while (hasMorePages) {
+            try {
+                val responseBody = app.get("$mainUrl/ajax/v2/episode/list/$animeId?page=$page").body.string()
+                val epRes = responseBody.stringParse<Response>()?.getDocument()
+                
+                if (epRes == null) {
+                    hasMorePages = false
+                    continue
+                }
+                
+                val episodesOnPage = epRes.select(".ss-list > a[href].ssl-item.ep-item")
+                
+                if (episodesOnPage.isEmpty()) {
+                    hasMorePages = false
+                } else {
+                    allEpisodes.addAll(episodesOnPage)
+                    page++
+                    
+                    // Safety limit to prevent infinite loops
+                    if (page > 20) hasMorePages = false
+                }
+            } catch (e: Exception) {
+                // If any page fails, stop fetching more pages
+                hasMorePages = false
+            }
+        }
 
-        epRes?.select(".ss-list > a[href].ssl-item.ep-item")?.forEachIndexed { index, ep ->
+        // Process all episodes from all pages
+        allEpisodes.forEachIndexed { index, ep ->
             val href = ep.attr("href").removePrefix("/")
             val episodeNum = ep.selectFirst(".ssli-order")?.text()?.toIntOrNull() ?: return@forEachIndexed
             val episodeKey = episodeNum.toString()

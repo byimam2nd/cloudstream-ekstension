@@ -1,4 +1,4 @@
-package com.AnichinCafe
+package com.Anichin
 
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.ExtractorApi

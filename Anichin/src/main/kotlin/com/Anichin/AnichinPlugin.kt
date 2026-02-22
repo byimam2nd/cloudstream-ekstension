@@ -1,4 +1,4 @@
-package com.AnichinCafe
+package com.Anichin
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
@@ -15,10 +15,10 @@ enum class ServerList(val link: Pair<String, Boolean>) {
 }
 
 @CloudstreamPlugin
-class AnichinCafeProviderPlugin : Plugin() {
+class AnichinProviderPlugin : Plugin() {
 
     override fun load(context: Context) {
-        registerMainAPI(AnichinCafe())
+        registerMainAPI(Anichin())
         // Register extractors if needed
         // registerExtractorAPI(YourExtractor())
     }
