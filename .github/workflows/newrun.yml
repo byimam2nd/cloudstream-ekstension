@@ -19,11 +19,13 @@ jobs:
       matrix: ${{ steps.set.outputs.matrix }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@v4
+      - name: Checkout builds branch
+        uses: actions/checkout@v4
         with:
           ref: builds
           path: builds
@@ -33,7 +35,13 @@ jobs:
         run: |
           set -e
 
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | cut -d/ -f1 | sort -u)
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          # Ambil folder level pertama yang berubah
+          CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" | cut -d/ -f1 | sort -u)
+
+          # Ambil semua module dari settings.gradle.kts
           ALL_MODULES=$(grep 'include' settings.gradle.kts | sed -E 's/.*"(.*)".*/\1/')
 
           BUILD_LIST=""
@@ -50,10 +58,16 @@ jobs:
             fi
           done
 
-          UNIQUE=$(printf "%s\n" $BUILD_LIST | sort -u)
-          JSON=$(printf '%s\n' $UNIQUE | jq -R . | jq -s .)
+          UNIQUE=$(printf "%s\n" $BUILD_LIST | sort -u | sed '/^$/d')
 
-          echo "matrix={\"module\":$JSON}" >> $GITHUB_OUTPUT
+          if [ -z "$UNIQUE" ]; then
+            echo "matrix=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          JSON=$(printf '%s\n' $UNIQUE | jq -R . | jq -s -c .)
+
+          echo "matrix={\"module\":$JSON}" >> "$GITHUB_OUTPUT"
 
 
   build:
@@ -62,6 +76,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
 
     steps:
@@ -90,16 +105,19 @@ jobs:
 
   publish:
     needs: [detect, build]
+    if: needs.detect.outputs.matrix != ''
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout builds branch
+        uses: actions/checkout@v4
         with:
           ref: builds
           path: builds
         continue-on-error: true
 
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
         with:
           path: src
 
