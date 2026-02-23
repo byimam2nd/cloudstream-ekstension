@@ -95,15 +95,7 @@ class Anichin : MainAPI() {
         val epCount = this.select(".epx, .episode-count, .eps, .badge").firstOrNull()?.text()
             ?.filter { it.isDigit() }?.toIntOrNull()
 
-        // Get status (Ongoing/Completed)
-        val statusText = this.select(".status, .type, .film-type, .anime-type").firstOrNull()?.text() ?: ""
-        val status = getStatus(statusText)
-        
-        // Get type
-        val typeText = this.select(".anime-type, .film-type, .type, .status").firstOrNull()?.text() ?: ""
-        val type = getType(typeText)
-
-        return newAnimeSearchResponse(title, href, type) {
+        return newMovieSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl.ifEmpty { null }
             // Add episode count if available
             addDubStatus(false, epCount != null, null, epCount)
@@ -164,20 +156,16 @@ class Anichin : MainAPI() {
             .filter { 
                 it.select("a[href*='/seri/'], a[href*='/anime/']").isNotEmpty()
             }
-            .map { it.toSearchResult() }
+            .mapNotNull { it.toSearchResult() }
         
-        return if (items.isNotEmpty()) {
-            newHomePageResponse(request.name, items)
-        } else {
-            // Fallback: try to find any series links
-            val fallbackItems = document.select("a[href*='/seri/']")
-                .filter { 
-                    it.select("img, .thumb, .poster").isNotEmpty()
-                }
-                .map { it.toSearchResult() }
-            
-            newHomePageResponse(request.name, fallbackItems)
-        }
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = items,
+                isHorizontalImages = false  // Use vertical layout like Donghuastream
+            ),
+            hasNext = true
+        )
     }
 
     override suspend fun load(url: String): LoadResponse {
@@ -267,17 +255,14 @@ class Anichin : MainAPI() {
         val type = if (document.select(".spe:contains(Type)").text().contains("Movie", ignoreCase = true))
             TvType.AnimeMovie else TvType.Anime
 
-        return newAnimeLoadResponse(title, url, TvType.Anime) {
-            engName = title
-            posterUrl = poster
-            this.tags = genres
+        return newTvSeriesLoadResponse(title, url, TvType.Anime, uniqueEpisodes) {
+            this.posterUrl = poster
             this.plot = description
+            this.tags = genres
             this.score = Score.from10(rating)
             this.showStatus = showStatus
             this.year = year
             this.duration = duration
-            
-            addEpisodes(com.lagradost.cloudstream3.DubStatus.Subbed, uniqueEpisodes)
         }
     }
 
