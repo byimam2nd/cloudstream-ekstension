@@ -146,20 +146,19 @@ class Anichin : MainAPI() {
         val document = app.get("${request.data}$page").document
         
         // Try multiple selectors for compatibility - match Anichin.cafe structure
-        val items = document.select("div.swiper-slide.item, div.item, div.anime-item, div.video-item, div.listupd div.item")
+        val items = document.select("div.listupd div.item, div.bsx, div.swiper-slide, div.item")
             .filter { 
-                it.select("img, .backdrop").isNotEmpty() && 
-                it.select("a[href*='/seri/'], a[href*='/anime/']").isNotEmpty() 
+                it.select("a[href*='/seri/'], a[href*='/anime/']").isNotEmpty()
             }
             .map { it.toSearchResult() }
         
         return if (items.isNotEmpty()) {
             newHomePageResponse(request.name, items)
         } else {
-            // Fallback: try to find any items in listupd div
-            val fallbackItems = document.select("div.listupd div.item, div.bsx")
+            // Fallback: try to find any series links
+            val fallbackItems = document.select("a[href*='/seri/']")
                 .filter { 
-                    it.select("a[href]").isNotEmpty()
+                    it.select("img, .thumb, .poster").isNotEmpty()
                 }
                 .map { it.toSearchResult() }
             
