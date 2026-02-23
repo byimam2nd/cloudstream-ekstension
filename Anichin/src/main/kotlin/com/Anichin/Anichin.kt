@@ -107,9 +107,9 @@ class Anichin : MainAPI() {
             this.posterUrl = posterUrl.ifEmpty { null }
             // Add episode count if available
             if (epCount != null && epCount > 0) {
-                addDubStatus(false, true, null, epCount)
+                addDubStatus(com.lagradost.cloudstream3.DubStatus.Subbed, epCount)
             } else {
-                addDubStatus(false, true, null, null)
+                addDubStatus(com.lagradost.cloudstream3.DubStatus.Subbed, null)
             }
         }
     }
@@ -281,12 +281,12 @@ class Anichin : MainAPI() {
             this.year = year
             this.duration = duration
             
-            addEpisodes(com.lagradost.cloudstream3.DubStatus.Subbed, uniqueEpisodes)
-            
             // Add total episode count if available
             if (totalEpisodes != null && totalEpisodes > 0) {
-                addDubStatus(false, true, null, totalEpisodes)
+                addDubStatus(com.lagradost.cloudstream3.DubStatus.Subbed, totalEpisodes)
             }
+            
+            addEpisodes(com.lagradost.cloudstream3.DubStatus.Subbed, uniqueEpisodes)
         }
     }
 
