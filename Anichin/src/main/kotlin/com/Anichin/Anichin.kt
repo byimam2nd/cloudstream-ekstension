@@ -100,7 +100,7 @@ open class Anichin : MainAPI() {
         val document = app.get(url).documentLarge
         val title       = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
         val href=document.selectFirst(".eplister li > a")?.attr("href") ?:""
-        var poster = document.select("div.ime > img").attr("data-src")
+        var poster = document.select("div.thumb > img").attr("src")
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
         val type=document.selectFirst(".spe")?.text().toString()
         val tvtag=if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
