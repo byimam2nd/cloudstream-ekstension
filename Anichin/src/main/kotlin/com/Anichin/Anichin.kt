@@ -116,17 +116,41 @@ class Anichin : MainAPI() {
         val link = "$mainUrl/search?keyword=$query&page=$page"
         val res = app.get(link).documentLarge
 
-        return res.select("div.anime-item, div.flw-item, div.anime-card").map { 
-            it.toSearchResult() 
-        }.toNewSearchResponseList()
+        // Try multiple selectors for compatibility
+        val items = res.select("div.item, div.anime-item, div.video-item, a.item, a.anime-item")
+            .filter { 
+                it.select("img").isNotEmpty() && 
+                it.select("a[href]").isNotEmpty() 
+            }
+            .map { it.toSearchResult() }
+        
+        return items.toNewSearchResponseList()
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}$page").document
-        val items = document.select("div.anime-item, div.flw-item, div.anime-card").map { 
-            it.toSearchResult() 
+        
+        // Try multiple selectors for compatibility
+        val items = document.select("div.item, div.anime-item, div.video-item, a.item, a.anime-item")
+            .filter { 
+                it.select("img").isNotEmpty() && 
+                it.select("a[href]").isNotEmpty() 
+            }
+            .map { it.toSearchResult() }
+        
+        return if (items.isNotEmpty()) {
+            newHomePageResponse(request.name, items)
+        } else {
+            // Fallback: try to find any clickable items with images
+            val fallbackItems = document.select("a")
+                .filter { 
+                    it.select("img").isNotEmpty() &&
+                    it.attr("href").contains("/anime/") || it.attr("href").contains("/watch/")
+                }
+                .map { it.toSearchResult() }
+            
+            newHomePageResponse(request.name, fallbackItems)
         }
-        return newHomePageResponse(request.name, items)
     }
 
     override suspend fun load(url: String): LoadResponse {
