@@ -125,8 +125,6 @@ class Anichin : MainAPI() {
                     "$mainUrl/?page=" to "Latest Episodes",
                     "$mainUrl/ongoing?page=" to "Ongoing Anime",
                     "$mainUrl/completed?page=" to "Completed Anime",
-                    "$mainUrl/donghua?page=" to "Donghua",
-                    "$mainUrl/popular?page=" to "Popular Anime",
             )
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
