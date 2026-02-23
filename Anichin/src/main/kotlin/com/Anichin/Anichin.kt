@@ -174,9 +174,14 @@ class Anichin : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        // Remove watch/ prefix if exists
-        val cleanUrl = url.replace("watch/", "").replace("anime/", "").replace("/seri/", "/")
+        // Clean URL - remove watch/ prefix but keep the anime slug
+        val cleanUrl = url.replace("watch/", "").replace("/anime/", "")
         val document = app.get(cleanUrl).document
+
+        // Get anime title from URL slug for episode matching
+        val animeSlug = cleanUrl.substringAfterLast("/").substringBefore("-")
+            .replace("seri/", "")
+            .trim()
 
         val title = document.selectFirst("h1.entry-title, .entry-title h1, .infox h1, .single-info h1")?.text().toString()
             .ifEmpty { "Unknown" }
@@ -223,31 +228,39 @@ class Anichin : MainAPI() {
 
         val episodes = mutableListOf<Episode>()
 
-        // Scrape episodes from HTML - Anichin.cafe structure
-        // Pattern: /anime-episode-X-subtitle-indonesia/
+        // Scrape episodes - match anime slug to ensure correct episodes
         document.select("a[href*='-episode-']")
-            .filter { 
-                it.attr("href").contains("subtitle") || 
-                it.attr("href").contains("sub-indo") ||
-                it.attr("href").contains("/episode/")
+            .filter { ep ->
+                val href = ep.attr("href")
+                // Ensure episode belongs to this anime by checking slug
+                href.contains(animeSlug, ignoreCase = true) || 
+                href.contains("subtitle") || 
+                href.contains("sub-indo")
             }
             .forEachIndexed { index, ep ->
                 val href = fixUrl(ep.attr("href"))
                 
-                // Extract episode number from URL or text
-                val episodeNum = Regex("episode-(\\d+)").find(ep.attr("href"))?.groupValues?.get(1)?.toIntOrNull()
+                // Extract episode number from URL
+                val episodeNum = Regex("episode-(\\d+)").find(href)?.groupValues?.get(1)?.toIntOrNull()
                     ?: Regex("Episode (\\d+)").find(ep.text())?.groupValues?.get(1)?.toIntOrNull()
                     ?: Regex("(\\d+)").find(ep.text())?.groupValues?.get(1)?.toIntOrNull()
                     ?: (index + 1)
                 
+                // Clean episode title
                 val epTitle = ep.text().ifEmpty { "Episode $episodeNum" }
-                    .replace("Subtitle Indonesia", "")
-                    .replace("Sub Indo", "")
-                    .replace("Subtitle", "")
+                    .replace("Subtitle Indonesia", "", ignoreCase = true)
+                    .replace("Sub Indo", "", ignoreCase = true)
+                    .replace("Subtitle", "", ignoreCase = true)
+                    .replace(title, "", ignoreCase = true)
+                    .replace("-", " ")
                     .trim()
+                    .let { 
+                        if (it.isEmpty() || it.all { c -> !c.isLetterOrDigit() }) "Episode $episodeNum" 
+                        else it 
+                    }
 
                 episodes.add(
-                    newEpisode("sub|$href") {
+                    newEpisode(href) {
                         this.name = epTitle
                         this.episode = episodeNum
                     }
