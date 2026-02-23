@@ -63,16 +63,22 @@ class Anichin : MainAPI() {
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
 
     private fun Element.toSearchResult(): SearchResponse {
-        // Try multiple selectors for title
-        val href = fixUrl(this.select("a").attr("href").ifEmpty { this.attr("href") })
-        val title = this.select("h2 a, a[data-jtitle], h2, a").firstOrNull()?.text()
+        // Get href from a tag
+        val href = fixUrl(this.select("a[href*='/seri/'], a[href*='/anime/']").attr("href").ifEmpty { this.attr("href") })
+        
+        // Get title - try multiple selectors
+        val title = this.select("h2 a, a[data-jtitle]").firstOrNull()?.text()
             ?: this.select("[data-jtitle]").attr("data-jtitle")
+            ?: this.select("h2").firstOrNull()?.text()
+            ?: this.select("a").attr("title")
             ?: "Unknown"
         
-        // Try multiple selectors for poster
+        // Get poster - try multiple selectors
         val posterUrl = fixUrl(
-            this.select("img").attr("src").ifEmpty { 
-                this.select("img").attr("data-src") 
+            this.select("img").attr("src").ifEmpty {
+                this.select("img").attr("data-src")
+            }.ifEmpty {
+                this.select(".thumb img, .poster img").attr("src")
             }.ifEmpty {
                 // Check for backdrop style
                 this.attr("style")
@@ -85,14 +91,26 @@ class Anichin : MainAPI() {
             }
         )
 
-        // Cek tipe anime (Donghua, Movie, dll)
+        // Get episode count from badge if available
+        val epCount = this.select(".epx, .episode-count, .eps, .badge").firstOrNull()?.text()
+            ?.filter { it.isDigit() }?.toIntOrNull()
+
+        // Get status (Ongoing/Completed)
+        val statusText = this.select(".status, .type, .film-type, .anime-type").firstOrNull()?.text() ?: ""
+        val status = getStatus(statusText)
+        
+        // Get type
         val typeText = this.select(".anime-type, .film-type, .type, .status").firstOrNull()?.text() ?: ""
         val type = getType(typeText)
 
         return newAnimeSearchResponse(title, href, type) {
             this.posterUrl = posterUrl.ifEmpty { null }
-            // Anichin mostly SUB only
-            addDubStatus(false, true, null, null)
+            // Add episode count if available
+            if (epCount != null && epCount > 0) {
+                addDubStatus(false, true, null, epCount)
+            } else {
+                addDubStatus(false, true, null, null)
+            }
         }
     }
 
@@ -168,33 +186,61 @@ class Anichin : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         // Remove watch/ prefix if exists
-        val cleanUrl = url.replace("watch/", "").replace("anime/", "")
+        val cleanUrl = url.replace("watch/", "").replace("anime/", "").replace("/seri/", "/")
         val document = app.get(cleanUrl).document
 
-        val title = document.selectFirst("h1.entry-title, h1.title, .entry-title h1")?.text().toString()
-            .ifEmpty { document.selectFirst(".single-info h1, .infox h1")?.text() ?: "Unknown" }
+        val title = document.selectFirst("h1.entry-title, .entry-title h1, .infox h1, .single-info h1")?.text().toString()
+            .ifEmpty { "Unknown" }
 
-        val description = document.select(".entry-content p, .synopsis, .description, .sinopse p").text()
-            .ifEmpty { document.select(".entry-content").text().substringBefore("Watch").substringBefore("Streaming") }
+        val description = document.select(".entry-content p, .sinopse p, .synopsis").firstOrNull()?.text()
+            ?: document.select(".entry-content").text().substringBefore("Watch").substringBefore("Streaming").trim()
 
         val poster = document.selectFirst(".thumb img, .poster img, .single-info img, img[itemprop='image']")?.attr("src")
             ?: document.selectFirst("img")?.attr("src")
 
         val genres = document.select(".genxed a, .genres a, [itemprop='genre'] a").map { it.text() }
 
-        // Get episode count from text
-        val episodeCountText = document.selectFirst(".spe:contains(Episode), .spe:contains(episodes)")?.text()
-        val subCount = episodeCountText?.substringAfter("Episode:")?.substringBefore(" ")?.toIntOrNull()
-            ?: document.select(".episode-count").text().toIntOrNull()
+        // Get rating
+        val rating = document.selectFirst(".rating-prc [itemprop='ratingValue']")?.attr("content")?.toDoubleOrNull()
+            ?: document.selectFirst(".rating strong")?.text()?.substringAfter("Rating ")?.substringBefore(" ")?.toDoubleOrNull()
+        
+        // Get status and other info from .spe div
+        var showStatus: ShowStatus? = null
+        var year: Int? = null
+        var duration: Int? = null
+        var totalEpisodes: Int? = null
+        
+        document.select(".spe span").forEach { info ->
+            val text = info.text()
+            when {
+                text.contains("Status:", ignoreCase = true) -> {
+                    val statusText = text.substringAfter("Status:").trim()
+                    showStatus = getStatus(statusText)
+                }
+                text.contains("Released:", ignoreCase = true) -> {
+                    val yearText = text.substringAfter("Released:").trim().take(4)
+                    year = yearText.toIntOrNull()
+                }
+                text.contains("Duration:", ignoreCase = true) -> {
+                    val durText = text.substringAfter("Duration:").trim()
+                    duration = durText.filter { it.isDigit() }.toIntOrNull()
+                }
+                text.contains("Episodes:", ignoreCase = true) -> {
+                    val epText = text.substringAfter("Episodes:").trim()
+                    totalEpisodes = epText.filter { it.isDigit() }.toIntOrNull()
+                }
+            }
+        }
 
         val episodes = mutableListOf<Episode>()
 
         // Scrape episodes from HTML - Anichin.cafe structure
         // Pattern: /anime-episode-X-subtitle-indonesia/
-        document.select("a[href*='/episode/'], a[href*='-episode-']")
+        document.select("a[href*='-episode-']")
             .filter { 
                 it.attr("href").contains("subtitle") || 
-                it.attr("href").contains("sub-indo") 
+                it.attr("href").contains("sub-indo") ||
+                it.attr("href").contains("/episode/")
             }
             .forEachIndexed { index, ep ->
                 val href = fixUrl(ep.attr("href"))
@@ -202,11 +248,13 @@ class Anichin : MainAPI() {
                 // Extract episode number from URL or text
                 val episodeNum = Regex("episode-(\\d+)").find(ep.attr("href"))?.groupValues?.get(1)?.toIntOrNull()
                     ?: Regex("Episode (\\d+)").find(ep.text())?.groupValues?.get(1)?.toIntOrNull()
+                    ?: Regex("(\\d+)").find(ep.text())?.groupValues?.get(1)?.toIntOrNull()
                     ?: (index + 1)
                 
                 val epTitle = ep.text().ifEmpty { "Episode $episodeNum" }
                     .replace("Subtitle Indonesia", "")
                     .replace("Sub Indo", "")
+                    .replace("Subtitle", "")
                     .trim()
 
                 episodes.add(
@@ -220,7 +268,7 @@ class Anichin : MainAPI() {
         // Remove duplicates and reverse (newest first)
         val uniqueEpisodes = episodes.distinctBy { it.episode }.reversed()
 
-        val type = if (document.select(".spe:contains(Type), .type").text().contains("Movie", ignoreCase = true))
+        val type = if (document.select(".spe:contains(Type)").text().contains("Movie", ignoreCase = true))
             TvType.AnimeMovie else TvType.Anime
 
         return newAnimeLoadResponse(title, url, TvType.Anime) {
@@ -228,19 +276,16 @@ class Anichin : MainAPI() {
             posterUrl = poster
             this.tags = genres
             this.plot = description
+            this.score = Score.from10(rating)
+            this.showStatus = showStatus
+            this.year = year
+            this.duration = duration
+            
             addEpisodes(com.lagradost.cloudstream3.DubStatus.Subbed, uniqueEpisodes)
             
-            // Additional info
-            document.select(".spe span").forEach { info ->
-                val text = info.text()
-                when {
-                    text.contains("Status:") -> {
-                        showStatus = getStatus(text.substringAfter("Status:").trim())
-                    }
-                    text.contains("Released:") -> {
-                        year = text.substringAfter("Released:").trim().take(4).toIntOrNull()
-                    }
-                }
+            // Add total episode count if available
+            if (totalEpisodes != null && totalEpisodes > 0) {
+                addDubStatus(false, true, null, totalEpisodes)
             }
         }
     }
