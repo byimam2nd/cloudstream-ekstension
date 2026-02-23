@@ -172,122 +172,75 @@ class Anichin : MainAPI() {
         val cleanUrl = url.replace("watch/", "").replace("anime/", "")
         val document = app.get(cleanUrl).document
 
-        // Try to get sync data if available
-        val syncData = tryParseJson<ZoroSyncData>(document.selectFirst("#syncData")?.data())
-        
-        val title = document.selectFirst("h1.anime-title, h1.film-name, h1.title")?.text().toString()
-            .ifEmpty { document.selectFirst("h2.anime-title")?.text() ?: "Unknown" }
-        
-        val description = document.select("div.synopsis, div.description, div.anime-description").text()
-            .ifEmpty { document.select("div.film-description").text() }
-        
-        val poster = document.selectFirst("#ani_detail div.anime-poster img, div.anime-poster img, img.poster")?.attr("src")
-            ?: document.selectFirst("img")?.attr("src")
-        
-        val genres = document.select("div.genres a, div.anime-genre a, a[href*='/genre/']").map { it.text() }
-        
-        // Get anime ID from URL
-        val animeId = URI(url).path.split("-").lastOrNull() 
-            ?: document.selectFirst("input#anime-id")?.attr("value") 
-            ?: ""
-        
-        val subCount = document.selectFirst(".tick-sub, .episode-count")?.text()?.toIntOrNull()
-        val dubCount = document.selectFirst(".tick-dub")?.text()?.toIntOrNull()
-        
-        val episodes = mutableListOf<Episode>()
-        
-        // Try to load episodes from AJAX or HTML
-        if (animeId.isNotEmpty()) {
-            try {
-                // Try AJAX endpoint first (if exists)
-                val responseBody = app.get("$mainUrl/ajax/episode/list/$animeId").body.string()
-                val epRes = responseBody.stringParse<Response>()?.getDocument()
-                
-                epRes?.select("a.episode-item, a[href*='/episode/'], a[href*='/watch/']")?.forEachIndexed { index, ep ->
-                    val href = ep.attr("href").removePrefix("/")
-                    val episodeNum = ep.selectFirst(".episode-num, .ep-number")?.text()?.toIntOrNull() ?: (index + 1)
-                    val epTitle = ep.text().ifEmpty { "Episode $episodeNum" }
-                    
-                    episodes.add(
-                        newEpisode("sub|$href") {
-                            this.name = epTitle
-                            this.episode = episodeNum
-                        }
-                    )
-                }
-            } catch (e: Exception) {
-                // Fallback: parse episodes from HTML
-                document.select("div.episode-list a, a.episode-item, a[href*='/episode/']").forEachIndexed { index, ep ->
-                    val href = fixUrl(ep.attr("href"))
-                    val episodeNum = ep.selectFirst(".episode-num")?.text()?.toIntOrNull() ?: (index + 1)
-                    val epTitle = ep.text().ifEmpty { "Episode $episodeNum" }
-                    
-                    episodes.add(
-                        newEpisode("sub|$href") {
-                            this.name = epTitle
-                            this.episode = episodeNum
-                        }
-                    )
-                }
-            }
-        }
-        
-        // Get metadata from ani.zip if sync data available
-        val malId = syncData?.malId ?: "0"
-        val anilistId = syncData?.aniListId ?: "0"
-        var kitsuid: String? = null
-        var tmdbid: Int? = null
-        var backgroundposter: String? = null
-        var logoUrl: String? = null
-        
-        if (malId != "0") {
-            try {
-                val syncMetaData = app.get("https://api.ani.zip/mappings?mal_id=$malId").toString()
-                val animeMetaData = parseAnimeData(syncMetaData)
-                
-                kitsuid = animeMetaData?.mappings?.kitsuid
-                tmdbid = animeMetaData?.mappings?.themoviedbId
-                backgroundposter = animeMetaData?.images?.find { it.coverType == "Fanart" }?.url
-                logoUrl = fetchTmdbLogoUrl(
-                    tmdbAPI = "https://api.themoviedb.org/3",
-                    apiKey = "98ae14df2b8d8f8f8136499daf79f0e0",
-                    type = TvType.Anime,
-                    tmdbId = tmdbid,
-                    appLangCode = "en"
-                )
-            } catch (e: Exception) {
-                Log.e("Anichin", "Failed to fetch metadata: ${e.message}")
-            }
-        }
+        val title = document.selectFirst("h1.entry-title, h1.title, .entry-title h1")?.text().toString()
+            .ifEmpty { document.selectFirst(".single-info h1, .infox h1")?.text() ?: "Unknown" }
 
-        val type = if (document.select("div.film-stats").text().contains("Movie", ignoreCase = true)) 
+        val description = document.select(".entry-content p, .synopsis, .description, .sinopse p").text()
+            .ifEmpty { document.select(".entry-content").text().substringBefore("Watch").substringBefore("Streaming") }
+
+        val poster = document.selectFirst(".thumb img, .poster img, .single-info img, img[itemprop='image']")?.attr("src")
+            ?: document.selectFirst("img")?.attr("src")
+
+        val genres = document.select(".genxed a, .genres a, [itemprop='genre'] a").map { it.text() }
+
+        // Get episode count from text
+        val episodeCountText = document.selectFirst(".spe:contains(Episode), .spe:contains(episodes)")?.text()
+        val subCount = episodeCountText?.substringAfter("Episode:")?.substringBefore(" ")?.toIntOrNull()
+            ?: document.select(".episode-count").text().toIntOrNull()
+
+        val episodes = mutableListOf<Episode>()
+
+        // Scrape episodes from HTML - Anichin.cafe structure
+        // Pattern: /anime-episode-X-subtitle-indonesia/
+        document.select("a[href*='/episode/'], a[href*='-episode-']")
+            .filter { 
+                it.attr("href").contains("subtitle") || 
+                it.attr("href").contains("sub-indo") 
+            }
+            .forEachIndexed { index, ep ->
+                val href = fixUrl(ep.attr("href"))
+                
+                // Extract episode number from URL or text
+                val episodeNum = Regex("episode-(\\d+)").find(ep.attr("href"))?.groupValues?.get(1)?.toIntOrNull()
+                    ?: Regex("Episode (\\d+)").find(ep.text())?.groupValues?.get(1)?.toIntOrNull()
+                    ?: (index + 1)
+                
+                val epTitle = ep.text().ifEmpty { "Episode $episodeNum" }
+                    .replace("Subtitle Indonesia", "")
+                    .replace("Sub Indo", "")
+                    .trim()
+
+                episodes.add(
+                    newEpisode("sub|$href") {
+                        this.name = epTitle
+                        this.episode = episodeNum
+                    }
+                )
+            }
+
+        // Remove duplicates and reverse (newest first)
+        val uniqueEpisodes = episodes.distinctBy { it.episode }.reversed()
+
+        val type = if (document.select(".spe:contains(Type), .type").text().contains("Movie", ignoreCase = true))
             TvType.AnimeMovie else TvType.Anime
 
         return newAnimeLoadResponse(title, url, TvType.Anime) {
             engName = title
             posterUrl = poster
-            backgroundPosterUrl = backgroundposter
-            try { this.logoUrl = logoUrl } catch(_:Throwable){}
             this.tags = genres
             this.plot = description
-            addEpisodes(DubStatus.Subbed, episodes.reversed())
-            // addEpisodes(DubStatus.Dubbed, emptyList()) // Anichin mostly SUB only
+            addEpisodes(com.lagradost.cloudstream3.DubStatus.Subbed, uniqueEpisodes)
             
-            addMalId(malId.toIntOrNull())
-            addAniListId(anilistId.toIntOrNull())
-            try { addKitsuId(kitsuid) } catch(_:Throwable){}
-            
-            // Parse additional info from HTML
-            document.select("div.anisc-info .item, div.item").forEach { info ->
-                val infoType = info.select("span.item-head").text().removeSuffix(":")
-                when (infoType) {
-                    "Overview" -> plot = info.selectFirst(".text")?.text() ?: description
-                    "Japanese" -> japName = info.selectFirst(".name")?.text()
-                    "Premiered" -> year = info.selectFirst(".name")?.text()?.substringAfter(" ")?.toIntOrNull()
-                    "Duration" -> duration = getDurationFromString(info.selectFirst(".name")?.text())
-                    "Status" -> showStatus = getStatus(info.selectFirst(".name")?.text().toString())
-                    "Genres" -> tags = info.select("a").map { it.text() }
-                    else -> {}
+            // Additional info
+            document.select(".spe span").forEach { info ->
+                val text = info.text()
+                when {
+                    text.contains("Status:") -> {
+                        showStatus = getStatus(text.substringAfter("Status:").trim())
+                    }
+                    text.contains("Released:") -> {
+                        year = text.substringAfter("Released:").trim().take(4).toIntOrNull()
+                    }
                 }
             }
         }
