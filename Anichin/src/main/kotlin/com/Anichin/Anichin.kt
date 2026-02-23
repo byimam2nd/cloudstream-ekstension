@@ -106,11 +106,7 @@ class Anichin : MainAPI() {
         return newAnimeSearchResponse(title, href, type) {
             this.posterUrl = posterUrl.ifEmpty { null }
             // Add episode count if available
-            if (epCount != null && epCount > 0) {
-                addDubStatus(com.lagradost.cloudstream3.DubStatus.Subbed, epCount)
-            } else {
-                addDubStatus(com.lagradost.cloudstream3.DubStatus.Subbed, null)
-            }
+            addDubStatus(false, epCount != null, null, epCount)
         }
     }
 
@@ -280,11 +276,6 @@ class Anichin : MainAPI() {
             this.showStatus = showStatus
             this.year = year
             this.duration = duration
-            
-            // Add total episode count if available
-            if (totalEpisodes != null && totalEpisodes > 0) {
-                addDubStatus(com.lagradost.cloudstream3.DubStatus.Subbed, totalEpisodes)
-            }
             
             addEpisodes(com.lagradost.cloudstream3.DubStatus.Subbed, uniqueEpisodes)
         }
