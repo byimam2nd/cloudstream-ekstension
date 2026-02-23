@@ -63,17 +63,34 @@ class Anichin : MainAPI() {
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
 
     private fun Element.toSearchResult(): SearchResponse {
-        val href = fixUrl(this.select("a").attr("href"))
-        val title = this.select("h3.anime-title, h3.film-name, .anime-name").firstOrNull()?.text() 
-            ?: this.select("a").attr("title")
-        val posterUrl = fixUrl(this.select("img").attr("src").ifEmpty { this.select("img").attr("data-src") })
+        // Try multiple selectors for title
+        val href = fixUrl(this.select("a").attr("href").ifEmpty { this.attr("href") })
+        val title = this.select("h2 a, a[data-jtitle], h2, a").firstOrNull()?.text()
+            ?: this.select("[data-jtitle]").attr("data-jtitle")
+            ?: "Unknown"
         
+        // Try multiple selectors for poster
+        val posterUrl = fixUrl(
+            this.select("img").attr("src").ifEmpty { 
+                this.select("img").attr("data-src") 
+            }.ifEmpty {
+                // Check for backdrop style
+                this.attr("style")
+                    .substringAfter("background-image: url('")
+                    .substringBefore("')")
+            }.ifEmpty {
+                this.select(".backdrop").attr("style")
+                    .substringAfter("background-image: url('")
+                    .substringBefore("')")
+            }
+        )
+
         // Cek tipe anime (Donghua, Movie, dll)
-        val typeText = this.select(".anime-type, .film-type, .type").firstOrNull()?.text() ?: ""
+        val typeText = this.select(".anime-type, .film-type, .type, .status").firstOrNull()?.text() ?: ""
         val type = getType(typeText)
 
         return newAnimeSearchResponse(title, href, type) {
-            this.posterUrl = posterUrl
+            this.posterUrl = posterUrl.ifEmpty { null }
             // Anichin mostly SUB only
             addDubStatus(false, true, null, null)
         }
@@ -117,9 +134,9 @@ class Anichin : MainAPI() {
         val res = app.get(link).documentLarge
 
         // Try multiple selectors for compatibility
-        val items = res.select("div.item, div.anime-item, div.video-item, a.item, a.anime-item")
+        val items = res.select("div.item, div.anime-item, div.video-item, div.swiper-slide, a.item, a.anime-item, div.listupd div.item")
             .filter { 
-                it.select("img").isNotEmpty() && 
+                it.select("img, .backdrop").isNotEmpty() && 
                 it.select("a[href]").isNotEmpty() 
             }
             .map { it.toSearchResult() }
@@ -130,22 +147,21 @@ class Anichin : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}$page").document
         
-        // Try multiple selectors for compatibility
-        val items = document.select("div.item, div.anime-item, div.video-item, a.item, a.anime-item")
+        // Try multiple selectors for compatibility - match Anichin.cafe structure
+        val items = document.select("div.swiper-slide.item, div.item, div.anime-item, div.video-item, div.listupd div.item")
             .filter { 
-                it.select("img").isNotEmpty() && 
-                it.select("a[href]").isNotEmpty() 
+                it.select("img, .backdrop").isNotEmpty() && 
+                it.select("a[href*='/seri/'], a[href*='/anime/']").isNotEmpty() 
             }
             .map { it.toSearchResult() }
         
         return if (items.isNotEmpty()) {
             newHomePageResponse(request.name, items)
         } else {
-            // Fallback: try to find any clickable items with images
-            val fallbackItems = document.select("a")
+            // Fallback: try to find any items in listupd div
+            val fallbackItems = document.select("div.listupd div.item, div.bsx")
                 .filter { 
-                    it.select("img").isNotEmpty() &&
-                    it.attr("href").contains("/anime/") || it.attr("href").contains("/watch/")
+                    it.select("a[href]").isNotEmpty()
                 }
                 .map { it.toSearchResult() }
             
