@@ -9,7 +9,6 @@ import com.lagradost.cloudstream3.extractors.Geodailymotion
 class AnichinProvider: BasePlugin() {
     override fun load() {
         registerMainAPI(Anichin())
-        registerMainAPI(SeaTV())
         registerExtractorAPI(Vtbe())
         registerExtractorAPI(waaw())
         registerExtractorAPI(wishfast())
