@@ -2,7 +2,7 @@
 version = 15
 
 
-anichin {
+cloudstream {
     // All of these properties are optional, you can safely remove them
 
     description = "Anichin (Anime Chinese)"
