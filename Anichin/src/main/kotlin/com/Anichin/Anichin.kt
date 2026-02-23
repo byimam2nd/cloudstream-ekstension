@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.ActorRole
 import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.Episode
+import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
@@ -95,7 +96,11 @@ class Anichin : MainAPI() {
         val epCount = this.select(".epx, .episode-count, .eps, .badge").firstOrNull()?.text()
             ?.filter { it.isDigit() }?.toIntOrNull()
 
-        return newMovieSearchResponse(title, href, TvType.Anime) {
+        // Get type
+        val typeText = this.select(".anime-type, .film-type, .type, .status").firstOrNull()?.text() ?: ""
+        val type = getType(typeText)
+
+        return newAnimeSearchResponse(title, href, type) {
             this.posterUrl = posterUrl.ifEmpty { null }
             // Add episode count if available
             addDubStatus(false, epCount != null, null, epCount)
@@ -255,7 +260,7 @@ class Anichin : MainAPI() {
         val type = if (document.select(".spe:contains(Type)").text().contains("Movie", ignoreCase = true))
             TvType.AnimeMovie else TvType.Anime
 
-        return newTvSeriesLoadResponse(title, url, TvType.Anime, uniqueEpisodes) {
+        return newAnimeLoadResponse(title, url, TvType.Anime) {
             this.posterUrl = poster
             this.plot = description
             this.tags = genres
@@ -263,6 +268,8 @@ class Anichin : MainAPI() {
             this.showStatus = showStatus
             this.year = year
             this.duration = duration
+            
+            addEpisodes(com.lagradost.cloudstream3.DubStatus.Subbed, uniqueEpisodes)
         }
     }
 
