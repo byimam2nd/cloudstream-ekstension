@@ -1,44 +1,28 @@
-import org.jetbrains.kotlin.konan.properties.Properties
-
-version = 1
-
-android {
-    buildFeatures {
-        buildConfig = true
-    }
-
-    defaultConfig {
-        // No special build config fields needed for Anichin
-    }
-}
-
-dependencies {
-    implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("com.google.android.material:material:1.13.0")
-}
+// use an integer for version numbers
+version = 15
 
 
 cloudstream {
-    language = "id"
     // All of these properties are optional, you can safely remove them
 
-    authors = listOf("Based on HiAnime by Stormunblessed, KillerDogeEmpire, RowdyRushya, Phisher98")
+    description = "Contains SeaTV (Chinese)"
+    language    = "zh"
+    authors = listOf("Phisher98")
 
     /**
-     * Status int as the following:
-     * 0: Down
-     * 1: Ok
-     * 2: Slow
-     * 3: Beta only
-     * */
+    * Status int as the following:
+    * 0: Down
+    * 1: Ok
+    * 2: Slow
+    * 3: Beta only
+    * */
     status = 1 // will be 3 if unspecified
-    tvTypes = listOf(
-        "Anime",
-        "OVA",
-        "Donghua",
-    )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=anichin.cafe&sz=%size%"
-    requiresResources = false
-    isCrossPlatform = false  // Same as HiAnime
+    // List of video source types. Users are able to filter for extensions in a given category.
+    // You can find a list of available types here:
+    // https://recloudstream.github.io/cloudstream/html/app/com.lagradost.cloudstream3/-tv-type/index.html
+    tvTypes = listOf("Anime")
+    iconUrl="https://raw.githubusercontent.com/Kohi-den/extensions-source/927f9c68fd64ce52f6212ae633d0f0585eca3545/src/en/donghuastream/res/mipmap-xxxhdpi/ic_launcher.png"
+
+    isCrossPlatform = true
 }

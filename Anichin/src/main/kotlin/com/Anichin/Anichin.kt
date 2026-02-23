@@ -1,288 +1,140 @@
 package com.Anichin
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
+
 import com.lagradost.api.Log
-import com.lagradost.cloudstream3.Actor
-import com.lagradost.cloudstream3.ActorData
-import com.lagradost.cloudstream3.ActorRole
-import com.lagradost.cloudstream3.DubStatus
-import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addKitsuId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.MainPageRequest
-import com.lagradost.cloudstream3.Score
 import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.SearchResponseList
-import com.lagradost.cloudstream3.ShowStatus
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
-import com.lagradost.cloudstream3.addDate
-import com.lagradost.cloudstream3.addDubStatus
-import com.lagradost.cloudstream3.addEpisodes
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.fixUrl
-import com.lagradost.cloudstream3.getDurationFromString
+import com.lagradost.cloudstream3.fixUrlNull
 import com.lagradost.cloudstream3.mainPageOf
-import com.lagradost.cloudstream3.newAnimeLoadResponse
-import com.lagradost.cloudstream3.newAnimeSearchResponse
 import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
-import com.lagradost.cloudstream3.toNewSearchResponseList
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.newMovieLoadResponse
+import com.lagradost.cloudstream3.newMovieSearchResponse
+import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.INFER_TYPE
+import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import java.net.URI
-import okhttp3.OkHttpClient
-import org.json.JSONObject
 
-class Anichin : MainAPI() {
-    override var mainUrl = AnichinPlugin.currentAnichinServer
-    override var name = "Anichin"
-    override val hasQuickSearch = true
-    override val hasMainPage = true
-    override val hasChromecastSupport = true
-    override val hasDownloadSupport = true
-    override val usesWebView = false
-    override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
+open class Anichin : MainAPI() {
+    override var mainUrl              = "https://anichin.cafe"
+    override var name                 = "Anichin"
+    override val hasMainPage          = true
+    override var lang                 = "id"
+    override val hasDownloadSupport   = true
+    override val supportedTypes       = setOf(TvType.Anime)
 
-    private fun Element.toSearchResult(): SearchResponse {
-        // Get href from a tag
-        val href = fixUrl(this.select("a[href*='/seri/'], a[href*='/anime/']").attr("href").ifEmpty { this.attr("href") })
-        
-        // Get title - try multiple selectors
-        val title = this.select("h2 a, a[data-jtitle]").firstOrNull()?.text()
-            ?: this.select("[data-jtitle]").attr("data-jtitle")
-            ?: this.select("h2").firstOrNull()?.text()
-            ?: this.select("a").attr("title")
-            ?: "Unknown"
-        
-        // Get poster - try multiple selectors
-        val posterUrl = fixUrl(
-            this.select("img").attr("src").ifEmpty {
-                this.select("img").attr("data-src")
-            }.ifEmpty {
-                this.select(".thumb img, .poster img").attr("src")
-            }.ifEmpty {
-                // Check for backdrop style
-                this.attr("style")
-                    .substringAfter("background-image: url('")
-                    .substringBefore("')")
-            }.ifEmpty {
-                this.select(".backdrop").attr("style")
-                    .substringAfter("background-image: url('")
-                    .substringBefore("')")
-            }
-        )
-
-        // Get episode count from badge if available
-        val epCount = this.select(".epx, .episode-count, .eps, .badge").firstOrNull()?.text()
-            ?.filter { it.isDigit() }?.toIntOrNull()
-
-        // Get type
-        val typeText = this.select(".anime-type, .film-type, .type, .status").firstOrNull()?.text() ?: ""
-        val type = getType(typeText)
-
-        return newAnimeSearchResponse(title, href, type) {
-            this.posterUrl = posterUrl.ifEmpty { null }
-            // Add episode count if available
-            addDubStatus(false, epCount != null, null, epCount)
-        }
-    }
-
-    private fun Element.getActorData(): ActorData? {
-        // Actor data might not be available on Anichin, skip for now
-        return null
-    }
-
-    companion object {
-        private val client = OkHttpClient()
-        const val userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        
-        fun getType(t: String): TvType {
-            return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie", ignoreCase = true)) TvType.AnimeMovie 
-            else TvType.Anime
-        }
-
-        fun getStatus(t: String): ShowStatus {
-            return when (t) {
-                "Finished", "Completed", "Tamat" -> ShowStatus.Completed
-                "Ongoing", "Releasing" -> ShowStatus.Ongoing
-                else -> ShowStatus.Completed
-            }
-        }
-    }
-
-    override val mainPage =
-            mainPageOf(
-                    "$mainUrl/?page=" to "Latest Episodes",
-                    "$mainUrl/ongoing?page=" to "Ongoing Anime",
-                    "$mainUrl/completed?page=" to "Completed Anime",
-            )
-
-    override suspend fun search(query: String, page: Int): SearchResponseList {
-        val link = "$mainUrl/search?keyword=$query&page=$page"
-        val res = app.get(link).documentLarge
-
-        // Try multiple selectors for compatibility
-        val items = res.select("div.item, div.anime-item, div.video-item, div.swiper-slide, a.item, a.anime-item, div.listupd div.item")
-            .filter { 
-                it.select("img, .backdrop").isNotEmpty() && 
-                it.select("a[href]").isNotEmpty() 
-            }
-            .map { it.toSearchResult() }
-        
-        return items.toNewSearchResponseList()
-    }
+    override val mainPage = mainPageOf(
+        "seri/?status=&type=&order=update&page=" to "Recently Updated",
+        "seri/?status=ongoing&type=&order=update" to "Ongoing",
+        "seri/?status=completed&type=&order=update" to "Completed",
+        "seri/?status=&type=special&sub=&order=update" to "Special Donghua",
+    )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}$page").document
-        
-        // Try multiple selectors for compatibility - match Anichin.cafe structure
-        val items = document.select("div.listupd div.item, div.bsx, div.swiper-slide, div.item")
-            .filter { 
-                it.select("a[href*='/seri/'], a[href*='/anime/']").isNotEmpty()
-            }
-            .mapNotNull { it.toSearchResult() }
-        
+        val document = app.get("$mainUrl/${request.data}$page").documentLarge
+        val home     = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
+
         return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = items,
-                isHorizontalImages = false  // Use vertical layout like Donghuastream
+            list    = HomePageList(
+                name               = request.name,
+                list               = home,
+                isHorizontalImages = false
             ),
             hasNext = true
         )
     }
 
-    override suspend fun load(url: String): LoadResponse {
-        // Clean URL - remove watch/ prefix but keep the anime slug
-        val cleanUrl = url.replace("watch/", "").replace("/anime/", "")
-        val document = app.get(cleanUrl).document
+    fun Element.toSearchResult(): SearchResponse {
+        val title     = this.select("div.bsx > a").attr("title")
+        val href      = fixUrl(this.select("div.bsx > a").attr("href"))
+        val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
+        return newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+        }
+    }
 
-        // Get anime title from URL slug for episode matching
-        val animeSlug = cleanUrl.substringAfterLast("/").substringBefore("-")
-            .replace("seri/", "")
-            .trim()
+    private fun Element.getImageAttr(): String {
+        return when {
+            this.hasAttr("data-src") -> this.attr("data-src")
+            this.hasAttr("src") -> this.attr("src")
+            else -> this.attr("src")
+        }
+    }
 
-        val title = document.selectFirst("h1.entry-title, .entry-title h1, .infox h1, .single-info h1")?.text().toString()
-            .ifEmpty { "Unknown" }
 
-        val description = document.select(".entry-content p, .sinopse p, .synopsis").firstOrNull()?.text()
-            ?: document.select(".entry-content").text().substringBefore("Watch").substringBefore("Streaming").trim()
+    override suspend fun search(query: String): List<SearchResponse> {
+        val searchResponse = mutableListOf<SearchResponse>()
 
-        val poster = document.selectFirst(".thumb img, .poster img, .single-info img, img[itemprop='image']")?.attr("src")
-            ?: document.selectFirst("img")?.attr("src")
+        for (i in 1..3) {
+            val document = app.get("${mainUrl}/pagg/$i/?s=$query").documentLarge
 
-        val genres = document.select(".genxed a, .genres a, [itemprop='genre'] a").map { it.text() }
+            val results = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
 
-        // Get rating
-        val rating = document.selectFirst(".rating-prc [itemprop='ratingValue']")?.attr("content")?.toDoubleOrNull()
-            ?: document.selectFirst(".rating strong")?.text()?.substringAfter("Rating ")?.substringBefore(" ")?.toDoubleOrNull()
-        
-        // Get status and other info from .spe div
-        var showStatus: ShowStatus? = null
-        var year: Int? = null
-        var duration: Int? = null
-        var totalEpisodes: Int? = null
-        
-        document.select(".spe span").forEach { info ->
-            val text = info.text()
-            when {
-                text.contains("Status:", ignoreCase = true) -> {
-                    val statusText = text.substringAfter("Status:").trim()
-                    showStatus = getStatus(statusText)
-                }
-                text.contains("Released:", ignoreCase = true) -> {
-                    val yearText = text.substringAfter("Released:").trim().take(4)
-                    year = yearText.toIntOrNull()
-                }
-                text.contains("Duration:", ignoreCase = true) -> {
-                    val durText = text.substringAfter("Duration:").trim()
-                    duration = durText.filter { it.isDigit() }.toIntOrNull()
-                }
-                text.contains("Episodes:", ignoreCase = true) -> {
-                    val epText = text.substringAfter("Episodes:").trim()
-                    totalEpisodes = epText.filter { it.isDigit() }.toIntOrNull()
-                }
+            if (!searchResponse.containsAll(results)) {
+                searchResponse.addAll(results)
+            } else {
+                break
             }
+
+            if (results.isEmpty()) break
         }
 
-        val episodes = mutableListOf<Episode>()
+        return searchResponse
+    }
 
-        // Scrape episodes - match anime slug to ensure correct episodes
-        document.select("a[href*='-episode-']")
-            .filter { ep ->
-                val href = ep.attr("href")
-                // Ensure episode belongs to this anime by checking slug
-                href.contains(animeSlug, ignoreCase = true) || 
-                href.contains("subtitle") || 
-                href.contains("sub-indo")
+    override suspend fun load(url: String): LoadResponse {
+        val document = app.get(url).documentLarge
+        val title       = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
+        val href=document.selectFirst(".eplister li > a")?.attr("href") ?:""
+        var poster = document.select("div.ime > img").attr("data-src")
+        val description = document.selectFirst("div.entry-content")?.text()?.trim()
+        val type=document.selectFirst(".spe")?.text().toString()
+        val tvtag=if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
+        return if (tvtag == TvType.TvSeries) {
+            val Eppage= document.selectFirst(".eplister li > a")?.attr("href") ?:""
+            val doc= app.get(Eppage).documentLarge
+            val episodes=doc.select("div.episodelist > ul > li").map { info->
+                        val href1 = info.select("a").attr("href")
+                        val episode = info.select("a span").text().substringAfter("-").substringBeforeLast("-")
+                        val posterr=info.selectFirst("a img")?.attr("data-src") ?:""
+                        newEpisode(href1)
+                        {
+                            this.name=episode.replace(title,"",ignoreCase = true)
+                            this.episode=episode.toIntOrNull()
+                            this.posterUrl=posterr
+                        }
             }
-            .forEachIndexed { index, ep ->
-                val href = fixUrl(ep.attr("href"))
-                
-                // Extract episode number from URL
-                val episodeNum = Regex("episode-(\\d+)").find(href)?.groupValues?.get(1)?.toIntOrNull()
-                    ?: Regex("Episode (\\d+)").find(ep.text())?.groupValues?.get(1)?.toIntOrNull()
-                    ?: Regex("(\\d+)").find(ep.text())?.groupValues?.get(1)?.toIntOrNull()
-                    ?: (index + 1)
-                
-                // Clean episode title
-                val epTitle = ep.text().ifEmpty { "Episode $episodeNum" }
-                    .replace("Subtitle Indonesia", "", ignoreCase = true)
-                    .replace("Sub Indo", "", ignoreCase = true)
-                    .replace("Subtitle", "", ignoreCase = true)
-                    .replace(title, "", ignoreCase = true)
-                    .replace("-", " ")
-                    .trim()
-                    .let { 
-                        if (it.isEmpty() || it.all { c -> !c.isLetterOrDigit() }) "Episode $episodeNum" 
-                        else it 
-                    }
-
-                episodes.add(
-                    newEpisode(href) {
-                        this.name = epTitle
-                        this.episode = episodeNum
-                    }
-                )
+            if (poster.isEmpty())
+            {
+                poster=document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
             }
-
-        // Remove duplicates and reverse (newest first)
-        val uniqueEpisodes = episodes.distinctBy { it.episode }.reversed()
-
-        val type = if (document.select(".spe:contains(Type)").text().contains("Movie", ignoreCase = true))
-            TvType.AnimeMovie else TvType.Anime
-
-        return newAnimeLoadResponse(title, url, TvType.Anime) {
-            this.posterUrl = poster
-            this.plot = description
-            this.tags = genres
-            this.score = Score.from10(rating)
-            this.showStatus = showStatus
-            this.year = year
-            this.duration = duration
-            
-            addEpisodes(com.lagradost.cloudstream3.DubStatus.Subbed, uniqueEpisodes)
+            newTvSeriesLoadResponse(title, url, TvType.Anime, episodes.reversed()) {
+                this.posterUrl = poster
+                this.plot = description
+            }
+        } else {
+            if (poster.isEmpty())
+            {
+                poster=document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
+            }
+            newMovieLoadResponse(title, url, TvType.Movie, href) {
+                this.posterUrl = poster
+                this.plot = description
+            }
         }
     }
 
@@ -292,221 +144,47 @@ class Anichin : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        try {
-            val dubType = data.removePrefix("$mainUrl/").substringBefore("|").ifEmpty { "sub" }
-            val hrefPart = data.substringAfterLast("|")
-            
-            // Load episode page
-            val document = app.get(hrefPart).document
-            
-            // Look for video iframes or embed URLs
-            val iframes = document.select("iframe[src], iframe[data-src]")
-            
-            iframes.forEach { iframe ->
-                val iframeUrl = iframe.attr("src").ifEmpty { iframe.attr("data-src") }
-                if (iframeUrl.isNotEmpty() && iframeUrl.startsWith("http")) {
-                    loadCustomExtractor(
-                        "Anichin",
-                        iframeUrl,
-                        mainUrl,
-                        subtitleCallback,
-                        callback,
-                    )
-                }
+        val html = app.get(data).documentLarge
+
+        val options = html.select("option[data-index]")
+
+        for (option in options) {
+            val base64 = option.attr("value")
+            if (base64.isBlank()) continue
+            val label = option.text().trim()
+            val decodedHtml = try {
+                base64Decode(base64)
+            } catch (_: Exception) {
+                Log.w("Error", "Base64 decode failed: $base64")
+                continue
             }
-            
-            // Also check for direct video links in scripts
-            val scripts = document.select("script")
-            scripts.forEach { script ->
-                val html = script.html()
-                // Look for m3u8 or mp4 URLs
-                val videoUrl = Regex("""https?://[^\s"'<>]+\.(?:m3u8|mp4)""").find(html)?.value
-                if (videoUrl != null) {
-                    callback.invoke(
+
+            val iframeUrl = Jsoup.parse(decodedHtml).selectFirst("iframe")?.attr("src")?.let(::httpsify)
+            if (iframeUrl.isNullOrEmpty()) continue
+            when {
+                "vidmoly" in iframeUrl -> {
+                    val cleanedUrl = "http:" + iframeUrl.substringAfter("=\"").substringBefore("\"")
+                    loadExtractor(cleanedUrl, referer = iframeUrl, subtitleCallback, callback)
+                }
+                iframeUrl.endsWith(".mp4") -> {
+                    callback(
                         newExtractorLink(
-                            "Anichin",
-                            "Anichin",
-                            videoUrl,
-                            ExtractorLinkType.M3U8
-                        )
+                            label,
+                            label,
+                            url = iframeUrl,
+                            INFER_TYPE
+                        ) {
+                            this.referer = ""
+                            this.quality = getQualityFromName(label)
+                        }
                     )
                 }
-            }
-            
-            return true
-        } catch (e: Exception) {
-            Log.e("Anichin", "Critical error in loadLinks: ${e.localizedMessage}")
-            return false
-        }
-    }
-
-    data class Response(
-        @SerializedName("status") val status: Boolean,
-        @SerializedName("html") val html: String
-    ) {
-        fun getDocument(): Document {
-            return Jsoup.parse(html)
-        }
-    }
-
-    private data class ZoroSyncData(
-            @JsonProperty("mal_id") val malId: String?,
-            @JsonProperty("anilist_id") val aniListId: String?,
-    )
-
-    // Metadata
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class MetaImage(
-        @JsonProperty("coverType") val coverType: String?,
-        @JsonProperty("url") val url: String?
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class MetaEpisode(
-        @JsonProperty("episode") val episode: String?,
-        @JsonProperty("airDateUtc") val airDateUtc: String?,
-        @JsonProperty("runtime") val runtime: Int?,
-        @JsonProperty("image") val image: String?,
-        @JsonProperty("title") val title: Map<String, String>?,
-        @JsonProperty("overview") val overview: String?,
-        @JsonProperty("rating") val rating: String?,
-        @JsonProperty("finaleType") val finaleType: String?
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class MetaAnimeData(
-        @JsonProperty("titles") val titles: Map<String, String>?,
-        @JsonProperty("images") val images: List<MetaImage>?,
-        @JsonProperty("episodes") val episodes: Map<String, MetaEpisode>?,
-        @JsonProperty("mappings") val mappings: MetaMappings? = null
-    )
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class MetaMappings(
-        @JsonProperty("themoviedb_id") val themoviedbId: Int? = null,
-        @JsonProperty("thetvdb_id") val thetvdbId: Int? = null,
-        @JsonProperty("imdb_id") val imdbId: String? = null,
-        @JsonProperty("mal_id") val malId: Int? = null,
-        @JsonProperty("anilist_id") val anilistId: Int? = null,
-        @JsonProperty("kitsu_id") val kitsuid: String? = null,
-    )
-
-    private fun parseAnimeData(jsonString: String): MetaAnimeData? {
-        return try {
-            val objectMapper = ObjectMapper()
-            objectMapper.readValue(jsonString, MetaAnimeData::class.java)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private inline fun <reified T> String.stringParse(): T? {
-        return try {
-            Gson().fromJson(this, T::class.java)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    private suspend fun loadCustomExtractor(
-        name: String? = null,
-        url: String,
-        referer: String? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-        quality: Int? = null,
-    ) {
-        loadExtractor(url, referer, subtitleCallback) { link ->
-            CoroutineScope(Dispatchers.IO).launch {
-                callback.invoke(
-                    newExtractorLink(
-                        name ?: link.source,
-                        name ?: link.name,
-                        link.url,
-                    ) {
-                        this.quality = when {
-                            link.type == ExtractorLinkType.M3U8 -> link.quality
-                            else -> quality ?: link.quality
-                        }
-                        this.type = link.type
-                        this.referer = link.referer
-                        this.headers = link.headers
-                        this.extractorData = link.extractorData
-                    }
-                )
+                else -> {
+                    loadExtractor(iframeUrl, referer = iframeUrl, subtitleCallback, callback)
+                }
             }
         }
+
+        return true
     }
-}
-
-suspend fun fetchTmdbLogoUrl(
-    tmdbAPI: String,
-    apiKey: String,
-    type: TvType,
-    tmdbId: Int?,
-    appLangCode: String?
-): String? {
-
-    if (tmdbId == null) return null
-
-    val url = if (type == TvType.AnimeMovie)
-        "$tmdbAPI/movie/$tmdbId/images?api_key=$apiKey"
-    else
-        "$tmdbAPI/tv/$tmdbId/images?api_key=$apiKey"
-
-    val json = runCatching { JSONObject(app.get(url).text) }.getOrNull() ?: return null
-    val logos = json.optJSONArray("logos") ?: return null
-    if (logos.length() == 0) return null
-
-    val lang = appLangCode?.trim()?.lowercase()
-
-    fun path(o: JSONObject) = o.optString("file_path")
-    fun isSvg(o: JSONObject) = path(o).endsWith(".svg", true)
-    fun urlOf(o: JSONObject) = "https://image.tmdb.org/t/p/w500${path(o)}"
-
-    var svgFallback: JSONObject? = null
-
-    for (i in 0 until logos.length()) {
-        val logo = logos.optJSONObject(i) ?: continue
-        val p = path(logo)
-        if (p.isBlank()) continue
-
-        val l = logo.optString("iso_639_1").trim().lowercase()
-        if (l == lang) {
-            if (!isSvg(logo)) return urlOf(logo)
-            if (svgFallback == null) svgFallback = logo
-        }
-    }
-    svgFallback?.let { return urlOf(it) }
-
-    var best: JSONObject? = null
-    var bestSvg: JSONObject? = null
-
-    fun voted(o: JSONObject) = o.optDouble("vote_average", 0.0) > 0 && o.optInt("vote_count", 0) > 0
-
-    fun better(a: JSONObject?, b: JSONObject): Boolean {
-        if (a == null) return true
-        val aAvg = a.optDouble("vote_average", 0.0)
-        val aCnt = a.optInt("vote_count", 0)
-        val bAvg = b.optDouble("vote_average", 0.0)
-        val bCnt = b.optInt("vote_count", 0)
-        return bAvg > aAvg || (bAvg == aAvg && bCnt > aCnt)
-    }
-
-    for (i in 0 until logos.length()) {
-        val logo = logos.optJSONObject(i) ?: continue
-        if (!voted(logo)) continue
-
-        if (isSvg(logo)) {
-            if (better(bestSvg, logo)) bestSvg = logo
-        } else {
-            if (better(best, logo)) best = logo
-        }
-    }
-
-    best?.let { return urlOf(it) }
-    bestSvg?.let { return urlOf(it) }
-
-    return null
 }
