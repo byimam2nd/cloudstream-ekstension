@@ -15,7 +15,6 @@ import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.fixUrlNull
 import com.lagradost.cloudstream3.mainPageOf
-import com.lagradost.cloudstream3.SearchResponseList
 import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
@@ -77,24 +76,13 @@ open class Anichin : MainAPI() {
             ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
 
-        // Extract episode count from .epx or .lchx element
-        val episodeText = this.selectFirst("div.bsx .epx")?.text()
-            ?: this.selectFirst("div.bsx .lchx")?.text()
-            ?: ""
-        val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
+        // Add [ONGOING] to title if ongoing
+        val displayTitle = if (isOngoing) "$title [ONGOING]" else title
 
-        // Use same pattern as HiAnime - addDubStatus with 4 parameters
-        return newAnimeSearchResponse(title, href, TvType.Anime) {
+        // Show "Sub" badge on poster (like HiAnime)
+        return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Parameters: hasDub, hasSub, dubCount, subCount
-            // Show episode count as badge if available, otherwise show ongoing status
-            if (episodeCount != null) {
-                addDubStatus(false, true, null, episodeCount)  // Shows "Sub XX"
-            } else if (isOngoing) {
-                addDubStatus(false, true)  // Shows "Sub" badge for ongoing
-            } else {
-                addDubStatus(false, true)  // Shows "Sub" badge
-            }
+            addDubStatus(false, true)  // Shows "Sub" badge
         }
     }
 
@@ -107,13 +95,13 @@ open class Anichin : MainAPI() {
     }
 
 
-    override suspend fun search(query: String, page: Int): SearchResponseList {
+    override suspend fun search(query: String): List<SearchResponse> {
         // OPTIMIZED: Parallel search with timeout (3x faster)
-        val results = CoroutineScope(Dispatchers.IO).async {
-            (1..3).map { p ->
+        return CoroutineScope(Dispatchers.IO).async {
+            (1..3).map { page ->
                 async {
                     try {
-                        val document = app.get("${mainUrl}/pagg/$p/?s=$query", timeout = 5000L)
+                        val document = app.get("${mainUrl}/pagg/$page/?s=$query", timeout = 5000L)
                             .documentLarge
                         document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
                     } catch (e: Exception) {
@@ -122,7 +110,6 @@ open class Anichin : MainAPI() {
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }.await()
-        return SearchResponseList(results)
     }
 
     override suspend fun load(url: String): LoadResponse {
