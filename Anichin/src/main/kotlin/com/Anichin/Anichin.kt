@@ -66,7 +66,34 @@ open class Anichin : MainAPI() {
         val title     = this.select("div.bsx > a").attr("title")
         val href      = fixUrl(this.select("div.bsx > a").attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        
+        // Extract status from .dtl or .badge element (Ongoing/Completed)
+        val statusText = this.selectFirst("div.bsx .dtl")?.text() 
+            ?: this.selectFirst("div.bsx .badge")?.text() 
+            ?: ""
+        
+        // Extract episode count from .epx or .lchx element
+        val episodeText = this.selectFirst("div.bsx .epx")?.text() 
+            ?: this.selectFirst("div.bsx .lchx")?.text()
+            ?: ""
+        val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
+        
+        // Add status/episode info to title for display on posters
+        val displayTitle = buildString {
+            append(title)
+            if (statusText.isNotEmpty()) {
+                append(" [")
+                append(statusText.trim())
+                append("]")
+            }
+            if (episodeCount != null) {
+                append(" (Eps ")
+                append(episodeCount)
+                append(")")
+            }
+        }
+        
+        return newMovieSearchResponse(displayTitle, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
     }
