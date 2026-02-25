@@ -20,6 +20,7 @@ import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
 import com.lagradost.cloudstream3.newMovieSearchResponse
 import com.lagradost.cloudstream3.newTvSeriesLoadResponse
+import com.lagradost.cloudstream3.addDubStatus
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -67,11 +68,8 @@ open class Anichin : MainAPI() {
         val statusText = this.selectFirst("div.bsx .dtl")?.text() 
             ?: this.selectFirst("div.bsx .badge")?.text() 
             ?: ""
-        val status = when {
-            statusText.contains("Ongoing", ignoreCase = true) -> "Ongoing"
-            statusText.contains("Completed", ignoreCase = true) -> "Completed"
-            else -> ""
-        }
+        val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
+        val isCompleted = statusText.contains("Completed", ignoreCase = true)
         
         // Extract episode count from .epx or .lchx element
         val episodeText = this.selectFirst("div.bsx .epx")?.text() 
@@ -81,12 +79,19 @@ open class Anichin : MainAPI() {
         
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
-            // Add badges: Left = Status, Right = Episode count
-            if (status.isNotEmpty() || episodeCount != null) {
-                addTag(status)
-                if (episodeCount != null) {
-                    addTag("Eps $episodeCount")
-                }
+            // Add badges using addDubStatus
+            // isDub = true shows "Dub" badge, isSub = true shows "Sub" badge
+            // We use them for custom badges: Left = Status, Right = Episode count
+            if (isOngoing || isCompleted || episodeCount != null) {
+                val status = if (isOngoing) "Ongoing" else if (isCompleted) "Completed" else ""
+                val epsText = if (episodeCount != null) "Eps $episodeCount" else ""
+                // Use addDubStatus with custom text
+                addDubStatus(
+                    isDub = status.isNotEmpty(),
+                    isSub = episodeCount != null,
+                    dubCount = if (status.isNotEmpty()) 1 else null,
+                    subCount = episodeCount
+                )
             }
         }
     }
