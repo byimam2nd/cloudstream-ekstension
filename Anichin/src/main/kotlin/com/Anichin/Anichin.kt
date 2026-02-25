@@ -10,7 +10,6 @@ import com.lagradost.cloudstream3.MainPageRequest
 import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
-import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.fixUrl
@@ -69,9 +68,9 @@ open class Anichin : MainAPI() {
             ?: this.selectFirst("div.bsx .badge")?.text() 
             ?: ""
         val status = when {
-            statusText.contains("Ongoing", ignoreCase = true) -> DubStatus.Ongoing
-            statusText.contains("Completed", ignoreCase = true) -> DubStatus.Completed
-            else -> null
+            statusText.contains("Ongoing", ignoreCase = true) -> "Ongoing"
+            statusText.contains("Completed", ignoreCase = true) -> "Completed"
+            else -> ""
         }
         
         // Extract episode count from .epx or .lchx element
@@ -83,7 +82,12 @@ open class Anichin : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             // Add badges: Left = Status, Right = Episode count
-            addDubStatus(status, episodeCount)
+            if (status.isNotEmpty() || episodeCount != null) {
+                addTag(status)
+                if (episodeCount != null) {
+                    addTag("Eps $episodeCount")
+                }
+            }
         }
     }
 
