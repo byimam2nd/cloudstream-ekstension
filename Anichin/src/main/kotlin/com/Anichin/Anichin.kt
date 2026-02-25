@@ -16,7 +16,6 @@ import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.fixUrlNull
 import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.SearchResponseList
-import com.lagradost.cloudstream3.toSearchResponseList
 import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
@@ -123,7 +122,7 @@ open class Anichin : MainAPI() {
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }.await()
-        return results.toSearchResponseList()
+        return SearchResponseList(results)
     }
 
     override suspend fun load(url: String): LoadResponse {
