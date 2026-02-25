@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.MainPageRequest
 import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.fixUrl
@@ -62,8 +63,27 @@ open class Anichin : MainAPI() {
         val title     = this.select("div.bsx > a").attr("title")
         val href      = fixUrl(this.select("div.bsx > a").attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
+        
+        // Extract status from .dtl or .badge element (Ongoing/Completed)
+        val statusText = this.selectFirst("div.bsx .dtl")?.text() 
+            ?: this.selectFirst("div.bsx .badge")?.text() 
+            ?: ""
+        val status = when {
+            statusText.contains("Ongoing", ignoreCase = true) -> DubStatus.Ongoing
+            statusText.contains("Completed", ignoreCase = true) -> DubStatus.Completed
+            else -> null
+        }
+        
+        // Extract episode count from .epx or .lchx element
+        val episodeText = this.selectFirst("div.bsx .epx")?.text() 
+            ?: this.selectFirst("div.bsx .lchx")?.text()
+            ?: ""
+        val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
+        
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
+            // Add badges: Left = Status, Right = Episode count
+            addDubStatus(status, episodeCount)
         }
     }
 
