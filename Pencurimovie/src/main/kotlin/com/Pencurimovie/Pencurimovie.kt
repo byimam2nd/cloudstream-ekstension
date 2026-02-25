@@ -1,23 +1,14 @@
 package com.Pencurimovie
 
 import com.lagradost.api.Log
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
 import org.jsoup.nodes.Element
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.*
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
 class Pencurimovie : MainAPI() {
     override var mainUrl = "https://ww73.pencurimovie.bond"
