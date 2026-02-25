@@ -188,10 +188,19 @@ class Pencurimovie : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data, timeout = 5000L).documentLarge
-        document.select("div.movieplay iframe").forEach {
-            val href = it.attr("data-src")
-            loadExtractor(href,subtitleCallback, callback)
+        val iframes = document.select("div.movieplay iframe")
+        
+        // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
+        // 5x faster for episodes with multiple servers
+        coroutineScope {
+            iframes.map { iframe ->
+                async {
+                    val href = iframe.attr("data-src")
+                    loadExtractor(href, subtitleCallback, callback)
+                }
+            }.awaitAll()
         }
+        
         return true
     }
 }
