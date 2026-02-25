@@ -151,13 +151,13 @@ open class Anichin : MainAPI() {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
             }
             
-            newTvSeriesLoadResponse(title, url, TvType.Anime, episodes.reversed()) {
+            val displayTitle = if (lastEpisodeNum != null) "$title (Eps $lastEpisodeNum)" else title
+            
+            newTvSeriesLoadResponse(displayTitle, url, TvType.Anime, episodes.reversed()) {
                 this.posterUrl = poster
                 this.plot = description
-                // Add badge showing last episode number (e.g., "Eps 187")
-                if (lastEpisodeNum != null) {
-                    addDubStatus(false, true, null, lastEpisodeNum)
-                }
+                // Add Sub badge on detail page
+                addDubStatus(false, true)
             }
         } else {
             if (poster.isEmpty()) {
