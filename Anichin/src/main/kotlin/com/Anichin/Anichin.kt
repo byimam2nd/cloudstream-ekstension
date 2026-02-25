@@ -41,6 +41,7 @@ open class Anichin : MainAPI() {
     override val hasMainPage          = true
     override var lang                 = "id"
     override val hasDownloadSupport   = true
+    override val usesWebView          = true
     override val supportedTypes       = setOf(TvType.Anime)
 
     override val mainPage = mainPageOf(
