@@ -112,10 +112,12 @@ open class Anichin : MainAPI() {
         // Add [ONGOING] to title if ongoing
         val displayTitle = if (isOngoing) "$title [ONGOING]" else title
 
-        // Show "Sub" badge on poster (like HiAnime)
+        // CRITICAL: Use addDubStatus CORRECTLY for search card badges
+        // This MUST be called in the builder block for badges to appear on home/search page
         return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            addDubStatus(false, true)  // Shows "Sub" badge
+            // Set both dub and sub to show badge on search cards
+            addDubStatus(true, true)  // Shows "Dub Sub" badge on home/search page
         }
     }
 
