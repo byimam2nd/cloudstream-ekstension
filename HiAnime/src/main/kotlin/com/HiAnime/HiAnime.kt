@@ -50,6 +50,9 @@ import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.net.URI
+import okhttp3.OkHttpClient
+import org.json.JSONObject
 
 // CACHING for instant results (5 minute TTL)
 private data class CachedResult<T>(
@@ -63,9 +66,6 @@ private data class CachedResult<T>(
 private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
 private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
 private val cacheMutex = Mutex()
-import java.net.URI
-import okhttp3.OkHttpClient
-import org.json.JSONObject
 
 class HiAnime : MainAPI() {
     override var mainUrl = HiAnimeProviderPlugin.currentHiAnimeServer
