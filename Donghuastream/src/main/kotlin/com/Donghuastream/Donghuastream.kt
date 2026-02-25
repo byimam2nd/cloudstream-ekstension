@@ -31,8 +31,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+
+// Caching for instant results (5 minute TTL)
+private data class CachedResult<T>(
+    val data: T,
+    val timestamp: Long,
+    val ttl: Long = 300000
+) {
+    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
+}
+
+private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
+private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
+private val cacheMutex = Mutex()
 
 open class Donghuastream : MainAPI() {
     override var mainUrl              = "https://donghuastream.org"
@@ -49,17 +64,33 @@ open class Donghuastream : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "${request.data}${page}"
+        cacheMutex.withLock {
+            val cached = mainPageCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                return cached.data
+            }
+        }
+        
         val document = app.get("$mainUrl/${request.data}$page", timeout = 5000L).documentLarge
-        val home     = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
-
-        return newHomePageResponse(
-            list    = HomePageList(
-                name               = request.name,
-                list               = home,
+        val home = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
+        val response = newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
                 isHorizontalImages = false
             ),
             hasNext = true
         )
+        
+        // Cache the result
+        cacheMutex.withLock {
+            mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
+            mainPageCache.entries.removeAll { it.value.isExpired() }
+        }
+        
+        return response
     }
 
     fun Element.toSearchResult(): SearchResponse {
@@ -81,8 +112,17 @@ open class Donghuastream : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "search_${query}"
+        cacheMutex.withLock {
+            val cached = searchCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                return cached.data
+            }
+        }
+        
         // OPTIMIZED: Parallel search with timeout (3x faster)
-        return CoroutineScope(Dispatchers.IO).async {
+        val results = coroutineScope {
             (1..3).map { page ->
                 async {
                     try {
@@ -94,7 +134,15 @@ open class Donghuastream : MainAPI() {
                     }
                 }
             }.awaitAll().flatten().distinctBy { it.url }
-        }.await()
+        }
+        
+        // Cache the result
+        cacheMutex.withLock {
+            searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
+            searchCache.entries.removeAll { it.value.isExpired() }
+        }
+        
+        return results
     }
 
     override suspend fun load(url: String): LoadResponse {
