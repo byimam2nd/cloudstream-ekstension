@@ -76,24 +76,21 @@ open class Anichin : MainAPI() {
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
         val isCompleted = statusText.contains("Completed", ignoreCase = true)
         
-        // Extract episode count from .epx or .lchx element
+        // Extract episode count from .epx or .lchx element  
         val episodeText = this.selectFirst("div.bsx .epx")?.text() 
             ?: this.selectFirst("div.bsx .lchx")?.text()
             ?: ""
         val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
         
         // Use addDubStatus like HiAnime - shows "Sub" badge with episode count on poster
-        // IMPORTANT: Always show badge if we have status info, even without episode count
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Parameters: hasDub, hasSub, dubCount, subCount
-            // Show "Sub" badge even without episode count (badge will show "Sub" only)
-            addDubStatus(
-                hasDub = false,
-                hasSub = true,  // Always show Sub badge
-                dubCount = null,
-                subCount = episodeCount  // Show episode count if available
-            )
+            // Match HiAnime signature exactly: (hasDub, hasSub, dubCount, subCount)
+            if (episodeCount != null) {
+                addDubStatus(false, true, null, episodeCount)
+            } else {
+                addDubStatus(false, true)  // Just Sub badge without count
+            }
         }
     }
 
