@@ -20,7 +20,6 @@ import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
 import com.lagradost.cloudstream3.newMovieSearchResponse
 import com.lagradost.cloudstream3.newTvSeriesLoadResponse
-import com.lagradost.cloudstream3.addDubStatus
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -79,19 +78,13 @@ open class Anichin : MainAPI() {
         
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
-            // Add badges using addDubStatus
-            // isDub = true shows "Dub" badge, isSub = true shows "Sub" badge
-            // We use them for custom badges: Left = Status, Right = Episode count
-            if (isOngoing || isCompleted || episodeCount != null) {
-                val status = if (isOngoing) "Ongoing" else if (isCompleted) "Completed" else ""
-                val epsText = if (episodeCount != null) "Eps $episodeCount" else ""
-                // Use addDubStatus with custom text
-                addDubStatus(
-                    isDub = status.isNotEmpty(),
-                    isSub = episodeCount != null,
-                    dubCount = if (status.isNotEmpty()) 1 else null,
-                    subCount = episodeCount
-                )
+            // Set status for badge display
+            // Cloudstream UI will show badges based on these fields
+            if (isOngoing || isCompleted) {
+                this.status = if (isOngoing) "Ongoing" else "Completed"
+            }
+            if (episodeCount != null) {
+                this.episode = episodeCount
             }
         }
     }
