@@ -85,8 +85,9 @@ class KisskhProvider : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
+        // OPTIMIZED: Add timeout to prevent hanging
         val searchResponse =
-            app.get("$mainUrl/api/DramaList/Search?q=$query&type=0", referer = "$mainUrl/").text
+            app.get("$mainUrl/api/DramaList/Search?q=$query&type=0", referer = "$mainUrl/", timeout = 5000L).text
         return tryParseJson<ArrayList<Media>>(searchResponse)?.mapNotNull { media ->
             media.toSearchResponse()
         } ?: throw ErrorLoadingException("Invalid Json reponse")
@@ -102,7 +103,8 @@ class KisskhProvider : MainAPI() {
             "$mainUrl/api/DramaList/Drama/${id.last()}?isq=false",
             referer = "$mainUrl/Drama/${
                 getTitle(id.first())
-            }?id=${id.last()}"
+            }?id=${id.last()}",
+            timeout = 5000L
         ).parsedSafe<MediaDetail>()
             ?: throw ErrorLoadingException("Invalid Json reponse")
 
