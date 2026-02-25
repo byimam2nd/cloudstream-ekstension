@@ -9,6 +9,21 @@ import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+// CACHING for instant results (5 minute TTL)
+private data class CachedResult<T>(
+    val data: T,
+    val timestamp: Long,
+    val ttl: Long = 300000
+) {
+    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
+}
+
+private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
+private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
+private val cacheMutex = Mutex()
 
 class Pencurimovie : MainAPI() {
     override var mainUrl = "https://ww73.pencurimovie.bond"
@@ -32,10 +47,18 @@ class Pencurimovie : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 50L).documentLarge
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "${request.data}${page}"
+        cacheMutex.withLock {
+            val cached = mainPageCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                return cached.data
+            }
+        }
+        
+        val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 5000L).documentLarge
         val home = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
-
-        return newHomePageResponse(
+        val response = newHomePageResponse(
             list = HomePageList(
                 name = request.name,
                 list = home,
@@ -43,6 +66,14 @@ class Pencurimovie : MainAPI() {
             ),
             hasNext = true
         )
+        
+        // Cache the result
+        cacheMutex.withLock {
+            mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
+            mainPageCache.entries.removeAll { it.value.isExpired() }
+        }
+        
+        return response
     }
 
     private fun Element.toSearchResult(): SearchResponse {
@@ -58,8 +89,17 @@ class Pencurimovie : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "search_${query}"
+        cacheMutex.withLock {
+            val cached = searchCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                return cached.data
+            }
+        }
+        
         // OPTIMIZED: Parallel search with timeout (3x faster)
-        return coroutineScope {
+        val results = coroutineScope {
             (1..3).map { page ->
                 async {
                     try {
@@ -71,6 +111,14 @@ class Pencurimovie : MainAPI() {
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }
+        
+        // Cache the result
+        cacheMutex.withLock {
+            searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
+            searchCache.entries.removeAll { it.value.isExpired() }
+        }
+        
+        return results
     }
 
     override suspend fun load(url: String): LoadResponse {
