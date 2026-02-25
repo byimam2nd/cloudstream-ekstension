@@ -156,8 +156,6 @@ open class Anichin : MainAPI() {
             newTvSeriesLoadResponse(displayTitle, url, TvType.Anime, episodes.reversed()) {
                 this.posterUrl = poster
                 this.plot = description
-                // Add Sub badge on detail page
-                addDubStatus(false, true)
             }
         } else {
             if (poster.isEmpty()) {
