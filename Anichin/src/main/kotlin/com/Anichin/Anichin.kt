@@ -15,7 +15,6 @@ import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.fixUrlNull
 import com.lagradost.cloudstream3.mainPageOf
-import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
@@ -76,16 +75,15 @@ open class Anichin : MainAPI() {
             ?: this.selectFirst("div.bsx .badge")?.text()
             ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
-        val isCompleted = statusText.contains("Completed", ignoreCase = true)
         
-        // Use DubStatus for Ongoing/Completed badge on poster
-        val dubStatus = if (isOngoing) DubStatus.Ongoing else DubStatus.Completed
+        // Add status to title for display on posters
+        val displayTitle = if (isOngoing) "$title [ONGOING]" else title
         
-        // Use addDubStatus to show Ongoing/Completed badge on poster
-        return newAnimeSearchResponse(title, href, TvType.Anime) {
+        // Use addDubStatus to show "Sub" badge on poster (like HiAnime)
+        return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Show Ongoing/Completed badge on poster (like HiAnime)
-            addDubStatus(dubStatus)
+            // Show "Sub" badge (episode count will appear in detail page)
+            addDubStatus(false, true)
         }
     }
 
