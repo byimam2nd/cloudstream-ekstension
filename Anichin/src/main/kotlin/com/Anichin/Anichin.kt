@@ -15,7 +15,6 @@ import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.fixUrlNull
 import com.lagradost.cloudstream3.mainPageOf
-import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
@@ -83,13 +82,12 @@ open class Anichin : MainAPI() {
             ?: ""
         val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
         
-        // Use addDubStatus like HiAnime - shows badges on poster!
-        // Badge shows episode count on poster (like HiAnime "Sub" badge)
-        val status = if (isOngoing) DubStatus.Ongoing else if (isCompleted) DubStatus.Completed else DubStatus.Completed
+        // Use addDubStatus like HiAnime - shows "Sub" badge with episode count on poster
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Show episode count as badge on poster
-            addDubStatus(status, episodeCount)  // This shows "Eps XX" on poster
+            // Parameters: hasDub, hasSub, dubCount, subCount
+            // subCount shows as badge on poster (e.g., "Sub 24")
+            addDubStatus(false, episodeCount != null, null, episodeCount)
         }
     }
 
