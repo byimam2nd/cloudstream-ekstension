@@ -69,21 +69,33 @@ open class Anichin : MainAPI() {
         val title     = this.select("div.bsx > a").attr("title")
         val href      = fixUrl(this.select("div.bsx > a").attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
-        
+
         // Extract status from .dtl or .badge element (Ongoing/Completed)
         val statusText = this.selectFirst("div.bsx .dtl")?.text()
             ?: this.selectFirst("div.bsx .badge")?.text()
             ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
-        
+
+        // Extract episode count from .epx or .lchx element
+        val episodeText = this.selectFirst("div.bsx .epx")?.text()
+            ?: this.selectFirst("div.bsx .lchx")?.text()
+            ?: ""
+        val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
+
         // Add status to title for display on posters
         val displayTitle = if (isOngoing) "$title [ONGOING]" else title
-        
-        // Use addDubStatus to show "Sub" badge on poster (like HiAnime)
+
+        // Use addDubStatus to show badge on poster
+        // If episode count available, show "Eps XX", otherwise show "Sub"
         return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Show "Sub" badge (episode count will appear in detail page)
-            addDubStatus(false, true)
+            if (episodeCount != null) {
+                // Show episode count as badge (e.g., "Eps 24")
+                addDubStatus(false, true, null, episodeCount)
+            } else {
+                // No episode count, just show "Sub" badge
+                addDubStatus(false, true)
+            }
         }
     }
 
