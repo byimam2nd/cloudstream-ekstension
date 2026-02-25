@@ -62,30 +62,8 @@ open class Anichin : MainAPI() {
         val title     = this.select("div.bsx > a").attr("title")
         val href      = fixUrl(this.select("div.bsx > a").attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
-        
-        // Extract status from .dtl or .badge element (Ongoing/Completed)
-        val statusText = this.selectFirst("div.bsx .dtl")?.text() 
-            ?: this.selectFirst("div.bsx .badge")?.text() 
-            ?: ""
-        val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
-        val isCompleted = statusText.contains("Completed", ignoreCase = true)
-        
-        // Extract episode count from .epx or .lchx element
-        val episodeText = this.selectFirst("div.bsx .epx")?.text() 
-            ?: this.selectFirst("div.bsx .lchx")?.text()
-            ?: ""
-        val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
-        
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
-            // Set status for badge display
-            // Cloudstream UI will show badges based on these fields
-            if (isOngoing || isCompleted) {
-                this.status = if (isOngoing) "Ongoing" else "Completed"
-            }
-            if (episodeCount != null) {
-                this.episode = episodeCount
-            }
         }
     }
 
