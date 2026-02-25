@@ -76,26 +76,13 @@ open class Anichin : MainAPI() {
             ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
 
-        // Extract episode count from .epx or .lchx element
-        val episodeText = this.selectFirst("div.bsx .epx")?.text()
-            ?: this.selectFirst("div.bsx .lchx")?.text()
-            ?: ""
-        val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
-
         // Add status to title for display on posters
         val displayTitle = if (isOngoing) "$title [ONGOING]" else title
 
-        // Use addDubStatus to show badge on poster
-        // If episode count available, show "Eps XX", otherwise show "Sub"
+        // Show "Sub" badge on poster (episode count will appear on detail page)
         return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            if (episodeCount != null) {
-                // Show episode count as badge (e.g., "Eps 24")
-                addDubStatus(false, true, null, episodeCount)
-            } else {
-                // No episode count, just show "Sub" badge
-                addDubStatus(false, true)
-            }
+            addDubStatus(false, true)
         }
     }
 
@@ -133,32 +120,48 @@ open class Anichin : MainAPI() {
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
         val type=document.selectFirst(".spe")?.text().toString()
         val tvtag=if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
+        
         return if (tvtag == TvType.TvSeries) {
             val Eppage= document.selectFirst(".eplister li > a")?.attr("href") ?:""
             val doc= app.get(Eppage).documentLarge
-            val episodes=doc.select("div.episodelist > ul > li").map { info->
-                        val href1 = info.select("a").attr("href")
-                        val episode = info.select("a span").text().substringAfter("-").substringBeforeLast("-")
-                        val posterr=info.selectFirst("a img")?.attr("data-src") ?:""
-                        newEpisode(href1)
-                        {
-                            this.name=episode.replace(title,"",ignoreCase = true)
-                            this.episode=episode.toIntOrNull()
-                            this.posterUrl=posterr
-                        }
+            
+            // Get all episodes to find the last episode number
+            val allEpisodes = doc.select("div.episodelist > ul > li")
+            val lastEpisodeNum = allEpisodes.lastOrNull()?.let { lastEp ->
+                val episodeText = lastEp.select("a span").text()
+                    .substringAfter("-")
+                    .substringBeforeLast("-")
+                episodeText.filter { it.isDigit() }.toIntOrNull()
             }
-            if (poster.isEmpty())
-            {
-                poster=document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
+            
+            val episodes = allEpisodes.map { info ->
+                val href1 = info.select("a").attr("href")
+                val episode = info.select("a span").text()
+                    .substringAfter("-")
+                    .substringBeforeLast("-")
+                val posterr = info.selectFirst("a img")?.attr("data-src") ?:""
+                newEpisode(href1) {
+                    this.name = episode.replace(title, "", ignoreCase = true)
+                    this.episode = episode.toIntOrNull()
+                    this.posterUrl = posterr
+                }
             }
+            
+            if (poster.isEmpty()) {
+                poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
+            }
+            
             newTvSeriesLoadResponse(title, url, TvType.Anime, episodes.reversed()) {
                 this.posterUrl = poster
                 this.plot = description
+                // Add badge showing last episode number (e.g., "Eps 187")
+                if (lastEpisodeNum != null) {
+                    addDubStatus(false, true, null, lastEpisodeNum)
+                }
             }
         } else {
-            if (poster.isEmpty())
-            {
-                poster=document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
+            if (poster.isEmpty()) {
+                poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
             }
             newMovieLoadResponse(title, url, TvType.Movie, href) {
                 this.posterUrl = poster
