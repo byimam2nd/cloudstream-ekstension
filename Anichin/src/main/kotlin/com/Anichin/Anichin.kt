@@ -83,11 +83,17 @@ open class Anichin : MainAPI() {
         val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
         
         // Use addDubStatus like HiAnime - shows "Sub" badge with episode count on poster
+        // IMPORTANT: Always show badge if we have status info, even without episode count
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
             // Parameters: hasDub, hasSub, dubCount, subCount
-            // subCount shows as badge on poster (e.g., "Sub 24")
-            addDubStatus(false, episodeCount != null, null, episodeCount)
+            // Show "Sub" badge even without episode count (badge will show "Sub" only)
+            addDubStatus(
+                hasDub = false,
+                hasSub = true,  // Always show Sub badge
+                dubCount = null,
+                subCount = episodeCount  // Show episode count if available
+            )
         }
     }
 
