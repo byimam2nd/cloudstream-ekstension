@@ -111,7 +111,7 @@ open class SuperStream(sharedPref: SharedPreferences? = null) : TmdbProvider() {
 
 
         private suspend fun fetchProxyList(): List<String> = try {
-            val response = app.get(REMOTE_PROXY_LIST).text
+            val response = app.get(REMOTE_PROXY_LIST, timeout = 10000L).text
             val json = JSONObject(response)
             val arr = json.getJSONArray("proxies")
 
@@ -255,7 +255,7 @@ open class SuperStream(sharedPref: SharedPreferences? = null) : TmdbProvider() {
 
     override suspend fun search(query: String,page: Int): SearchResponseList? {
         val tmdbAPI = getApiBase()
-        return app.get("$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=$page&include_adult=${settingsForProvider.enableAdult}")
+        return app.get("$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=$page&include_adult=${settingsForProvider.enableAdult}", timeout = 10000L)
             .parsedSafe<Results>()?.results?.mapNotNull { media ->
                 media.toSearchResponse()
             }?.toNewSearchResponseList()
@@ -291,7 +291,7 @@ open class SuperStream(sharedPref: SharedPreferences? = null) : TmdbProvider() {
             "$tmdbAPI/tv/${data.id}?api_key=$apiKey&append_to_response=$append"
         }
 
-        val res = app.get(resUrl).parsedSafe<MediaDetail>()
+        val res = app.get(resUrl, timeout = 10000L).parsedSafe<MediaDetail>()
             ?: throw ErrorLoadingException("Invalid Json Response")
         val title = res.title ?: res.name ?: return null
         val poster = getOriImageUrl(res.posterPath)
@@ -331,7 +331,7 @@ open class SuperStream(sharedPref: SharedPreferences? = null) : TmdbProvider() {
         if (type == TvType.TvSeries) {
             val lastSeason = res.last_episode_to_air?.season_number
             val episodes = res.seasons?.mapNotNull { season ->
-                app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey")
+                app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey", timeout = 10000L)
                     .parsedSafe<MediaDetailEpisodes>()?.episodes?.map { eps ->
                         Log.d("Phisher",eps.toJson())
                         newEpisode(
@@ -376,7 +376,7 @@ open class SuperStream(sharedPref: SharedPreferences? = null) : TmdbProvider() {
                 val gson = Gson()
                 val animeType = if (data.type?.contains("tv", ignoreCase = true) == true) "series" else "movie"
                 val imdbId = res.external_ids?.imdb_id.orEmpty()
-                val cineJsonText = app.get("$Cinemeta/meta/$animeType/$imdbId.json").text
+                val cineJsonText = app.get("$Cinemeta/meta/$animeType/$imdbId.json", timeout = 10000L).text
                 val cinejson = runCatching {
                     gson.fromJson(cineJsonText, CinemetaRes::class.java)
                 }.getOrNull()

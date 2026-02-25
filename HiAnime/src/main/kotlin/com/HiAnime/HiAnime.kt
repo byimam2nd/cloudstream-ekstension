@@ -131,13 +131,13 @@ class HiAnime : MainAPI() {
 
     override suspend fun search(query: String,page: Int): SearchResponseList {
         val link = "$mainUrl/search?keyword=$query&page=$page"
-        val res = app.get(link).documentLarge
+        val res = app.get(link, timeout = 10000L).documentLarge
 
         return res.select("div.flw-item").map { it.toSearchResult() }.toNewSearchResponseList()
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}$page").document
+        val document = app.get("${request.data}$page", timeout = 10000L).document
         val items = document.select("div.flw-item").map { it.toSearchResult() }
         return newHomePageResponse(request.name, items)
     }
@@ -146,7 +146,7 @@ class HiAnime : MainAPI() {
         val document = app.get(url.replace("watch/", "")).document
 
         val syncData = tryParseJson<ZoroSyncData>(document.selectFirst("#syncData")?.data())
-        val syncMetaData = app.get("https://api.ani.zip/mappings?mal_id=${syncData?.malId}").toString()
+        val syncMetaData = app.get("https://api.ani.zip/mappings?mal_id=${syncData?.malId}", timeout = 10000L).toString()
         val animeMetaData = parseAnimeData(syncMetaData)
         val title = document.selectFirst(".anisc-detail > .film-name")?.text().toString()
         val description = document.select("div.film-description > div").text().ifEmpty { document.select("div.film-description div").text() }
@@ -184,7 +184,7 @@ class HiAnime : MainAPI() {
         
         while (hasMorePages) {
             try {
-                val responseBody = app.get("$mainUrl/ajax/v2/episode/list/$animeId?page=$page").body.string()
+                val responseBody = app.get("$mainUrl/ajax/v2/episode/list/$animeId?page=$page", timeout = 10000L).body.string()
                 val epRes = responseBody.stringParse<Response>()?.getDocument()
                 
                 if (epRes == null) {
@@ -288,7 +288,7 @@ class HiAnime : MainAPI() {
             val dubType = data.removePrefix("$mainUrl/").substringBefore("|").ifEmpty { "raw" }
             val hrefPart = data.substringAfterLast("|")
             val epId = hrefPart.substringAfter("ep=")
-            val doc = app.get("$mainUrl/ajax/v2/episode/servers?episodeId=$epId")
+            val doc = app.get("$mainUrl/ajax/v2/episode/servers?episodeId=$epId", timeout = 10000L)
                 .parsed<Response>()
                 .getDocument()
             val servers = doc.select(".server-item[data-type=$dubType][data-id], .server-item[data-type=raw][data-id]")
@@ -302,7 +302,7 @@ class HiAnime : MainAPI() {
                     }
                 }.distinctBy { it.first }
             servers.forEach { (id, label) ->
-                val sourceurl = app.get("${mainUrl}/ajax/v2/episode/sources?id=$id").parsedSafe<EpisodeServers>()?.link
+                val sourceurl = app.get("${mainUrl}/ajax/v2/episode/sources?id=$id", timeout = 10000L).parsedSafe<EpisodeServers>()?.link
                 if (sourceurl != null) {
                     loadCustomExtractor(
                         "HiAnime [$label]",
@@ -503,7 +503,7 @@ suspend fun fetchTmdbLogoUrl(
     else
         "$tmdbAPI/tv/$tmdbId/images?api_key=$apiKey"
 
-    val json = runCatching { JSONObject(app.get(url).text) }.getOrNull() ?: return null
+    val json = runCatching { JSONObject(app.get(url, timeout = 10000L).text) }.getOrNull() ?: return null
     val logos = json.optJSONArray("logos") ?: return null
     if (logos.length() == 0) return null
 

@@ -158,7 +158,7 @@ open class StreamPlay(val sharedPref: SharedPreferences? = null) : TmdbProvider(
         suspend fun getDomains(forceRefresh: Boolean = false): DomainsParser? {
             if (cachedDomains == null || forceRefresh) {
                 try {
-                    cachedDomains = app.get(DOMAINS_URL).parsedSafe<DomainsParser>()
+                    cachedDomains = app.get(DOMAINS_URL, timeout = 10000L).parsedSafe<DomainsParser>()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -316,7 +316,7 @@ open class StreamPlay(val sharedPref: SharedPreferences? = null) : TmdbProvider(
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
         val tmdbAPI = getApiBase()
-        return app.get("$tmdbAPI/search/multi?api_key=$apiKey&language=$langCode&query=$query&page=$page&include_adult=${settingsForProvider.enableAdult}")
+        return app.get("$tmdbAPI/search/multi?api_key=$apiKey&language=$langCode&query=$query&page=$page&include_adult=${settingsForProvider.enableAdult}", timeout = 10000L)
             .parsedSafe<Results>()?.results?.mapNotNull { media ->
                 media.toSearchResponse()
             }?.toNewSearchResponseList()
@@ -341,8 +341,8 @@ open class StreamPlay(val sharedPref: SharedPreferences? = null) : TmdbProvider(
         }
 
         val (res, enRes) = coroutineScope {
-            val resDeferred = async { app.get(resUrl).parsedSafe<MediaDetail>() }
-            val enResDeferred = async { app.get(enResUrl).parsedSafe<MediaDetail>() }
+            val resDeferred = async { app.get(resUrl, timeout = 10000L).parsedSafe<MediaDetail>() }
+            val enResDeferred = async { app.get(enResUrl, timeout = 10000L).parsedSafe<MediaDetail>() }
 
             Pair(
                 resDeferred.await() ?: throw ErrorLoadingException("Invalid Json Response"),
@@ -389,7 +389,7 @@ open class StreamPlay(val sharedPref: SharedPreferences? = null) : TmdbProvider(
             }
 
             val cineDeferred = async {
-                app.get("$Cinemeta/meta/$cinetype/${res.external_ids?.imdb_id}.json")
+                app.get("$Cinemeta/meta/$cinetype/${res.external_ids?.imdb_id}.json", timeout = 10000L)
                     .parsedSafe<CinemetaRes>()
             }
 
@@ -410,7 +410,7 @@ open class StreamPlay(val sharedPref: SharedPreferences? = null) : TmdbProvider(
                 res.seasons?.map { season ->
                     async {
                         semaphore.withPermit {
-                            app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey&language=$langCode")
+                            app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey&language=$langCode", timeout = 10000L)
                                 .parsedSafe<MediaDetailEpisodes>()
                                 ?.episodes
                                 ?.map { eps ->
@@ -462,7 +462,7 @@ open class StreamPlay(val sharedPref: SharedPreferences? = null) : TmdbProvider(
                 val animeVideos = cineRes?.meta?.videos?.filter { it.season != 0 } ?: emptyList()
                 val jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title
                     ?: cineRes?.meta?.name
-                val syncMetaData = app.get("https://api.ani.zip/mappings?imdb_id=$imdbId").textLarge
+                val syncMetaData = app.get("https://api.ani.zip/mappings?imdb_id=$imdbId", timeout = 10000L).textLarge
                 val animeMetaData = parseAnimeData(syncMetaData)
                 val kitsuid = animeMetaData?.mappings?.kitsuid
                 fun buildEpisodeList(isDub: Boolean) = animeVideos.map { video ->

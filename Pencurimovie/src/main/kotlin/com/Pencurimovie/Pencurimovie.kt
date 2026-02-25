@@ -126,7 +126,7 @@ class Pencurimovie : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).documentLarge
+        val document = app.get(data, timeout = 5000L).documentLarge
         document.select("div.movieplay iframe").forEach {
             val href = it.attr("data-src")
             loadExtractor(href,subtitleCallback, callback)
