@@ -19,6 +19,8 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
 import com.lagradost.cloudstream3.newMovieSearchResponse
+import com.lagradost.cloudstream3.newAnimeSearchResponse
+import com.lagradost.cloudstream3.addDubStatus
 import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
@@ -71,6 +73,8 @@ open class Anichin : MainAPI() {
         val statusText = this.selectFirst("div.bsx .dtl")?.text() 
             ?: this.selectFirst("div.bsx .badge")?.text() 
             ?: ""
+        val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
+        val isCompleted = statusText.contains("Completed", ignoreCase = true)
         
         // Extract episode count from .epx or .lchx element
         val episodeText = this.selectFirst("div.bsx .epx")?.text() 
@@ -78,23 +82,17 @@ open class Anichin : MainAPI() {
             ?: ""
         val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
         
-        // Add status/episode info to title for display on posters
-        val displayTitle = buildString {
-            append(title)
-            if (statusText.isNotEmpty()) {
-                append(" [")
-                append(statusText.trim())
-                append("]")
-            }
-            if (episodeCount != null) {
-                append(" (Eps ")
-                append(episodeCount)
-                append(")")
-            }
-        }
-        
-        return newMovieSearchResponse(displayTitle, href, TvType.Movie) {
+        // Use addDubStatus like HiAnime - shows badges on poster!
+        // Left badge = "Sub" with episode count, Right badge = "Dub" if available
+        return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
+            // Show episode count as badge on poster (like HiAnime)
+            addDubStatus(
+                isDub = false,  // No dub badge
+                isSub = episodeCount != null || isOngoing || isCompleted,  // Show sub badge
+                dubCount = null,
+                subCount = episodeCount  // This shows "Eps XX" on poster
+            )
         }
     }
 
