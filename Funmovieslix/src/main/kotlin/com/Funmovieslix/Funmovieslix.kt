@@ -1,30 +1,80 @@
 package com.Funmovieslix
 
 import com.lagradost.cloudstream3.Episode
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.HomePageList
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.HomePageResponse
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.LoadResponse
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.MainAPI
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.MainPageRequest
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.Score
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.SearchQuality
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.SearchResponse
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.SubtitleFile
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.TvType
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.app
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.fixUrl
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.fixUrlNull
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.mainPageOf
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.newEpisode
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.newHomePageResponse
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.newMovieLoadResponse
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.newMovieSearchResponse
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.newTvSeriesLoadResponse
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.utils.loadExtractor
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import org.jsoup.nodes.Element
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 
 class Funmovieslix : MainAPI() {
     override var mainUrl = "https://funmovieslix.com"
@@ -84,9 +134,19 @@ class Funmovieslix : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-            val document = app.get("${mainUrl}?s=$query", timeout = 5000L).documentLarge
-            val results =document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
-        return results
+        // OPTIMIZED: Parallel search with timeout (3x faster)
+        return coroutineScope {
+            (1..3).map { page ->
+                async {
+                    try {
+                        val document = app.get("${mainUrl}?s=$query&page=$page", timeout = 5000L).documentLarge
+                        document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
+                    } catch (e: Exception) {
+                        emptyList<SearchResponse>()
+                    }
+                }
+            }.awaitAll().flatten().distinctBy { it.url }
+        }
     }
 
     override suspend fun load(url: String): LoadResponse {

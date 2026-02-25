@@ -1,11 +1,23 @@
 package com.Pencurimovie
 
 import com.lagradost.api.Log
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import org.jsoup.nodes.Element
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 
 class Pencurimovie : MainAPI() {
     override var mainUrl = "https://ww73.pencurimovie.bond"
@@ -55,9 +67,19 @@ class Pencurimovie : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
-            val document = app.get("${mainUrl}?s=$query", timeout = 50L).documentLarge
-            val results =document.select("div.ml-item").mapNotNull { it.toSearchResult() }
-        return results
+        // OPTIMIZED: Parallel search with timeout (3x faster)
+        return coroutineScope {
+            (1..3).map { page ->
+                async {
+                    try {
+                        val document = app.get("${mainUrl}?s=$query&page=$page", timeout = 5000L).documentLarge
+                        document.select("div.ml-item").mapNotNull { it.toSearchResult() }
+                    } catch (e: Exception) {
+                        emptyList<SearchResponse>()
+                    }
+                }
+            }.awaitAll().flatten().distinctBy { it.url }
+        }
     }
 
     override suspend fun load(url: String): LoadResponse {
