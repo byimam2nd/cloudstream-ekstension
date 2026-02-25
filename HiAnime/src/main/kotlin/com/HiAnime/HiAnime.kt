@@ -45,9 +45,24 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+
+// CACHING for instant results (5 minute TTL)
+private data class CachedResult<T>(
+    val data: T,
+    val timestamp: Long,
+    val ttl: Long = 300000
+) {
+    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
+}
+
+private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
+private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
+private val cacheMutex = Mutex()
 import java.net.URI
 import okhttp3.OkHttpClient
 import org.json.JSONObject
@@ -129,17 +144,50 @@ class HiAnime : MainAPI() {
                     "$mainUrl/completed?page=" to "Latest Completed",
             )
 
-    override suspend fun search(query: String,page: Int): SearchResponseList {
+    override suspend fun search(query: String, page: Int): SearchResponseList {
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "search_${query}_${page}"
+        cacheMutex.withLock {
+            val cached = searchCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                return cached.data.toNewSearchResponseList()
+            }
+        }
+        
         val link = "$mainUrl/search?keyword=$query&page=$page"
         val res = app.get(link, timeout = 10000L).documentLarge
-
-        return res.select("div.flw-item").map { it.toSearchResult() }.toNewSearchResponseList()
+        val results = res.select("div.flw-item").map { it.toSearchResult() }.toNewSearchResponseList()
+        
+        // Cache the result
+        cacheMutex.withLock {
+            searchCache[cacheKey] = CachedResult(results.items, System.currentTimeMillis())
+            searchCache.entries.removeAll { it.value.isExpired() }
+        }
+        
+        return results
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "${request.data}${page}"
+        cacheMutex.withLock {
+            val cached = mainPageCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                return cached.data
+            }
+        }
+        
         val document = app.get("${request.data}$page", timeout = 10000L).document
         val items = document.select("div.flw-item").map { it.toSearchResult() }
-        return newHomePageResponse(request.name, items)
+        val response = newHomePageResponse(request.name, items)
+        
+        // Cache the result
+        cacheMutex.withLock {
+            mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
+            mainPageCache.entries.removeAll { it.value.isExpired() }
+        }
+        
+        return response
     }
 
     override suspend fun load(url: String): LoadResponse {

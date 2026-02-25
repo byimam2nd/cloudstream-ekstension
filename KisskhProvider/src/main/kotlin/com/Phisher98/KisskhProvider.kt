@@ -18,6 +18,21 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.json.JSONObject
 import java.util.ArrayList
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+// CACHING for instant results (5 minute TTL)
+private data class CachedResult<T>(
+    val data: T,
+    val timestamp: Long,
+    val ttl: Long = 300000
+) {
+    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
+}
+
+private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
+private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
+private val cacheMutex = Mutex()
 
 class KisskhProvider : MainAPI() {
     override var mainUrl = "https://kisskh.ovh"
@@ -52,12 +67,21 @@ class KisskhProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val home = app.get("$mainUrl/api/DramaList/List?page=$page${request.data}")
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "${request.data}${page}"
+        cacheMutex.withLock {
+            val cached = mainPageCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                return cached.data
+            }
+        }
+        
+        val home = app.get("$mainUrl/api/DramaList/List?page=$page${request.data}", timeout = 5000L)
             .parsedSafe<Responses>()?.data
             ?.mapNotNull { media ->
                 media.toSearchResponse()
             } ?: throw ErrorLoadingException("Invalid Json reponse")
-        return newHomePageResponse(
+        val response = newHomePageResponse(
             list = HomePageList(
                 name = request.name,
                 list = home,
@@ -65,6 +89,14 @@ class KisskhProvider : MainAPI() {
             ),
             hasNext = true
         )
+        
+        // Cache the result
+        cacheMutex.withLock {
+            mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
+            mainPageCache.entries.removeAll { it.value.isExpired() }
+        }
+        
+        return response
     }
 
     private fun Media.toSearchResponse(): SearchResponse? {
@@ -85,12 +117,29 @@ class KisskhProvider : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "search_${query}"
+        cacheMutex.withLock {
+            val cached = searchCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                return cached.data
+            }
+        }
+        
         // OPTIMIZED: Add timeout to prevent hanging
         val searchResponse =
             app.get("$mainUrl/api/DramaList/Search?q=$query&type=0", referer = "$mainUrl/", timeout = 5000L).text
-        return tryParseJson<ArrayList<Media>>(searchResponse)?.mapNotNull { media ->
+        val results = tryParseJson<ArrayList<Media>>(searchResponse)?.mapNotNull { media ->
             media.toSearchResponse()
         } ?: throw ErrorLoadingException("Invalid Json reponse")
+        
+        // Cache the result
+        cacheMutex.withLock {
+            searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
+            searchCache.entries.removeAll { it.value.isExpired() }
+        }
+        
+        return results
     }
 
     private fun getTitle(str: String): String {
