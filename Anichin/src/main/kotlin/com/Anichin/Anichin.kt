@@ -15,6 +15,7 @@ import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.fixUrlNull
 import com.lagradost.cloudstream3.mainPageOf
+import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
@@ -71,27 +72,20 @@ open class Anichin : MainAPI() {
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
         
         // Extract status from .dtl or .badge element (Ongoing/Completed)
-        val statusText = this.selectFirst("div.bsx .dtl")?.text() 
-            ?: this.selectFirst("div.bsx .badge")?.text() 
+        val statusText = this.selectFirst("div.bsx .dtl")?.text()
+            ?: this.selectFirst("div.bsx .badge")?.text()
             ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
         val isCompleted = statusText.contains("Completed", ignoreCase = true)
         
-        // Extract episode count from .epx or .lchx element  
-        val episodeText = this.selectFirst("div.bsx .epx")?.text() 
-            ?: this.selectFirst("div.bsx .lchx")?.text()
-            ?: ""
-        val episodeCount = episodeText.filter { it.isDigit() }.toIntOrNull()
+        // Use DubStatus for Ongoing/Completed badge on poster
+        val dubStatus = if (isOngoing) DubStatus.Ongoing else DubStatus.Completed
         
-        // Use addDubStatus like HiAnime - shows "Sub" badge with episode count on poster
+        // Use addDubStatus to show Ongoing/Completed badge on poster
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Match HiAnime signature exactly: (hasDub, hasSub, dubCount, subCount)
-            if (episodeCount != null) {
-                addDubStatus(false, true, null, episodeCount)
-            } else {
-                addDubStatus(false, true)  // Just Sub badge without count
-            }
+            // Show Ongoing/Completed badge on poster (like HiAnime)
+            addDubStatus(dubStatus)
         }
     }
 
