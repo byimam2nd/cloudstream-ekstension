@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
@@ -47,6 +48,9 @@ private data class CachedResult<T>(
     fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
 }
 
+// Cache size limits to prevent memory leaks
+private const val MAX_CACHE_SIZE = 50
+
 private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
 private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
 private val cacheMutex = Mutex()
@@ -58,7 +62,7 @@ open class Anichin : MainAPI() {
     override var lang                 = "id"
     override val hasDownloadSupport   = true
     override val usesWebView          = true
-    override val supportedTypes       = setOf(TvType.Anime)
+    override val supportedTypes       = setOf(TvType.Anime, TvType.AnimeMovie, TvType.TvSeries)
 
     override val mainPage = mainPageOf(
         "seri/?status=&type=&order=update&page=" to "Recently Updated",
@@ -112,12 +116,11 @@ open class Anichin : MainAPI() {
         // Add [ONGOING] to title if ongoing
         val displayTitle = if (isOngoing) "$title [ONGOING]" else title
 
-        // CRITICAL: Use addDubStatus CORRECTLY for search card badges
-        // This MUST be called in the builder block for badges to appear on home/search page
+        // FIX 6: Accurate badge display - Anichin typically has subtitles only
         return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Set both dub and sub to show badge on search cards
-            addDubStatus(true, true)  // Shows "Dub Sub" badge on home/search page
+            // Accurate badge: Sub only (Anichin is fansub site)
+            addDubStatus(false, true)  // Shows "Sub" badge
         }
     }
 
@@ -155,8 +158,12 @@ open class Anichin : MainAPI() {
             }.awaitAll().flatten().distinctBy { it.url }
         }
         
-        // Cache the result
+        // Cache the result with size limit
         cacheMutex.withLock {
+            // Enforce cache size limit to prevent memory leaks
+            if (searchCache.size > MAX_CACHE_SIZE) {
+                searchCache.clear()
+            }
             searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
             // Clean old cache entries
             searchCache.entries.removeAll { it.value.isExpired() }
@@ -167,16 +174,18 @@ open class Anichin : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url, timeout = 5000L).documentLarge
-        val title       = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
-        val href=document.selectFirst(".eplister li > a")?.attr("href") ?:""
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
+        val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
         var poster = document.select("div.thumb > img").attr("src")
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
-        val type=document.selectFirst(".spe")?.text().toString()
-        val tvtag=if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
+        val type = document.selectFirst(".spe")?.text().toString()
         
-        return if (tvtag == TvType.TvSeries) {
-            val Eppage= document.selectFirst(".eplister li > a")?.attr("href") ?:""
-            val doc= app.get(Eppage, timeout = 5000L).documentLarge
+        // FIX 1: Consistent TvType for anime content
+        val tvtag = if (type.contains("Movie", ignoreCase = true)) TvType.AnimeMovie else TvType.Anime
+
+        return if (tvtag == TvType.Anime) {
+            val Eppage = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
+            val doc = app.get(Eppage, timeout = 5000L).documentLarge
 
             // Get all episodes to find the last episode number
             val allEpisodes = doc.select("div.episodelist > ul > li")
@@ -187,36 +196,31 @@ open class Anichin : MainAPI() {
                 episodeText.filter { it.isDigit() }.toIntOrNull()
             }
 
-            // OPTIMIZED: Parallel episode loading (10 episodes at a time)
-            // 5-10x faster for anime with many episodes
-            val episodes = coroutineScope {
-                allEpisodes.map { info ->
-                    async {
-                        val href1 = info.select("a").attr("href")
-                        val episode = info.select("a span").text()
-                            .substringAfter("-")
-                            .substringBeforeLast("-")
-                        var posterr = info.selectFirst("a img")?.attr("data-src") ?:""
-                        
-                        // OPTIMIZED: Resize poster for mobile screens (prevent breaking)
-                        // Max 500px width for better quality on non-Android TV
-                        if (posterr.isNotEmpty()) {
-                            posterr = optimizeImageUrl(posterr, 500)
-                        }
-                        
-                        newEpisode(href1) {
-                            this.name = episode.replace(title, "", ignoreCase = true)
-                            this.episode = episode.toIntOrNull()
-                            this.posterUrl = posterr
-                        }
-                    }
-                }.awaitAll()
+            // FIX 2 & 3: Safe episode parsing without unnecessary async
+            val episodes = allEpisodes.map { info ->
+                val href1 = info.select("a").attr("href")
+                
+                // FIX 2: Robust episode number parsing
+                val rawText = info.select("a span").text()
+                val episodeNumber = rawText.filter { it.isDigit() }.toIntOrNull()
+                
+                var posterr = info.selectFirst("a img")?.attr("data-src") ?: ""
+
+                // Image optimization
+                if (posterr.isNotEmpty()) {
+                    posterr = optimizeImageUrl(posterr, 500)
+                }
+
+                newEpisode(href1) {
+                    this.name = rawText.replace(title, "", ignoreCase = true)
+                    this.episode = episodeNumber
+                    this.posterUrl = posterr
+                }
             }.reversed()
 
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
             } else {
-                // OPTIMIZED: Resize main poster for mobile screens
                 poster = optimizeImageUrl(poster, 500)
             }
 
@@ -227,13 +231,13 @@ open class Anichin : MainAPI() {
                 this.plot = description
             }
         } else {
+            // Anime movie
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
             } else {
-                // OPTIMIZED: Resize movie poster for mobile screens
                 poster = optimizeImageUrl(poster, 500)
             }
-            newMovieLoadResponse(title, url, TvType.Movie, href) {
+            newMovieLoadResponse(title, url, TvType.AnimeMovie, href) {
                 this.posterUrl = poster
                 this.plot = description
             }
@@ -262,16 +266,16 @@ open class Anichin : MainAPI() {
     ): Boolean {
         val html = app.get(data, timeout = 5000L).documentLarge
         val options = html.select("option[data-index]")
-        
-        // OPTIMIZED: Parallel link extraction (extract 5 servers simultaneously)
-        // 5x faster for episodes with multiple servers
-        coroutineScope {
+
+        // FIX 5: Use supervisorScope for exception safety
+        // One server failing won't cancel all others
+        supervisorScope {
             options.map { option ->
                 async {
                     val base64 = option.attr("value")
                     if (base64.isBlank()) return@async
                     val label = option.text().trim()
-                    
+
                     val decodedHtml = try {
                         base64Decode(base64)
                     } catch (_: Exception) {
@@ -281,11 +285,13 @@ open class Anichin : MainAPI() {
 
                     val iframeUrl = Jsoup.parse(decodedHtml).selectFirst("iframe")?.attr("src")?.let(::httpsify)
                     if (iframeUrl.isNullOrEmpty()) return@async
-                    
+
                     when {
+                        // FIX 4: Proper Vidmoly URL handling
                         "vidmoly" in iframeUrl -> {
-                            val cleanedUrl = "http:" + iframeUrl.substringAfter("=\"").substringBefore("\"")
-                            loadExtractor(cleanedUrl, referer = iframeUrl, subtitleCallback, callback)
+                            // Just use httpsify, don't manipulate the URL string
+                            val cleanedUrl = httpsify(iframeUrl)
+                            loadExtractor(cleanedUrl, referer = data, subtitleCallback, callback)
                         }
                         iframeUrl.endsWith(".mp4") -> {
                             callback(
@@ -295,13 +301,13 @@ open class Anichin : MainAPI() {
                                     url = iframeUrl,
                                     INFER_TYPE
                                 ) {
-                                    this.referer = ""
+                                    this.referer = data
                                     this.quality = getQualityFromName(label)
                                 }
                             )
                         }
                         else -> {
-                            loadExtractor(iframeUrl, referer = iframeUrl, subtitleCallback, callback)
+                            loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
                         }
                     }
                 }
