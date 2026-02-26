@@ -67,9 +67,10 @@ open class Anichin : MainAPI() {
 
     override val mainPage = mainPageOf(
         "seri/?status=&type=&order=update&page=" to "Recently Updated",
+        "seri/?sub=&order=latest" to "Latest Added",
         "seri/?status=ongoing&type=&order=update" to "Ongoing",
         "seri/?status=completed&type=&order=update" to "Completed",
-        "seri/?status=&type=special&sub=&order=update" to "Special Donghua",
+        "/seri/?status=&type=&order=popular" to "Popular Donghua",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
