@@ -27,6 +27,7 @@ import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.ShowStatus
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -107,19 +108,17 @@ open class Anichin : MainAPI() {
         val href      = fixUrl(this.select("div.bsx > a").attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
 
-        // Extract status from .dtl or .badge element (Ongoing/Completed)
-        val statusText = this.selectFirst("div.bsx .dtl")?.text()
-            ?: this.selectFirst("div.bsx .badge")?.text()
-            ?: ""
+        // FIX: Use correct selector - .type not .dtl or .badge
+        // Real HTML: <div class="type">Ongoing</div>
+        val statusText = this.selectFirst("div.bsx .type")?.text() ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
 
         // Add [ONGOING] to title if ongoing
         val displayTitle = if (isOngoing) "$title [ONGOING]" else title
 
-        // FIX 6: Accurate badge display - Anichin typically has subtitles only
+        // Accurate badge: Sub only (Anichin is fansub site)
         return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Accurate badge: Sub only (Anichin is fansub site)
             addDubStatus(false, true)  // Shows "Sub" badge
         }
     }
@@ -182,27 +181,40 @@ open class Anichin : MainAPI() {
         
         // FIX 1: Consistent TvType for anime content
         val tvtag = if (type.contains("Movie", ignoreCase = true)) TvType.AnimeMovie else TvType.Anime
+        
+        // FIX 5: Set showStatus from real .spe element
+        val statusText = document.select(".spe").text().lowercase()
+        val showStatus = when {
+            "ongoing" in statusText -> ShowStatus.Ongoing
+            "completed" in statusText -> ShowStatus.Completed
+            else -> null
+        }
 
         return if (tvtag == TvType.Anime) {
-            val Eppage = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
-            val doc = app.get(Eppage, timeout = 5000L).documentLarge
+            // FIX 2: Episode list is ALREADY on this page (.eplister li)
+            // No need to fetch another page!
+            val allEpisodes = document.select(".eplister li")
+            
+            // FIX 4: Proper regex-based episode parsing for format:
+            // "Renegade Immortal Episode 129 Subtitle Indonesia"
+            val lastEpisodeNum = allEpisodes.mapNotNull { ep ->
+                val text = ep.selectFirst("a span")?.text() ?: return@mapNotNull null
+                Regex("""Episode\s*(\d+)""", RegexOption.IGNORE_CASE)
+                    .find(text)
+                    ?.groupValues?.get(1)
+                    ?.toIntOrNull()
+            }.maxOrNull()
 
-            // Get all episodes to find the last episode number
-            val allEpisodes = doc.select("div.episodelist > ul > li")
-            val lastEpisodeNum = allEpisodes.lastOrNull()?.let { lastEp ->
-                val episodeText = lastEp.select("a span").text()
-                    .substringAfter("-")
-                    .substringBeforeLast("-")
-                episodeText.filter { it.isDigit() }.toIntOrNull()
-            }
-
-            // FIX 2 & 3: Safe episode parsing without unnecessary async
+            // FIX 3: Direct parsing without unnecessary async
             val episodes = allEpisodes.map { info ->
                 val href1 = info.select("a").attr("href")
                 
-                // FIX 2: Robust episode number parsing
-                val rawText = info.select("a span").text()
-                val episodeNumber = rawText.filter { it.isDigit() }.toIntOrNull()
+                // Robust episode number parsing
+                val rawText = info.selectFirst("a span")?.text() ?: ""
+                val episodeNumber = Regex("""Episode\s*(\d+)""", RegexOption.IGNORE_CASE)
+                    .find(rawText)
+                    ?.groupValues?.get(1)
+                    ?.toIntOrNull()
                 
                 var posterr = info.selectFirst("a img")?.attr("data-src") ?: ""
 
@@ -229,6 +241,7 @@ open class Anichin : MainAPI() {
             newTvSeriesLoadResponse(displayTitle, url, TvType.Anime, episodes) {
                 this.posterUrl = poster
                 this.plot = description
+                this.showStatus = showStatus
             }
         } else {
             // Anime movie
