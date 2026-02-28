@@ -148,14 +148,21 @@ open class Anichin : MainAPI() {
             }
         }
 
-        // FIX: Correct URL pattern - /page/ not /pagg/
+        // FIX: Correct search URL pattern
+        // Page 1: /?s=query (NOT /page/1/?s=query)
+        // Page 2+: /page/2/?s=query
         // OPTIMIZED: Parallel search with timeout (3x faster)
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
                     try {
-                        val document = app.get("${mainUrl}/page/$page/?s=$query", timeout = 5000L)
-                            .documentLarge
+                        // WordPress search: page 1 has no /page/1/ in URL
+                        val searchUrl = if (page == 1) {
+                            "${mainUrl}/?s=$query"
+                        } else {
+                            "${mainUrl}/page/$page/?s=$query"
+                        }
+                        val document = app.get(searchUrl, timeout = 5000L).documentLarge
                         document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
                     } catch (e: Exception) {
                         emptyList<SearchResponse>()
