@@ -109,18 +109,23 @@ open class Anichin : MainAPI() {
         val href      = fixUrl(this.select("div.bsx > a").attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
 
-        // FIX: Use correct selector - .type not .dtl or .badge
-        // Real HTML: <div class="type">Ongoing</div>
-        val statusText = this.selectFirst("div.bsx .type")?.text() ?: ""
+        // FIX: Use correct selector - .epx for status (Ongoing/Completed)
+        // Real HTML: <span class="epx">Ongoing</span>
+        val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
+        val isCompleted = statusText.contains("Completed", ignoreCase = true)
 
-        // Add [ONGOING] to title if ongoing
+        // Add [ONGOING] to title if ongoing for better UX
         val displayTitle = if (isOngoing) "$title [ONGOING]" else title
 
-        // Accurate badge: Sub only (Anichin is fansub site)
+        // Show badge: Sub only (Anichin is fansub site)
+        // Add episode count badge if available in future
         return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            addDubStatus(false, true)  // Shows "Sub" badge
+            addDubStatus(
+                isDub = false,
+                isSub = isOngoing || isCompleted  // Show "Sub" badge for all
+            )
         }
     }
 
@@ -194,29 +199,25 @@ open class Anichin : MainAPI() {
         return if (tvtag == TvType.Anime) {
             // FIX 2: Episode list is ALREADY on this page (.eplister li)
             // No need to fetch another page!
-            val allEpisodes = document.select(".eplister li")
-            
-            // FIX 4: Proper regex-based episode parsing for format:
-            // "Renegade Immortal Episode 129 Subtitle Indonesia"
+            val allEpisodes = document.select(".eplister li[data-index]")
+
+            // FIX: Use correct selector .epl-num for episode number
+            // Real HTML: <div class="epl-num">129</div>
             val lastEpisodeNum = allEpisodes.mapNotNull { ep ->
-                val text = ep.selectFirst("a span")?.text() ?: return@mapNotNull null
-                Regex("""Episode\s*(\d+)""", RegexOption.IGNORE_CASE)
-                    .find(text)
-                    ?.groupValues?.get(1)
-                    ?.toIntOrNull()
+                ep.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
             }.maxOrNull()
 
             // FIX 3: Direct parsing without unnecessary async
             val episodes = allEpisodes.map { info ->
                 val href1 = info.select("a").attr("href")
-                
-                // Robust episode number parsing
-                val rawText = info.selectFirst("a span")?.text() ?: ""
-                val episodeNumber = Regex("""Episode\s*(\d+)""", RegexOption.IGNORE_CASE)
-                    .find(rawText)
-                    ?.groupValues?.get(1)
-                    ?.toIntOrNull()
-                
+
+                // Use correct selectors: .epl-num for episode, .epl-title for name
+                val episodeNumber = info.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
+                val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
+
+                // Extract clean name by removing series title
+                val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()
+
                 var posterr = info.selectFirst("a img")?.attr("data-src") ?: ""
 
                 // Image optimization
@@ -225,7 +226,7 @@ open class Anichin : MainAPI() {
                 }
 
                 newEpisode(href1) {
-                    this.name = rawText.replace(title, "", ignoreCase = true)
+                    this.name = cleanName.ifEmpty { episodeTitle }
                     this.episode = episodeNumber
                     this.posterUrl = posterr
                 }
