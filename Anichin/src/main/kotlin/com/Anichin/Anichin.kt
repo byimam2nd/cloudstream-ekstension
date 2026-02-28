@@ -114,18 +114,24 @@ open class Anichin : MainAPI() {
         val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
 
-        // FIX: Use quality field to display status badge on poster
-        // Cloudstream displays quality badge on top-left of poster
-        // We repurpose this for "Ongoing" status
-        val quality = if (isOngoing) "Ongoing" else null
+        // FIX: Fetch episode count from detail page for badge display
+        // This adds 1 HTTP request per anime, but shows "Eps XXX" badge on poster
+        val episodeCount = runCatching {
+            val doc = app.get(href, timeout = 5000L).documentLarge
+            doc.select(".eplister li[data-index]").mapNotNull { ep ->
+                ep.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
+            }.maxOrNull()
+        }.getOrNull()
 
-        // Show "Sub" badge on poster (top-right corner)
+        // Show "Sub" badge with episode count on poster (top-right corner)
+        // Format: "Sub Eps 129" or just "Sub" if no episodes
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            this.quality = quality
             addDubStatus(
                 dubExist = false,
-                subExist = true  // Always show "Sub" badge - Anichin is fansub site
+                subExist = true,
+                dubEpisodes = null,
+                subEpisodes = episodeCount  // Shows "Eps XXX" on poster badge
             )
         }
     }
@@ -261,9 +267,8 @@ open class Anichin : MainAPI() {
                 poster = optimizeImageUrl(poster, 500)
             }
 
-            val displayTitle = if (lastEpisodeNum != null) "$title (Eps $lastEpisodeNum)" else title
-
-            newTvSeriesLoadResponse(displayTitle, url, TvType.Anime, episodes) {
+            // Title is clean now - episode count shown in badge on poster
+            newTvSeriesLoadResponse(title, url, TvType.Anime, episodes) {
                 this.posterUrl = poster
                 this.plot = description
                 this.showStatus = showStatus
