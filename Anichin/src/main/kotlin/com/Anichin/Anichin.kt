@@ -114,14 +114,15 @@ open class Anichin : MainAPI() {
         val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
 
-        // FIX: Display status in title for hero card display
-        // Format: "Title (Ongoing)" or "Title"
-        // This appears on the hero card below the poster
-        val displayTitle = if (isOngoing) "$title (Ongoing)" else title
+        // FIX: Use quality field to display status badge on poster
+        // Cloudstream displays quality badge on top-left of poster
+        // We repurpose this for "Ongoing" status
+        val quality = if (isOngoing) "Ongoing" else null
 
         // Show "Sub" badge on poster (top-right corner)
-        return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
+        return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
+            this.quality = quality
             addDubStatus(
                 dubExist = false,
                 subExist = true  // Always show "Sub" badge - Anichin is fansub site
