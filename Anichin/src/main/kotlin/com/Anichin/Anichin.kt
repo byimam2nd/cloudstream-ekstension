@@ -184,11 +184,13 @@ open class Anichin : MainAPI() {
         val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
         var poster = document.select("div.thumb > img").attr("src")
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
-        val type = document.selectFirst(".spe")?.text().toString()
         
-        // FIX 1: Consistent TvType for anime content
-        val tvtag = if (type.contains("Movie", ignoreCase = true)) TvType.AnimeMovie else TvType.Anime
-        
+        // FIX: Robust type detection with fallback
+        // Check .spe for Type field, fallback to URL pattern
+        val type = document.selectFirst(".spe")?.text() ?: ""
+        val isMovie = type.contains("Movie", ignoreCase = true) || url.contains("-movie-", ignoreCase = true)
+        val tvtag = if (isMovie) TvType.AnimeMovie else TvType.Anime
+
         // FIX 5: Set showStatus from real .spe element
         val statusText = document.select(".spe").text().lowercase()
         val showStatus = when {
@@ -302,13 +304,9 @@ open class Anichin : MainAPI() {
                     val iframeUrl = Jsoup.parse(decodedHtml).selectFirst("iframe")?.attr("src")?.let(::httpsify)
                     if (iframeUrl.isNullOrEmpty()) return@async
 
+                    // Handle different server types
                     when {
-                        // FIX 4: Proper Vidmoly URL handling
-                        "vidmoly" in iframeUrl -> {
-                            // Just use httpsify, don't manipulate the URL string
-                            val cleanedUrl = httpsify(iframeUrl)
-                            loadExtractor(cleanedUrl, referer = data, subtitleCallback, callback)
-                        }
+                        // Direct MP4 files
                         iframeUrl.endsWith(".mp4") -> {
                             callback(
                                 newExtractorLink(
@@ -322,6 +320,7 @@ open class Anichin : MainAPI() {
                                 }
                             )
                         }
+                        // Use loadExtractor for supported extractors (OK.ru, Dailymotion, etc.)
                         else -> {
                             loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
                         }
