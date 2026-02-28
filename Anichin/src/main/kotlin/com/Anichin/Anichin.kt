@@ -104,7 +104,7 @@ open class Anichin : MainAPI() {
         return response
     }
 
-    fun Element.toSearchResult(): SearchResponse {
+    suspend fun Element.toSearchResult(): SearchResponse {
         val title     = this.select("div.bsx > a").attr("title")
         val href      = fixUrl(this.select("div.bsx > a").attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
