@@ -120,9 +120,10 @@ open class Anichin : MainAPI() {
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
             // Show "Sub" badge on poster (appears on hero card)
+            // Signature: addDubStatus(dubExist: Boolean, subExist: Boolean, ...)
             addDubStatus(
-                isDub = false,
-                isSub = true  // Always show "Sub" badge - Anichin is fansub site
+                dubExist = false,
+                subExist = true  // Always show "Sub" badge - Anichin is fansub site
             )
         }
     }
