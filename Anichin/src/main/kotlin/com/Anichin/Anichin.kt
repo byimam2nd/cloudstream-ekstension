@@ -113,15 +113,13 @@ open class Anichin : MainAPI() {
         // Real HTML: <span class="epx">Ongoing</span>
         val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
-        val isCompleted = statusText.contains("Completed", ignoreCase = true)
 
-        // Add [ONGOING] to title if ongoing for better UX
-        val displayTitle = if (isOngoing) "$title [ONGOING]" else title
-
-        // FIX: Badge should always show "Sub" for Anichin (fansub site)
-        // Don't depend on status detection - all content is Sub regardless of status
-        return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
+        // FIX: Badges appear on poster/hero card, NOT in title
+        // Cloudstream shows Sub/Dub badges on the poster via addDubStatus()
+        // Status (Ongoing/Completed) is shown on detail page, not search results
+        return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
+            // Show "Sub" badge on poster (appears on hero card)
             addDubStatus(
                 isDub = false,
                 isSub = true  // Always show "Sub" badge - Anichin is fansub site
