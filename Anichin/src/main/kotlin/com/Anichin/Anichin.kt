@@ -118,13 +118,13 @@ open class Anichin : MainAPI() {
         // Add [ONGOING] to title if ongoing for better UX
         val displayTitle = if (isOngoing) "$title [ONGOING]" else title
 
-        // Show badge: Sub only (Anichin is fansub site)
-        // Add episode count badge if available in future
+        // FIX: Badge should always show "Sub" for Anichin (fansub site)
+        // Don't depend on status detection - all content is Sub regardless of status
         return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
             addDubStatus(
                 isDub = false,
-                isSub = isOngoing || isCompleted  // Show "Sub" badge for all
+                isSub = true  // Always show "Sub" badge - Anichin is fansub site
             )
         }
     }
