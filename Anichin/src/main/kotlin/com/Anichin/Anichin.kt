@@ -21,7 +21,6 @@ import com.lagradost.cloudstream3.newMovieLoadResponse
 import com.lagradost.cloudstream3.newMovieSearchResponse
 import com.lagradost.cloudstream3.newAnimeSearchResponse
 import com.lagradost.cloudstream3.addDubStatus
-import com.lagradost.cloudstream3.addStatus
 import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
@@ -69,8 +68,8 @@ open class Anichin : MainAPI() {
     override val mainPage = mainPageOf(
         "seri/?status=&type=&order=update&page=" to "Recently Updated",
         "seri/?sub=&order=latest&page=" to "Latest Added",
-        "seri/?status=ongoing&type=&order=update" to "Ongoing",
-        "seri/?status=completed&type=&order=update" to "Completed",
+        "seri/?status=ongoing&type=&order=update&page=" to "Ongoing",
+        "seri/?status=completed&type=&order=update&page=" to "Completed",
         "seri/?status=&type=&order=popular&page=" to "Popular Donghua",
     )
 
@@ -114,27 +113,15 @@ open class Anichin : MainAPI() {
         // Real HTML: <span class="epx">Ongoing</span>
         val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
-        val isCompleted = statusText.contains("Completed", ignoreCase = true)
 
-        // Determine status for badge display on poster
-        val status = when {
-            isOngoing -> "Ongoing"
-            isCompleted -> "Completed"
-            else -> ""
-        }
+        // FIX: Display status in title for hero card display
+        // Format: "Title (Ongoing)" or "Title"
+        // This appears on the hero card below the poster
+        val displayTitle = if (isOngoing) "$title (Ongoing)" else title
 
-        // FIX: Show proper badges on hero card poster
-        // Cloudstream displays:
-        // - Top-left: Status (Ongoing/Completed) via addStatus()
-        // - Top-right: Sub/Dub badge via addDubStatus()
-        // - Episode count requires fetching detail page (not done here for performance)
-        return newAnimeSearchResponse(title, href, TvType.Anime) {
+        // Show "Sub" badge on poster (top-right corner)
+        return newAnimeSearchResponse(displayTitle, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Show status badge (Ongoing/Completed) on top-left of poster
-            if (status.isNotEmpty()) {
-                addStatus(status)
-            }
-            // Show "Sub" badge on top-right of poster
             addDubStatus(
                 dubExist = false,
                 subExist = true  // Always show "Sub" badge - Anichin is fansub site
