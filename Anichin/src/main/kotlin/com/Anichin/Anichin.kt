@@ -144,9 +144,12 @@ open class Anichin : MainAPI() {
         cacheMutex.withLock {
             val cached = searchCache[cacheKey]
             if (cached != null && !cached.isExpired()) {
+                Log.d("AnichinSearch", "Cache hit for: $query")
                 return cached.data
             }
         }
+
+        Log.d("AnichinSearch", "Searching for: $query")
 
         // FIX: Correct search URL pattern
         // Page 1: /?s=query (NOT /page/1/?s=query)
@@ -162,14 +165,20 @@ open class Anichin : MainAPI() {
                         } else {
                             "${mainUrl}/page/$page/?s=$query"
                         }
+                        Log.d("AnichinSearch", "Fetching page $page: $searchUrl")
                         val document = app.get(searchUrl, timeout = 5000L).documentLarge
-                        document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
+                        val articles = document.select("div.listupd > article")
+                        Log.d("AnichinSearch", "Page $page found ${articles.size} articles")
+                        articles.mapNotNull { it.toSearchResult() }
                     } catch (e: Exception) {
+                        Log.e("AnichinSearch", "Error fetching page $page: ${e.message}")
                         emptyList<SearchResponse>()
                     }
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }
+
+        Log.d("AnichinSearch", "Total results: ${results.size}")
         
         // Cache the result with size limit
         cacheMutex.withLock {
