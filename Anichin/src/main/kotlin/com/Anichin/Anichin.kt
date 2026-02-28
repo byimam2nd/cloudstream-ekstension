@@ -147,13 +147,14 @@ open class Anichin : MainAPI() {
                 return cached.data
             }
         }
-        
+
+        // FIX: Correct URL pattern - /page/ not /pagg/
         // OPTIMIZED: Parallel search with timeout (3x faster)
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
                     try {
-                        val document = app.get("${mainUrl}/pagg/$page/?s=$query", timeout = 5000L)
+                        val document = app.get("${mainUrl}/page/$page/?s=$query", timeout = 5000L)
                             .documentLarge
                         document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
                     } catch (e: Exception) {
