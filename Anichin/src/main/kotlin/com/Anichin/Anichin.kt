@@ -159,11 +159,14 @@ open class Anichin : MainAPI() {
             (1..3).map { page ->
                 async {
                     try {
+                        // URL encode the query to handle spaces and special characters
+                        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+                        
                         // WordPress search: page 1 has no /page/1/ in URL
                         val searchUrl = if (page == 1) {
-                            "${mainUrl}/?s=$query"
+                            "${mainUrl}/?s=$encodedQuery"
                         } else {
-                            "${mainUrl}/page/$page/?s=$query"
+                            "${mainUrl}/page/$page/?s=$encodedQuery"
                         }
                         Log.d("AnichinSearch", "Fetching page $page: $searchUrl")
                         val document = app.get(searchUrl, timeout = 5000L).documentLarge
