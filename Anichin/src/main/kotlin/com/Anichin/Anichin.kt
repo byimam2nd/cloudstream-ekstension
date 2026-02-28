@@ -124,16 +124,15 @@ open class Anichin : MainAPI() {
         }.getOrNull()
 
         // Show episode count badge on poster (top-right corner)
-        // Format: "Eps 129" (no "Sub" text)
+        // Format: "Sub Eps 129" - Cloudstream requires subExist=true for badge to appear
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Only show episode count, no "Sub" badge
-            // When subExist=false but subEpisodes is set, it shows "Eps XXX" only
+            // Must have subExist=true or dubExist=true for badge to show
             addDubStatus(
                 dubExist = false,
-                subExist = false,  // Hide "Sub" text
+                subExist = true,  // Required for badge to appear
                 dubEpisodes = null,
-                subEpisodes = episodeCount  // Shows "Eps XXX" on poster badge
+                subEpisodes = episodeCount  // Shows "Eps XXX" next to "Sub"
             )
         }
     }
