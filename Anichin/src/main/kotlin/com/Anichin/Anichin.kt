@@ -70,7 +70,7 @@ open class Anichin : MainAPI() {
         "seri/?sub=&order=latest&page=" to "Latest Added",
         "seri/?status=ongoing&type=&order=update" to "Ongoing",
         "seri/?status=completed&type=&order=update" to "Completed",
-        "/seri/?status=&type=&order=popular&page=" to "Popular Donghua",
+        "seri/?status=&type=&order=popular&page=" to "Popular Donghua",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
