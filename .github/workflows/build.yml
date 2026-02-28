@@ -1,0 +1,210 @@
+name: Build
+
+concurrency:
+  group: "build"
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - '*.md'
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  # Job 1: Detect changed extensions
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      extensions: ${{ steps.changes.outputs.extensions }}
+      all_extensions: ${{ steps.list-all.outputs.extensions }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get changed extensions
+        id: changes
+        run: |
+          # Get changed files between last commit and current
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          
+          # Extract unique extension directories that changed
+          EXTENSIONS=$(echo "$CHANGED_FILES" | \
+            grep -oP '^[^/]+(?=/src/main/kotlin)' | \
+            sort -u | \
+            jq -R -s -c 'split("\n") | map(select(length > 0))')
+          
+          echo "extensions=$EXTENSIONS" >> $GITHUB_OUTPUT
+          echo "Changed extensions: $EXTENSIONS"
+
+      - name: List all extensions
+        id: list-all
+        run: |
+          # Get all extension directories
+          ALL_EXT=$(find . -maxdepth 1 -type d ! -name '.' ! -name '.git' ! -name '.github' ! -name '.vscode' ! -name 'docs' ! -name 'gradle' | \
+            sed 's|^\./||' | \
+            sort | \
+            jq -R -s -c 'split("\n") | map(select(length > 0))')
+          
+          echo "extensions=$ALL_EXT" >> $GITHUB_OUTPUT
+
+  # Job 2: Build changed extensions (parallel matrix)
+  build-extensions:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Build only changed extensions, or all if no specific changes detected
+        extension: ${{ fromJson(needs.detect-changes.outputs.extensions) || fromJson(needs.detect-changes.outputs.all_extensions) }}
+      fail-fast: false
+      max-parallel: 4  # Build 4 extensions at once
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: "src"
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: adopt
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create local.properties
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          touch local.properties
+
+      - name: Build ${{ matrix.extension }}
+        id: build
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          chmod +x gradlew
+          
+          # Build only this specific extension
+          echo "Building ${{ matrix.extension }}..."
+          ./gradlew :${{ matrix.extension }}:assembleDebug --no-daemon --console=plain
+          
+          # Check if build produced output
+          if [ -f "${{ matrix.extension }}/build/outputs/apk/debug/${{ matrix.extension }}-debug.apk" ]; then
+            echo "Build successful for ${{ matrix.extension }}"
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "Build failed for ${{ matrix.extension }}"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Upload ${{ matrix.extension }} artifact
+        if: steps.build.outputs.success == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.extension }}
+          path: src/${{ matrix.extension }}/build/outputs/apk/debug/*.apk
+          retention-days: 1
+
+  # Job 3: Build all extensions for plugins.json (only if multiple changed or full build)
+  build-all-for-plugins:
+    needs: [detect-changes, build-extensions]
+    runs-on: ubuntu-latest
+    if: |
+      (fromJson(needs.detect-changes.outputs.extensions) | length) > 1 ||
+      (fromJson(needs.detect-changes.outputs.extensions) | length) == 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: "src"
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: adopt
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create local.properties
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          touch local.properties
+
+      - name: Build all extensions
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          chmod +x gradlew
+          ./gradlew make --no-daemon --console=plain
+
+      - name: Generate plugins.json
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          ./gradlew makePluginsJson --no-daemon --console=plain
+
+      - name: Upload all artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-extensions
+          path: |
+            src/build/plugins.json
+            src/*/build/outputs/apk/debug/*.apk
+          retention-days: 1
+
+  # Job 4: Combine and push to builds branch
+  push-builds:
+    needs: [detect-changes, build-extensions]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout builds
+        uses: actions/checkout@v4
+        with:
+          ref: "builds"
+          path: "builds"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Clean old builds
+        run: |
+          rm $GITHUB_WORKSPACE/builds/*.cs3 2>/dev/null || true
+          rm $GITHUB_WORKSPACE/builds/*.jar 2>/dev/null || true
+          rm $GITHUB_WORKSPACE/builds/*.apk 2>/dev/null || true
+
+      - name: Copy new builds
+        run: |
+          # Copy APKs from artifacts
+          find $GITHUB_WORKSPACE/artifacts -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/builds/ \;
+          
+          # If plugins.json exists in artifacts, copy it
+          if [ -f "$GITHUB_WORKSPACE/artifacts/all-extensions/plugins.json" ]; then
+            cp $GITHUB_WORKSPACE/artifacts/all-extensions/plugins.json $GITHUB_WORKSPACE/builds/
+          fi
+          
+          # List what was copied
+          echo "=== Build artifacts ==="
+          ls -la $GITHUB_WORKSPACE/builds/
+
+      - name: Push to builds branch
+        run: |
+          cd $GITHUB_WORKSPACE/builds
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          git commit -m "Build ${{ github.sha }} - ${{ github.run_number }}" || exit 0
+          git push
