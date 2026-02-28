@@ -123,13 +123,15 @@ open class Anichin : MainAPI() {
             }.maxOrNull()
         }.getOrNull()
 
-        // Show "Sub" badge with episode count on poster (top-right corner)
-        // Format: "Sub Eps 129" or just "Sub" if no episodes
+        // Show episode count badge on poster (top-right corner)
+        // Format: "Eps 129" (no "Sub" text)
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
+            // Only show episode count, no "Sub" badge
+            // When subExist=false but subEpisodes is set, it shows "Eps XXX" only
             addDubStatus(
                 dubExist = false,
-                subExist = true,
+                subExist = false,  // Hide "Sub" text
                 dubEpisodes = null,
                 subEpisodes = episodeCount  // Shows "Eps XXX" on poster badge
             )
