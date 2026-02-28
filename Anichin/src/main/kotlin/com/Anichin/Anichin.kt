@@ -21,6 +21,7 @@ import com.lagradost.cloudstream3.newMovieLoadResponse
 import com.lagradost.cloudstream3.newMovieSearchResponse
 import com.lagradost.cloudstream3.newAnimeSearchResponse
 import com.lagradost.cloudstream3.addDubStatus
+import com.lagradost.cloudstream3.addStatus
 import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
@@ -113,14 +114,27 @@ open class Anichin : MainAPI() {
         // Real HTML: <span class="epx">Ongoing</span>
         val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
+        val isCompleted = statusText.contains("Completed", ignoreCase = true)
 
-        // FIX: Badges appear on poster/hero card, NOT in title
-        // Cloudstream shows Sub/Dub badges on the poster via addDubStatus()
-        // Status (Ongoing/Completed) is shown on detail page, not search results
+        // Determine status for badge display on poster
+        val status = when {
+            isOngoing -> "Ongoing"
+            isCompleted -> "Completed"
+            else -> ""
+        }
+
+        // FIX: Show proper badges on hero card poster
+        // Cloudstream displays:
+        // - Top-left: Status (Ongoing/Completed) via addStatus()
+        // - Top-right: Sub/Dub badge via addDubStatus()
+        // - Episode count requires fetching detail page (not done here for performance)
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Show "Sub" badge on poster (appears on hero card)
-            // Signature: addDubStatus(dubExist: Boolean, subExist: Boolean, ...)
+            // Show status badge (Ongoing/Completed) on top-left of poster
+            if (status.isNotEmpty()) {
+                addStatus(status)
+            }
+            // Show "Sub" badge on top-right of poster
             addDubStatus(
                 dubExist = false,
                 subExist = true  // Always show "Sub" badge - Anichin is fansub site
