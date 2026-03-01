@@ -37,17 +37,31 @@ jobs:
             if [ -n "$EXTS" ]; then
               # Convert to JSON array
               JSON=$(echo "$EXTS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+              COUNT=$(echo "$EXTS" | wc -l)
               echo "extensions=$JSON" >> $GITHUB_OUTPUT
-              echo "count=$(echo "$EXTS" | wc -l)" >> $GITHUB_OUTPUT
-              echo "Changed extensions: $JSON"
+              echo "count=$COUNT" >> $GITHUB_OUTPUT
+              echo "✓ Changed extensions: $JSON"
               exit 0
             fi
           fi
           
-          # No changes detected or not a push, build all
-          echo "No specific changes detected, will build all"
-          echo "extensions=[]" >> $GITHUB_OUTPUT
-          echo "count=0" >> $GITHUB_OUTPUT
+          # Fallback: List all extensions in repo
+          echo "⚠ No changes detected, listing all extensions..."
+          cd src
+          ALL_EXT=$(find . -maxdepth 1 -type d -name "*/src" 2>/dev/null | sed 's|^\./||' | sed 's|/src||' | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          cd ..
+          
+          if [ -n "$ALL_EXT" ] && [ "$ALL_EXT" != "[]" ]; then
+            echo "extensions=$ALL_EXT" >> $GITHUB_OUTPUT
+            echo "count=$(echo "$ALL_EXT" | jq 'length')" >> $GITHUB_OUTPUT
+            echo "✓ Building all extensions: $ALL_EXT"
+          else
+            # Hardcoded fallback
+            DEFAULT='["Anichin","Donghuastream","Funmovieslix","HiAnime","IdlixProvider","KisskhProvider","LayarKacaProvider"]'
+            echo "extensions=$DEFAULT" >> $GITHUB_OUTPUT
+            echo "count=7" >> $GITHUB_OUTPUT
+            echo "✓ Using default extension list"
+          fi
 
   # Job 2: Build extensions (parallel matrix) - Target: 35s
   build-extensions:
