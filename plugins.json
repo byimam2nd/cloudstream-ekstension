@@ -1,0 +1,243 @@
+[
+    {
+        "iconUrl": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjD5KTf3taknWZ6YLFfkHAvDCoeC79LCjfh1T5VsBajkI0hFV4afH6WBwDeiHrGtkYKaRMX4pAWa_M2kG8LXefpk8g6Ug35PnJyXpiro5lPw8tcXMPA_6RFcRw3dYQkoZgXDdjiMdHde2k8ZfwTlazvlVerXAhdrLDNAeo5NysoU-CScOAcVmsosVl_cA/s1600/NewLogo.png",
+        "jarFileSize": 203218,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 44791,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "byimam2nd"
+        ],
+        "tvTypes": [
+            "Anime"
+        ],
+        "version": 15,
+        "internalName": "Anichin",
+        "jarUrl": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Anichin.jar",
+        "description": "Anichin (Anime Chinese)",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Anichin.cs3",
+        "name": "Anichin"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/Kohi-den/extensions-source/927f9c68fd64ce52f6212ae633d0f0585eca3545/src/en/donghuastream/res/mipmap-xxxhdpi/ic_launcher.png",
+        "jarFileSize": 234588,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 45213,
+        "status": 1,
+        "language": "zh",
+        "authors": [
+            "Phisher98"
+        ],
+        "tvTypes": [
+            "Anime"
+        ],
+        "version": 15,
+        "internalName": "Donghuastream",
+        "jarUrl": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Donghuastream.jar",
+        "description": "Contains SeaTV (Chinese)",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Donghuastream.cs3",
+        "name": "Donghuastream"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/Icons/Funmovieslix.png",
+        "jarFileSize": 110655,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 27146,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Phisher98"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 4,
+        "internalName": "Funmovieslix",
+        "jarUrl": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Funmovieslix.jar",
+        "description": "Indonesia Source",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Funmovieslix.cs3",
+        "name": "Funmovieslix"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=hianime.to&sz=%size%",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 62247,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "Stormunblessed, KillerDogeEmpire,RowdyRushya,Phisher98"
+        ],
+        "tvTypes": [
+            "Anime",
+            "OVA"
+        ],
+        "version": 30,
+        "internalName": "HiAnime",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/HiAnime.cs3",
+        "name": "HiAnime"
+    },
+    {
+        "iconUrl": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://idlixian.com&size=16",
+        "jarFileSize": 125238,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 31630,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Hexated,Phisher98"
+        ],
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "Anime",
+            "AsianDrama"
+        ],
+        "version": 2,
+        "internalName": "IdlixProvider",
+        "jarUrl": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/IdlixProvider.jar",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/IdlixProvider.cs3",
+        "name": "IdlixProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=kisskh.co&sz=%size%",
+        "jarFileSize": 162171,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 41962,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "Phisher98,Hexated,Peerless"
+        ],
+        "tvTypes": [
+            "AsianDrama",
+            "TvSeries",
+            "Anime",
+            "Movie"
+        ],
+        "version": 16,
+        "internalName": "KisskhProvider",
+        "jarUrl": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/KisskhProvider.jar",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/KisskhProvider.cs3",
+        "name": "KisskhProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=tv7.lk21.am.in&sz=%size%",
+        "jarFileSize": 109377,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 26344,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Hexated,Phisher98"
+        ],
+        "tvTypes": [
+            "AsianDrama",
+            "TvSeries",
+            "Movie"
+        ],
+        "version": 5,
+        "internalName": "LayarKacaProvider",
+        "jarUrl": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/LayarKacaProvider.jar",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/LayarKacaProvider.cs3",
+        "name": "LayarKacaProvider"
+    },
+    {
+        "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ww03.pencurimovie.bond&size=%size%",
+        "jarFileSize": 84684,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 19974,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Phisher98"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 4,
+        "internalName": "Pencurimovie",
+        "jarUrl": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Pencurimovie.jar",
+        "description": "Pencurimovie ",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Pencurimovie.cs3",
+        "name": "Pencurimovie"
+    },
+    {
+        "iconUrl": "https://i3.wp.com/yt3.googleusercontent.com/ytc/AIdro_nCBArSmvOc6o-k2hTYpLtQMPrKqGtAw_nC20rxm70akA=s900-c-k-c0x00ffffff-no-rj?ssl=1",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 886764,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "Phisher98",
+            "Hexated"
+        ],
+        "tvTypes": [
+            "AsianDrama",
+            "TvSeries",
+            "Anime",
+            "Movie",
+            "Cartoon",
+            "AnimeMovie"
+        ],
+        "version": 552,
+        "internalName": "StreamPlay",
+        "description": "#1 best extention based on MultiAPI",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/StreamPlay.cs3",
+        "name": "StreamPlay"
+    },
+    {
+        "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://www.showbox.media/&size=256",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 122632,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "Phisher98"
+        ],
+        "tvTypes": [
+            "AsianDrama",
+            "TvSeries",
+            "Anime",
+            "Movie",
+            "Cartoon",
+            "AnimeMovie"
+        ],
+        "version": 30,
+        "internalName": "SuperStream",
+        "description": "SuperStream (Retrieve the cookie using Login with Google to properly utilize SuperStream.",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/SuperStream.cs3",
+        "name": "SuperStream"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/Icons/Ultima.jpg",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/cloudstream-ekstension",
+        "fileSize": 356374,
+        "status": 2,
+        "language": "en",
+        "authors": [
+            "RowdyRushya,Phisher98"
+        ],
+        "tvTypes": [
+            "All"
+        ],
+        "version": 32,
+        "internalName": "Ultima",
+        "description": "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)",
+        "url": "https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/builds/Ultima.cs3",
+        "name": "Ultima"
+    }
+]
