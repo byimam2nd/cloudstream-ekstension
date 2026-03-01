@@ -13,66 +13,9 @@ on:
       - '*.md'
 
 jobs:
-  # Job 1: Detect changed extensions (5s)
-  detect-changes:
+  build:
     runs-on: ubuntu-latest
-    outputs:
-      extensions: ${{ steps.detect.outputs.extensions }}
-      count: ${{ steps.detect.outputs.count }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Detect changed extensions
-        id: detect
-        run: |
-          # Get changed files
-          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-          
-          # Extract extension directories
-          if [ -n "$CHANGED" ]; then
-            EXTS=$(echo "$CHANGED" | grep -oP '^[^/]+(?=/src)' | sort -u | grep -v '^\.$' | grep -v '\.github' | grep -v 'docs' | grep -v 'gradle' || echo "")
-            if [ -n "$EXTS" ]; then
-              # Convert to JSON array
-              JSON=$(echo "$EXTS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-              COUNT=$(echo "$EXTS" | wc -l)
-              echo "extensions=$JSON" >> $GITHUB_OUTPUT
-              echo "count=$COUNT" >> $GITHUB_OUTPUT
-              echo "✓ Changed extensions: $JSON"
-              exit 0
-            fi
-          fi
-          
-          # Fallback: List all extensions in repo
-          echo "⚠ No changes detected, listing all extensions..."
-          cd src
-          ALL_EXT=$(find . -maxdepth 1 -type d -name "*/src" 2>/dev/null | sed 's|^\./||' | sed 's|/src||' | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          cd ..
-          
-          if [ -n "$ALL_EXT" ] && [ "$ALL_EXT" != "[]" ]; then
-            echo "extensions=$ALL_EXT" >> $GITHUB_OUTPUT
-            echo "count=$(echo "$ALL_EXT" | jq 'length')" >> $GITHUB_OUTPUT
-            echo "✓ Building all extensions: $ALL_EXT"
-          else
-            # Hardcoded fallback
-            DEFAULT='["Anichin","Donghuastream","Funmovieslix","HiAnime","IdlixProvider","KisskhProvider","LayarKacaProvider"]'
-            echo "extensions=$DEFAULT" >> $GITHUB_OUTPUT
-            echo "count=7" >> $GITHUB_OUTPUT
-            echo "✓ Using default extension list"
-          fi
-
-  # Job 2: Build extensions (parallel matrix) - Target: 35s
-  build-extensions:
-    needs: detect-changes
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # Build only changed extensions, or all if none detected
-        extension: ${{ fromJson(needs.detect-changes.outputs.extensions) || fromJSON('["Anichin","Donghuastream","Funmovieslix","HiAnime","IdlixProvider","KisskhProvider","LayarKacaProvider"]') }}
-      fail-fast: false
-      max-parallel: 4
+    timeout-minutes: 10
     
     steps:
       # Fast checkout (5s)
@@ -82,14 +25,24 @@ jobs:
           fetch-depth: 1
           path: "src"
 
-      # Cache Gradle dependencies (10s restore vs 30s download)
+      - name: Checkout builds
+        uses: actions/checkout@v4
+        with:
+          ref: "builds"
+          fetch-depth: 1
+          path: "builds"
+
+      - name: Clean old builds
+        run: rm -f $GITHUB_WORKSPACE/builds/*.{cs3,jar,apk} 2>/dev/null || true
+
+      # Cache Gradle (10s restore vs 30s download)
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/build.gradle') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -101,92 +54,36 @@ jobs:
           distribution: adopt
           cache: gradle
 
-      # Minimal Android SDK (5s vs 30s full)
-      - name: Setup Android SDK (Minimal)
+      # Minimal Android SDK (10s vs 30s)
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           log-accepted-licenses: true
 
-      # Create local.properties
       - name: Create local.properties
-        run: |
-          cd $GITHUB_WORKSPACE/src
-          touch local.properties
+        run: cd $GITHUB_WORKSPACE/src && touch local.properties
 
-      # Build only this extension (20-30s)
-      - name: Build ${{ matrix.extension }}
-        id: build
+      # Build all extensions (60-90s)
+      - name: Build Plugins
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          
-          echo "Building ${{ matrix.extension }}..."
-          ./gradlew :${{ matrix.extension }}:assembleDebug \
+          ./gradlew make makePluginsJson \
             --no-daemon \
-            --no-build-cache \
             --console=plain \
             -Dorg.gradle.parallel=true \
-            -Dorg.gradle.workers.max=2
-          
-          # Verify build output
-          APK_PATH="${{ matrix.extension }}/build/outputs/apk/debug"
-          if [ -d "$APK_PATH" ] && [ "$(ls -A $APK_PATH/*.apk 2>/dev/null)" ]; then
-            echo "Build successful!"
-            echo "success=true" >> $GITHUB_OUTPUT
-          else
-            echo "Build failed - no APK found"
-            echo "success=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+            -Dorg.gradle.workers.max=4
 
-      # Upload artifact (5s)
-      - name: Upload ${{ matrix.extension }}
-        if: steps.build.outputs.success == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.extension }}
-          path: src/${{ matrix.extension }}/build/outputs/apk/debug/*.apk
-          retention-days: 1
-          if-no-files-found: ignore
+          # Copy artifacts
+          find . -name "*.cs3" -exec cp {} $GITHUB_WORKSPACE/builds/ \;
+          find . -name "*.jar" -exec cp {} $GITHUB_WORKSPACE/builds/ \;
+          find . -name "*.apk" -exec cp {} $GITHUB_WORKSPACE/builds/ \;
+          cp build/plugins.json $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
 
-  # Job 3: Combine and push (10s)
-  push-builds:
-    needs: [detect-changes, build-extensions]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout builds
-        uses: actions/checkout@v4
-        with:
-          ref: "builds"
-          fetch-depth: 1
-          path: "builds"
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Clean old builds
-        run: rm -f $GITHUB_WORKSPACE/builds/*.{cs3,jar,apk} 2>/dev/null || true
-
-      - name: Copy new builds
-        run: |
-          # Copy all APKs from artifacts
-          find $GITHUB_WORKSPACE/artifacts -name "*.apk" -type f -exec cp {} $GITHUB_WORKSPACE/builds/ \;
-          
-          # Build plugins.json if we have multiple extensions
-          if [ "$(find $GITHUB_WORKSPACE/artifacts -name "*.apk" | wc -l)" -gt 1 ]; then
-            cd $GITHUB_WORKSPACE/src
-            ./gradlew makePluginsJson --no-daemon --console=plain 2>/dev/null || true
-            cp build/plugins.json $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
-          fi
-          
           echo "=== Build artifacts ==="
           ls -la $GITHUB_WORKSPACE/builds/
 
-      - name: Push to builds branch
+      - name: Push builds
         run: |
           cd $GITHUB_WORKSPACE/builds
           git config --local user.email "actions@github.com"
