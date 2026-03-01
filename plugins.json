@@ -1,0 +1,168 @@
+[
+    {
+        "iconUrl": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjD5KTf3taknWZ6YLFfkHAvDCoeC79LCjfh1T5VsBajkI0hFV4afH6WBwDeiHrGtkYKaRMX4pAWa_M2kG8LXefpk8g6Ug35PnJyXpiro5lPw8tcXMPA_6RFcRw3dYQkoZgXDdjiMdHde2k8ZfwTlazvlVerXAhdrLDNAeo5NysoU-CScOAcVmsosVl_cA/s1600/NewLogo.png",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 200722,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "Anime"
+        ],
+        "version": 10,
+        "internalName": "Anichin",
+        "description": "\ud83c\udfac Anichin - Streaming Anime China Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Anichin.cs3",
+        "name": "Anichin"
+    },
+    {
+        "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.animasu.top&size=%size%",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 194375,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Hexated",
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 1,
+        "internalName": "Animasu",
+        "description": "\ud83d\udc30 Animasu - Streaming Anime Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Animasu.cs3",
+        "name": "Animasu"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/Kohi-den/extensions-source/927f9c68fd64ce52f6212ae633d0f0585eca3545/src/en/donghuastream/res/mipmap-xxxhdpi/ic_launcher.png",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 196612,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "Anime"
+        ],
+        "version": 10,
+        "internalName": "Donghuastream",
+        "description": "\ud83d\udc09 Donghuastream - Platform streaming anime Donghua China dengan subtitle Indonesia terlengkap!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Donghuastream.cs3",
+        "name": "Donghuastream"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/imam2nd/TVVVV/refs/heads/main/Icons/Funmovieslix.png",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 195459,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 10,
+        "internalName": "Funmovieslix",
+        "description": "\ud83c\udfac Funmovieslix - Streaming film dan series Indonesia dengan kualitas HD dan server cepat!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Funmovieslix.cs3",
+        "name": "Funmovieslix"
+    },
+    {
+        "iconUrl": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://idlixian.com&size=16",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 201930,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "Anime",
+            "AsianDrama"
+        ],
+        "version": 10,
+        "internalName": "Idlix",
+        "description": "\ud83c\udfac Idlix - Streaming film, series, anime, dan Asian drama dengan subtitle Indonesia terlengkap dan tercepat!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Idlix.cs3",
+        "name": "Idlix"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=d21.team&sz=%size%",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 196653,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "AsianDrama",
+            "TvSeries",
+            "Movie"
+        ],
+        "version": 10,
+        "internalName": "LayarKaca21",
+        "description": "\ud83c\udfac LayarKaca21 - Nonton film box office, series, dan Asian drama dengan subtitle Indonesia gratis!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/LayarKaca21.cs3",
+        "name": "LayarKaca21"
+    },
+    {
+        "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ww03.pencurimovie.bond&size=%size%",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 202204,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 10,
+        "internalName": "Pencurimovie",
+        "description": "\ud83c\udfac Pencurimovie - Download dan streaming film terbaru dengan kualitas HD dan subtitle Indonesia!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Pencurimovie.cs3",
+        "name": "Pencurimovie"
+    },
+    {
+        "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.samehadaku.how&size=%size%",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 193542,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Duro92",
+            "CodeSanzz",
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 1,
+        "internalName": "Samehadaku",
+        "description": "\u26e9\ufe0f Samehadaku - Streaming Anime Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Samehadaku.cs3",
+        "name": "Samehadaku"
+    }
+]
