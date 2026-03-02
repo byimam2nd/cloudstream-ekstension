@@ -85,3 +85,4 @@ If you believe content is violating copyright laws, please contact the **actual 
 # rebuild trigger
 # trigger rebuild for cache test
 # rebuild
+# rebuild trigger
