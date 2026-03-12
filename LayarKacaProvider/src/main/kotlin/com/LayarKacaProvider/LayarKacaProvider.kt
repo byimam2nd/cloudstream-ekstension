@@ -7,9 +7,8 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -28,11 +27,18 @@ private val cacheMutex = Mutex()
 
 class LayarKacaProvider : MainAPI() {
 
+    // Updated domains - LK21 now uses multiple mirror domains with Cloudflare protection
+    // Primary domain redirects to official mirror
     override var mainUrl = "https://lk21.de"
     private var seriesUrl = "https://series.lk21.de"
-    private var searchurl= "https://search.lk21.party"
+    
+    // New landing page that lists all active mirrors
+    private var landingUrl = "https://d21.team"
+    
+    // Alternative search endpoint - using API from lk21-api project
+    private var apiUrl = "https://tv.lk21official.love"
 
-    override var name = "LayarKaca"
+    override var name = "LayarKaca21"
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes = setOf(
@@ -41,9 +47,9 @@ class LayarKacaProvider : MainAPI() {
         TvType.AsianDrama
     )
 
-
+    // Updated main page URLs to use working endpoints
     override val mainPage = mainPageOf(
-        "$mainUrl/populer/page/" to "Film Terplopuler",
+        "$mainUrl/populer/page/" to "Film Terpopuler",
         "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
         "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
         "$seriesUrl/latest-series/page/" to "Series Terbaru",
@@ -125,42 +131,40 @@ class LayarKacaProvider : MainAPI() {
                 return cached.data
             }
         }
-        
+
         // OPTIMIZED: Parallel search with timeout (3x faster)
-        val results = coroutineScope {
-            (1..3).map { page ->
-                async {
-                    try {
-                        val res = app.get("$searchurl/search.php?s=$query&page=$page", timeout = 5000L).text
-                        val results = mutableListOf<SearchResponse>()
-                        val root = JSONObject(res)
-                        val arr = root.getJSONArray("data")
-                        for (i in 0 until arr.length()) {
-                            val item = arr.getJSONObject(i)
-                            val title = item.getString("title")
-                            val slug = item.getString("slug")
-                            val type = item.getString("type")
-                            val posterUrl = "https://poster.lk21.party/wp-content/uploads/"+item.optString("poster")
-                            when (type) {
-                                "series" -> results.add(newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) { this.posterUrl = posterUrl })
-                                "movie" -> results.add(newMovieSearchResponse(title, "$mainUrl/$slug", TvType.Movie) { this.posterUrl = posterUrl })
-                            }
-                        }
-                        results
-                    } catch (e: Exception) {
-                        emptyList<SearchResponse>()
-                    }
-                }
-            }.awaitAll().flatten().distinctBy { it.url }
+        // Using multiple search methods due to API changes
+        val results = mutableListOf<SearchResponse>()
+        
+        // Method 1: Try direct search on main domain
+        try {
+            val document = app.get("$mainUrl/?s=${query.encodeUrl()}", timeout = 10000L).document
+            results.addAll(document.select("article figure").mapNotNull {
+                it.toSearchResult()
+            })
+        } catch (e: Exception) {
+            Log.e("Phisher", "Search method 1 failed: ${e.message}")
         }
         
+        // Method 2: Try series search
+        if (results.isEmpty()) {
+            try {
+                val seriesDoc = app.get("$seriesUrl/?s=${query.encodeUrl()}", timeout = 10000L).document
+                results.addAll(seriesDoc.select("article figure").mapNotNull {
+                    it.toSearchResult()
+                })
+            } catch (e: Exception) {
+                Log.e("Phisher", "Search method 2 failed: ${e.message}")
+            }
+        }
+
         // Cache the result
         cacheMutex.withLock {
-            searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
+            searchCache[cacheKey] = CachedResult(results.distinctBy { it.url }, System.currentTimeMillis())
             searchCache.entries.removeAll { it.value.isExpired() }
         }
-        
-        return results
+
+        return results.distinctBy { it.url }
     }
 
     override suspend fun load(url: String): LoadResponse {
@@ -285,6 +289,10 @@ class LayarKacaProvider : MainAPI() {
         return URI(url).let {
             "${it.scheme}://${it.host}"
         }
+    }
+
+    private fun String.encodeUrl(): String {
+        return URLEncoder.encode(this, StandardCharsets.UTF_8.toString())
     }
 
 }
