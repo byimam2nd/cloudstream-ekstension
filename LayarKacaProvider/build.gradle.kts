@@ -6,7 +6,7 @@ cloudstream {
     language = "id"
     // All of these properties are optional, you can safely remove them
 
-    // description = "Lorem Ipsum"
+    description = "LayarKaca21 - Nonton Film Streaming Sub Indo"
     authors = listOf("Hexated,Phisher98")
 
     /**
@@ -23,8 +23,10 @@ cloudstream {
         "Movie",
     )
 
-
     iconUrl = "https://www.google.com/s2/favicons?domain=d21.team&sz=%size%"
 
     isCrossPlatform = true
+    
+    // Explicitly set the name to match the provider class
+    name = "LayarKaca21"
 }
