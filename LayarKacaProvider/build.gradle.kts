@@ -26,7 +26,4 @@ cloudstream {
     iconUrl = "https://www.google.com/s2/favicons?domain=d21.team&sz=%size%"
 
     isCrossPlatform = true
-    
-    // Explicitly set the name to match the provider class
-    name = "LayarKaca21"
 }
