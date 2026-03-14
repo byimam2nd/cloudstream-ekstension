@@ -69,19 +69,25 @@ class LayarKacaProvider : MainAPI() {
                 return cached.data
             }
         }
-        
-        val document = app.get(request.data + page, timeout = 5000L).documentLarge
-        val home = document.select("article figure").mapNotNull {
-            it.toSearchResult()
+
+        val home = try {
+            val document = app.get(request.data + page, timeout = 10000L).documentLarge
+            document.select("article figure").mapNotNull {
+                it.toSearchResult()
+            }
+        } catch (e: Exception) {
+            Log.e("Phisher", "getMainPage failed: ${e.message}")
+            emptyList()
         }
+
         val response = newHomePageResponse(request.name, home)
-        
+
         // Cache the result
         cacheMutex.withLock {
             mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
             mainPageCache.entries.removeAll { it.value.isExpired() }
         }
-        
+
         return response
     }
 
