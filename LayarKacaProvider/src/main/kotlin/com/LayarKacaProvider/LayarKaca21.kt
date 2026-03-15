@@ -47,15 +47,12 @@ open class LayarKaca21 : MainAPI() {
         TvType.AsianDrama
     )
 
-    // Updated main page URLs to use working endpoints
+    // Simplified main page - using search-based approach as fallback
     override val mainPage = mainPageOf(
-        "$mainUrl/populer/page/" to "Film Terpopuler",
-        "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
-        "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
-        "$seriesUrl/latest-series/page/" to "Series Terbaru",
-        "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
-        "$mainUrl/latest/page/" to "Film Upload Terbaru",
+        "$searchUrl/?s=" to "Search All Content",
     )
+    
+    private val searchUrl = "https://lk21.de"
 
     override suspend fun getMainPage(
         page: Int,
@@ -71,7 +68,17 @@ open class LayarKaca21 : MainAPI() {
         }
 
         val home = try {
-            val document = app.get(request.data + page, timeout = 10000L).documentLarge
+            // Try to load from main page URL
+            val url = if (request.data.contains("/?s=")) {
+                // Search-based URL - use popular search terms
+                val searchTerms = listOf("film", "movie", "series", "drama")
+                val term = searchTerms[(page - 1) % searchTerms.size]
+                "${request.data}${term}&page=$page"
+            } else {
+                "${request.data}$page"
+            }
+            
+            val document = app.get(url, timeout = 10000L).documentLarge
             document.select("article figure").mapNotNull {
                 it.toSearchResult()
             }
