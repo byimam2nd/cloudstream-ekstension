@@ -63,14 +63,13 @@ open class LayarKaca21 : MainAPI() {
     override var lang                 = "id"
     override val hasDownloadSupport   = true
     override val usesWebView          = true
-    override val supportedTypes       = setOf(TvType.Anime, TvType.AnimeMovie, TvType.TvSeries)
+    override val supportedTypes       = setOf(TvType.Movie, TvType.TvSeries, TvType.AsianDrama)
 
     override val mainPage = mainPageOf(
-        "seri/?status=&type=&order=popular&page=" to "Popular Donghua",
-        "seri/?status=&type=&order=update&page=" to "Recently Updated",
-        "seri/?sub=&order=latest&page=" to "Latest Added",
-        "seri/?status=ongoing&type=&order=update&page=" to "Ongoing",
-        "seri/?status=completed&type=&order=update&page=" to "Completed",
+        "populer/page/" to "Film Terpopuler",
+        "rating/page/" to "Film Berdasarkan IMDb Rating",
+        "most-commented/page/" to "Film Dengan Komentar Terbanyak",
+        "latest/page/" to "Film Upload Terbaru",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -83,16 +82,9 @@ open class LayarKaca21 : MainAPI() {
             }
         }
         
-        val document = app.get("$mainUrl/${request.data}$page", timeout = 5000L).documentLarge
-        val home = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
-        val response = newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = false
-            ),
-            hasNext = true
-        )
+        val document = app.get("$mainUrl${request.data}$page", timeout = 10000L).documentLarge
+        val home = document.select("article figure").mapNotNull { it.toSearchResult() }
+        val response = newHomePageResponse(request.name, home)
         
         // Cache the result
         cacheMutex.withLock {
@@ -104,36 +96,26 @@ open class LayarKaca21 : MainAPI() {
         return response
     }
 
-    suspend fun Element.toSearchResult(): SearchResponse {
-        val title     = this.select("div.bsx > a").attr("title")
-        val href      = fixUrl(this.select("div.bsx > a").attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
-
-        // FIX: Use correct selector - .epx for status (Ongoing/Completed)
-        // Real HTML: <span class="epx">Ongoing</span>
-        val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
-        val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
-
-        // FIX: Fetch episode count from detail page for badge display
-        // This adds 1 HTTP request per anime, but shows "Eps XXX" badge on poster
-        val episodeCount = runCatching {
-            val doc = app.get(href, timeout = 5000L).documentLarge
-            doc.select(".eplister li[data-index]").mapNotNull { ep ->
-                ep.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
-            }.maxOrNull()
-        }.getOrNull()
-
-        // Show episode count badge on poster (top-right corner)
-        // Format: "Sub Eps 129" - Cloudstream requires subExist=true for badge to appear
-        return newAnimeSearchResponse(title, href, TvType.Anime) {
-            this.posterUrl = posterUrl
-            // Must have subExist=true or dubExist=true for badge to show
-            addDubStatus(
-                dubExist = false,
-                subExist = true,  // Required for badge to appear
-                dubEpisodes = null,
-                subEpisodes = episodeCount  // Shows "Eps XXX" next to "Sub"
-            )
+    suspend fun Element.toSearchResult(): SearchResponse? {
+        val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
+        val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        
+        // Check if it's a series (has episode indicator)
+        val isSeries = this.selectFirst("span.episode") != null
+        
+        if (isSeries) {
+            val episode = this.selectFirst("span.episode strong")?.text()?.filter { it.isDigit() }?.toIntOrNull()
+            return newAnimeSearchResponse(title, href, TvType.TvSeries) {
+                this.posterUrl = posterUrl
+                addSub(episode)
+            }
+        } else {
+            val quality = this.select("div.quality").text().trim()
+            return newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = posterUrl
+                addQuality(quality)
+            }
         }
     }
 
@@ -178,7 +160,7 @@ open class LayarKaca21 : MainAPI() {
                         }
                         Log.d("LayarKaca21Search", "Fetching page $page: $searchUrl")
                         val document = app.get(searchUrl, timeout = 5000L).documentLarge
-                        val articles = document.select("div.listupd > article")
+                        val articles = document.select("article figure")
                         Log.d("LayarKaca21Search", "Page $page found ${articles.size} articles")
                         articles.mapNotNull { it.toSearchResult() }
                     } catch (e: Exception) {
