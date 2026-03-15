@@ -25,7 +25,7 @@ private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>
 private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
 private val cacheMutex = Mutex()
 
-class LayarKaca21 : MainAPI() {
+open class LayarKaca21 : MainAPI() {
 
     // Updated domains - LK21 now uses multiple mirror domains with Cloudflare protection
     // Primary domain redirects to official mirror
