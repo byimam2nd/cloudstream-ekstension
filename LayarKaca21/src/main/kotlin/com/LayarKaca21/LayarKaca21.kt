@@ -100,21 +100,21 @@ open class LayarKaca21 : MainAPI() {
         val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-        
+
         // Check if it's a series (has episode indicator)
         val isSeries = this.selectFirst("span.episode") != null
-        
+
         if (isSeries) {
             val episode = this.selectFirst("span.episode strong")?.text()?.filter { it.isDigit() }?.toIntOrNull()
             return newAnimeSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
-                addSub(episode)
+                this.episode = episode
             }
         } else {
             val quality = this.select("div.quality").text().trim()
             return newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
-                addQuality(quality)
+                this.quality = quality
             }
         }
     }
