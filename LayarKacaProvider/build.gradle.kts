@@ -1,5 +1,6 @@
 // use an integer for version numbers
-version = 7
+// Version format: major.minor.patch (e.g., 7.0.1 = major fix, minor update, patch)
+version = 8
 
 
 cloudstream {
