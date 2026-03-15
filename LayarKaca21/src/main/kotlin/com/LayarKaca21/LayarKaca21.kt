@@ -139,7 +139,8 @@ open class LayarKaca21 : MainAPI() {
         }
 
         val results = try {
-            val document = app.get("$mainUrl/?s=${query.encodeUrl()}", timeout = 10000L).document
+            val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+            val document = app.get("$mainUrl/?s=$encodedQuery", timeout = 10000L).document
             document.select("article figure").mapNotNull { it.toSearchResult() }
         } catch (e: Exception) {
             emptyList()
