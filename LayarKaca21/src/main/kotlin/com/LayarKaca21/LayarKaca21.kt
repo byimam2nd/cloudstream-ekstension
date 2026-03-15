@@ -38,6 +38,8 @@ open class LayarKaca21 : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}$page"
+        
+        // Check cache first
         cacheMutex.withLock {
             val cached = mainPageCache[cacheKey]
             if (cached != null && !cached.isExpired()) {
@@ -46,15 +48,23 @@ open class LayarKaca21 : MainAPI() {
         }
 
         val document = try {
-            app.get("${request.data}$page", timeout = 10000L).documentLarge
+            app.get("${request.data}$page", timeout = 15000L).documentLarge
         } catch (e: Exception) {
-            Log.e("LayarKaca21", "getMainPage failed: ${e.message}")
+            Log.e("LayarKaca21", "getMainPage request failed: ${e.message}")
+            // Return empty response instead of throwing - this keeps provider visible in home
             return newHomePageResponse(request.name, emptyList())
         }
 
-        val home = document.select("article figure").mapNotNull { it.toSearchResult() }
+        val home = try {
+            document.select("article figure").mapNotNull { it.toSearchResult() }
+        } catch (e: Exception) {
+            Log.e("LayarKaca21", "getMainPage parse failed: ${e.message}")
+            emptyList()
+        }
+
         val response = newHomePageResponse(request.name, home)
 
+        // Cache the result
         cacheMutex.withLock {
             mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
             mainPageCache.entries.removeAll { it.value.isExpired() }
