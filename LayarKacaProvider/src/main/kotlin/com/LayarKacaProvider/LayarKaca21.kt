@@ -67,7 +67,9 @@ open class LayarKaca21 : MainAPI() {
             }
         }
 
-        val home = try {
+        var home: List<SearchResponse> = emptyList()
+        
+        try {
             // Try to load from main page URL
             val url = if (request.data.contains("/?s=")) {
                 // Search-based URL - use popular search terms
@@ -79,14 +81,15 @@ open class LayarKaca21 : MainAPI() {
             }
             
             val document = app.get(url, timeout = 10000L).documentLarge
-            document.select("article figure").mapNotNull {
+            home = document.select("article figure").mapNotNull {
                 it.toSearchResult()
             }
         } catch (e: Exception) {
             Log.e("Phisher", "getMainPage failed: ${e.message}")
-            emptyList()
+            // Return empty list but DON'T throw - this ensures provider still appears in home
         }
 
+        // ALWAYS return a response (even if empty) so provider appears in home
         val response = newHomePageResponse(request.name, home)
 
         // Cache the result
