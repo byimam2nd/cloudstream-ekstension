@@ -48,11 +48,11 @@ open class LayarKaca21 : MainAPI() {
     )
 
     // Simplified main page - using search-based approach as fallback
+    private val searchUrl = "https://lk21.de"
+    
     override val mainPage = mainPageOf(
         "$searchUrl/?s=" to "Search All Content",
     )
-    
-    private val searchUrl = "https://lk21.de"
 
     override suspend fun getMainPage(
         page: Int,
