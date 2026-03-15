@@ -3,6 +3,8 @@ package com.layarkacaprovider
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
@@ -301,4 +303,11 @@ class LayarKacaProvider : MainAPI() {
         return URLEncoder.encode(this, StandardCharsets.UTF_8.toString())
     }
 
+}
+
+@CloudstreamPlugin
+class LayarKacaPlugin: BasePlugin() {
+    override fun load() {
+        registerMainAPI(LayarKacaProvider())
+    }
 }
