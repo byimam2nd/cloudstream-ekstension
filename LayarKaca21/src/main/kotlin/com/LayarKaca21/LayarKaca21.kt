@@ -67,22 +67,22 @@ open class LayarKaca21 : MainAPI() {
     override val supportedTypes       = setOf(TvType.Movie, TvType.TvSeries, TvType.AsianDrama)
 
     override val mainPage = mainPageOf(
-        "populer/page/" to "Film Terpopuler",
-        "rating/page/" to "Film Berdasarkan IMDb Rating",
-        "most-commented/page/" to "Film Dengan Komentar Terbanyak",
-        "latest/page/" to "Film Upload Terbaru",
+        "/populer/page/" to "Film Terpopuler",
+        "/rating/page/" to "Film Berdasarkan IMDb Rating",
+        "/most-commented/page/" to "Film Dengan Komentar Terbanyak",
+        "/latest/page/" to "Film Upload Terbaru",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         // CACHING: Check cache first (instant load for 5 minutes)
-        val cacheKey = "${request.data}${page}"
+        val cacheKey = "${request.data}$page"
         cacheMutex.withLock {
             val cached = mainPageCache[cacheKey]
             if (cached != null && !cached.isExpired()) {
                 return cached.data
             }
         }
-        
+
         val document = app.get("$mainUrl${request.data}$page", timeout = 10000L).documentLarge
         val home = document.select("article figure").mapNotNull { it.toSearchResult() }
         val response = newHomePageResponse(request.name, home)
@@ -130,61 +130,26 @@ open class LayarKaca21 : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
-        // CACHING: Check cache first (instant load for 5 minutes)
-        val cacheKey = "search_${query}"
+        val cacheKey = "search_$query"
         cacheMutex.withLock {
             val cached = searchCache[cacheKey]
             if (cached != null && !cached.isExpired()) {
-                Log.d("LayarKaca21Search", "Cache hit for: $query")
                 return cached.data
             }
         }
 
-        Log.d("LayarKaca21Search", "Searching for: $query")
-
-        // FIX: Correct search URL pattern
-        // Page 1: /?s=query (NOT /page/1/?s=query)
-        // Page 2+: /page/2/?s=query
-        // OPTIMIZED: Parallel search with timeout (3x faster)
-        val results = coroutineScope {
-            (1..3).map { page ->
-                async {
-                    try {
-                        // URL encode the query to handle spaces and special characters
-                        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-                        
-                        // WordPress search: page 1 has no /page/1/ in URL
-                        val searchUrl = if (page == 1) {
-                            "${mainUrl}/?s=$encodedQuery"
-                        } else {
-                            "${mainUrl}/page/$page/?s=$encodedQuery"
-                        }
-                        Log.d("LayarKaca21Search", "Fetching page $page: $searchUrl")
-                        val document = app.get(searchUrl, timeout = 5000L).documentLarge
-                        val articles = document.select("article figure")
-                        Log.d("LayarKaca21Search", "Page $page found ${articles.size} articles")
-                        articles.mapNotNull { it.toSearchResult() }
-                    } catch (e: Exception) {
-                        Log.e("LayarKaca21Search", "Error fetching page $page: ${e.message}")
-                        emptyList<SearchResponse>()
-                    }
-                }
-            }.awaitAll().flatten().distinctBy { it.url }
+        val results = try {
+            val document = app.get("$mainUrl/?s=${query.encodeUrl()}", timeout = 10000L).document
+            document.select("article figure").mapNotNull { it.toSearchResult() }
+        } catch (e: Exception) {
+            emptyList()
         }
 
-        Log.d("LayarKaca21Search", "Total results: ${results.size}")
-        
-        // Cache the result with size limit
         cacheMutex.withLock {
-            // Enforce cache size limit to prevent memory leaks
-            if (searchCache.size > MAX_CACHE_SIZE) {
-                searchCache.clear()
-            }
             searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
-            // Clean old cache entries
-            searchCache.entries.removeAll { it.value.isExpired() }
+            mainPageCache.entries.removeAll { it.value.isExpired() }
         }
-        
+
         return results
     }
 
