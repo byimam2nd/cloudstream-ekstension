@@ -33,7 +33,7 @@ class IdlixMonitor : SmartCacheMonitor() {
                 }
                 .filter { it.isNotEmpty() }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to fetch titles from $url", e)
+            Log.e(TAG, "Failed to fetch titles from $url")
             emptyList()
         }
     }
