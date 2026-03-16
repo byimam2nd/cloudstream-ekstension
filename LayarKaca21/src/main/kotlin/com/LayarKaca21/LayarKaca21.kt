@@ -176,7 +176,7 @@ class LayarKaca21 : MainAPI() {
             return cached
         }
 
-        // FIX: Use HTML scraping dengan selector yang spesifik untuk search results
+        // FIX: Use HTML scraping dengan selector yang lebih lenient
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
@@ -197,39 +197,56 @@ class LayarKaca21 : MainAPI() {
                             headers = mapOf("User-Agent" to getRandomUserAgent())
                         ).documentLarge
 
-                        // Selector spesifik untuk search results
-                        // Cari container utama search results dulu
-                        val searchResults = document.select("div.listupd article, div.items article, article[data-id], .result-item")
-                            .mapNotNull { article ->
-                                // Ambil title dari link
-                                val link = article.selectFirst("a[href]")
-                                val title = link?.attr("title")?.trim()
-                                    ?: link?.text()?.trim()
-                                    ?: article.selectFirst("h3, h2, .title")?.text()?.trim()
-                                    ?: return@mapNotNull null
-                                
-                                val href = link?.attr("href")?.let { fixUrl(it) }
-                                    ?: return@mapNotNull null
+                        // Coba beberapa selector dengan fallback
+                        val allArticles = document.select("article")
+                        
+                        // Filter: hanya yang ada di main content (bukan sidebar)
+                        val searchResults = allArticles.mapNotNull { article ->
+                            // Cek apakah article ini ada di dalam main content area
+                            val parent = article.parent()
+                            val isInMainContent = parent?.className()?.contains("listupd") == true ||
+                                parent?.className()?.contains("items") == true ||
+                                parent?.attr("id")?.contains("content") == true ||
+                                article.className().contains("result") == true
+                            
+                            // Skip jika tidak di main content (mungkin sidebar/widget)
+                            if (!isInMainContent && allArticles.size > 20) {
+                                // Jika ada banyak article, skip yang di sidebar
+                                return@mapNotNull null
+                            }
+                            
+                            // Ambil title dari link
+                            val link = article.selectFirst("a[href]") ?: return@mapNotNull null
+                            val title = link.attr("title").trim()
+                                .ifEmpty { link.text().trim() }
+                                .ifEmpty { article.selectFirst("h3, h2, .title")?.text()?.trim() }
+                                .ifEmpty { return@mapNotNull null }
+                            
+                            // Skip jika title terlalu pendek atau tidak relevan
+                            if (title.length < 3) return@mapNotNull null
+                            
+                            val href = link.attr("href").let { fixUrl(it) }
 
-                                // Ambil poster dari img
-                                val img = article.selectFirst("img")
-                                val posterUrl = img?.let { 
-                                    fixUrlNull(it.attr("data-src") ?: it.attr("src"))
+                            // Ambil poster dari img
+                            val img = article.selectFirst("img")
+                            val posterUrl = img?.let { 
+                                fixUrlNull(it.attr("data-src") ?: it.attr("src"))
+                            }
+
+                            // Cek type dari struktur
+                            val isSeries = article.selectFirst(".episode, .epx") != null ||
+                                article.text().contains("Season", ignoreCase = true)
+                            
+                            if (isSeries) {
+                                newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                                    this.posterUrl = posterUrl
                                 }
-
-                                // Cek type dari struktur
-                                val isSeries = article.selectFirst(".episode, .epx, span:contains(Season)") != null
-                                
-                                if (isSeries) {
-                                    newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                                        this.posterUrl = posterUrl
-                                    }
-                                } else {
-                                    newMovieSearchResponse(title, href, TvType.Movie) {
-                                        this.posterUrl = posterUrl
-                                    }
+                            } else {
+                                newMovieSearchResponse(title, href, TvType.Movie) {
+                                    this.posterUrl = posterUrl
                                 }
                             }
+                        }
 
                         searchResults
                     } catch (e: Exception) {
