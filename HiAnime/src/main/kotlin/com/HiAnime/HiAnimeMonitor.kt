@@ -1,6 +1,8 @@
 package com.HiAnime
 
-import com.SmartCacheMonitor
+import com.HiAnime.SmartCacheMonitor
+import com.lagradost.api.Log
+import kotlinx.coroutines.withTimeout
 import com.lagradost.cloudstream3.app
 
 /**

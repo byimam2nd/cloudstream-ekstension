@@ -1,6 +1,8 @@
 package com.hexated
 
-import com.SmartCacheMonitor
+import com.hexated.SmartCacheMonitor
+import com.lagradost.api.Log
+import kotlinx.coroutines.withTimeout
 import com.lagradost.cloudstream3.app
 
 /**

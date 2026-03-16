@@ -1,4 +1,5 @@
 package com.Anichin
+import kotlinx.coroutines.withTimeout
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
@@ -158,7 +159,7 @@ abstract class SmartCacheMonitor {
                 )
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Error checking cache for key: $cacheKey", e)
+                Log.e(TAG, "Error checking cache for key: $cacheKey | Cause: ${e.message}")
                 // Fallback: anggap valid jika ada error (return cached data)
                 FingerprintCheckResult(
                     isValid = true,
@@ -179,7 +180,7 @@ abstract class SmartCacheMonitor {
                 fetchTitles(url)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Timeout fetching titles from $url", e)
+            Log.e(TAG, "Timeout fetching titles from $url | Cause: ${e.message}")
             emptyList()
         }
     }

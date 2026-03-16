@@ -1,8 +1,9 @@
 package com.layarKacaProvider
 
-import com.SmartCacheMonitor
+import com.layarKacaProvider.SmartCacheMonitor
+import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.fixUrl
+import kotlinx.coroutines.withTimeout
 
 /**
  * LayarKaca21-specific cache monitor
