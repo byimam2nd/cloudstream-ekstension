@@ -8,7 +8,6 @@ import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.MainPageRequest
 import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.SearchQuality
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.app
@@ -112,10 +111,8 @@ open class LayarKaca21 : MainAPI() {
                 addDubStatus(false, true, null, episode)
             }
         } else {
-            val quality = this.select("div.quality").text().trim()
             return newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
-                this.quality = SearchQuality.valueOf(quality.uppercase().replace(" ", "_"))
             }
         }
     }
