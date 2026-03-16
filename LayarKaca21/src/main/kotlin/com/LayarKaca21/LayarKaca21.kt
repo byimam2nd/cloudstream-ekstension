@@ -16,14 +16,6 @@ import com.layarKaca21.getRandomUserAgent
 import com.layarKaca21.executeWithRetry
 import com.layarKaca21.logError
 
-// ============================================
-// OPTIMIZED CACHING CONFIGURATION
-// ============================================
-// TTL berbeda untuk setiap operasi
-private const val SEARCH_CACHE_TTL = 30 * 60 * 1000L      // 30 menit
-private const val MAINPAGE_CACHE_TTL = 10 * 60 * 1000L    // 10 menit
-private const val MAX_CACHE_SIZE = 50                     // Max 50 entries per cache
-
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(
     ttl = SEARCH_CACHE_TTL,

@@ -65,13 +65,6 @@ import com.HiAnime.getRandomUserAgent
 import com.HiAnime.executeWithRetry
 import com.HiAnime.logError
 
-// ============================================
-// CACHING CONFIGURATION
-// ============================================
-private const val SEARCH_CACHE_TTL = 30 * 60 * 1000L      // 30 menit
-private const val MAINPAGE_CACHE_TTL = 10 * 60 * 1000L    // 10 menit
-private const val MAX_CACHE_SIZE = 50                     // Max 50 entries
-
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(
     ttl = SEARCH_CACHE_TTL,
@@ -182,7 +175,7 @@ class HiAnime : MainAPI() {
             ).documentLarge
         }
 
-        val resultItems = results.select("div.flw-item").map {
+        val resultItems = results.select("div.flw-item").mapNotNull {
             runCatching { it.toSearchResult() }.getOrElse { null }
         }
 
