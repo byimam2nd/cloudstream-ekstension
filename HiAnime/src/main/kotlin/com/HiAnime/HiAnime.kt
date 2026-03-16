@@ -64,6 +64,8 @@ import com.HiAnime.rateLimitDelay
 import com.HiAnime.getRandomUserAgent
 import com.HiAnime.executeWithRetry
 import com.HiAnime.logError
+import com.CacheFingerprint
+import com.CacheValidationResult
 
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(
@@ -75,6 +77,10 @@ private val mainPageCache = CacheManager<HomePageResponse>(
     ttl = MAINPAGE_CACHE_TTL,
     maxSize = MAX_CACHE_SIZE
 )
+
+// Smart Cache Monitor untuk fingerprint-based invalidation
+private val monitor = HiAnimeMonitor()
+private val fingerprints = mutableMapOf<String, CacheFingerprint>()
 
 class HiAnime : MainAPI() {
     override var mainUrl = HiAnimeProviderPlugin.currentHiAnimeServer
@@ -186,13 +192,28 @@ class HiAnime : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // OPTIMIZED: Gunakan CacheManager dengan TTL 10 menit
         val cacheKey = "${request.data}${page}"
 
         // Check cache first
         val cached = mainPageCache.get(cacheKey)
+        val cachedFingerprint = fingerprints[cacheKey]
+        
         if (cached != null) {
-            return cached
+            // SMART CACHE: Check if content has changed
+            val checkResult = monitor.checkCacheValidity(
+                cacheKey = cacheKey,
+                url = "${request.data}$page",
+                cachedFingerprint = cachedFingerprint
+            )
+            
+            // If cache is valid, return cached data
+            if (checkResult.isValid && checkResult.result == CacheValidationResult.CACHE_VALID) {
+                Log.d("HiAnime", "Cache HIT for $cacheKey (fingerprint match)")
+                return cached
+            }
+            
+            // Cache invalid - will fetch new data
+            Log.d("HiAnime", "Cache MISS for $cacheKey (fingerprint changed)")
         }
 
         // Fetch dengan retry logic dan rate limiting
@@ -213,6 +234,12 @@ class HiAnime : MainAPI() {
 
         // Cache the result
         mainPageCache.put(cacheKey, response)
+        
+        // Update fingerprint
+        val titles = document.select("div.flw-item h3.film-name")
+            .mapNotNull { it.text().trim() }
+            .filter { it.isNotEmpty() }
+        fingerprints[cacheKey] = monitor.generateFingerprint(cacheKey, titles)
 
         return response
     }

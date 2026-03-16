@@ -23,6 +23,8 @@ import com.hexated.rateLimitDelay
 import com.hexated.getRandomUserAgent
 import com.hexated.executeWithRetry
 import com.hexated.logError
+import com.CacheFingerprint
+import com.CacheValidationResult
 
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(
@@ -34,6 +36,10 @@ private val mainPageCache = CacheManager<HomePageResponse>(
     ttl = MAINPAGE_CACHE_TTL,
     maxSize = MAX_CACHE_SIZE
 )
+
+// Smart Cache Monitor untuk fingerprint-based invalidation
+private val monitor = IdlixMonitor()
+private val fingerprints = mutableMapOf<String, CacheFingerprint>()
 
 class IdlixProvider : MainAPI() {
     override var mainUrl = "https://idlixian.com"
@@ -75,13 +81,28 @@ class IdlixProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        // OPTIMIZED: Gunakan CacheManager dengan TTL 10 menit
         val cacheKey = "${request.data}${page}"
 
         // Check cache first
         val cached = mainPageCache.get(cacheKey)
+        val cachedFingerprint = fingerprints[cacheKey]
+        
         if (cached != null) {
-            return cached
+            // SMART CACHE: Check if content has changed
+            val checkResult = monitor.checkCacheValidity(
+                cacheKey = cacheKey,
+                url = request.data + page,
+                cachedFingerprint = cachedFingerprint
+            )
+            
+            // If cache is valid, return cached data
+            if (checkResult.isValid && checkResult.result == CacheValidationResult.CACHE_VALID) {
+                Log.d("Idlix", "Cache HIT for $cacheKey (fingerprint match)")
+                return cached
+            }
+            
+            // Cache invalid - will fetch new data
+            Log.d("Idlix", "Cache MISS for $cacheKey (fingerprint changed)")
         }
 
         val url = request.data.split("?")
@@ -119,6 +140,12 @@ class IdlixProvider : MainAPI() {
 
         // Cache the result
         mainPageCache.put(cacheKey, response)
+        
+        // Update fingerprint
+        val titles = document.select("div.items article h3 > a")
+            .mapNotNull { it.text().replace(Regex("\\(\\d{4}\\)"), "").trim() }
+            .filter { it.isNotEmpty() }
+        fingerprints[cacheKey] = monitor.generateFingerprint(cacheKey, titles)
 
         return response
     }
