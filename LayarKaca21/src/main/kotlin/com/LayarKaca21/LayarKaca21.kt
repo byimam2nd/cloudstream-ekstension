@@ -148,44 +148,31 @@ class LayarKaca21 : MainAPI() {
             return cached
         }
 
-        // OPTIMIZED: Parallel search dengan rate limiting
+        // FIX: Use HTML scraping instead of JSON API (API mungkin down)
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
                     try {
                         rateLimitDelay()
                         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-                        val res = app.get(
-                            "$searchUrl/search.php?s=$encodedQuery&page=$page",
+                        
+                        // WordPress search URL pattern
+                        val searchUrl = if (page == 1) {
+                            "$mainUrl/?s=$encodedQuery"
+                        } else {
+                            "$mainUrl/page/$page/?s=$encodedQuery"
+                        }
+                        
+                        val document = app.get(
+                            searchUrl,
                             timeout = requestTimeout,
                             headers = mapOf("User-Agent" to getRandomUserAgent())
-                        ).text
+                        ).documentLarge
 
-                        val resultsList = mutableListOf<SearchResponse>()
-                        val root = JSONObject(res)
-                        val arr = root.getJSONArray("data")
-
-                        for (i in 0 until arr.length()) {
-                            val item = arr.getJSONObject(i)
-                            val title = item.getString("title")
-                            val slug = item.getString("slug")
-                            val type = item.getString("type")
-                            val posterUrl = "https://poster.lk21.party/wp-content/uploads/" + item.optString("poster")
-
-                            when (type) {
-                                "series" -> resultsList.add(
-                                    newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
-                                        this.posterUrl = posterUrl
-                                    }
-                                )
-                                "movie" -> resultsList.add(
-                                    newMovieSearchResponse(title, "$mainUrl/$slug", TvType.Movie) {
-                                        this.posterUrl = posterUrl
-                                    }
-                                )
-                            }
+                        // Scraping hasil search dari HTML
+                        document.select("article figure").mapNotNull {
+                            it.toSearchResult()
                         }
-                        resultsList
                     } catch (e: Exception) {
                         logError("LayarKaca", "Search page $page failed: ${e.message}", e)
                         emptyList<SearchResponse>()
