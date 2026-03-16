@@ -219,9 +219,9 @@ class LayarKaca21 : MainAPI() {
                             val link = article.selectFirst("a[href]") ?: return@mapNotNull null
                             val title = link.attr("title").trim()
                                 .ifEmpty { link.text().trim() }
-                                .ifEmpty { article.selectFirst("h3, h2, .title")?.text()?.trim() }
+                                .ifEmpty { article.selectFirst("h3, h2, .title")?.text()?.trim().orEmpty() }
                                 .ifEmpty { return@mapNotNull null }
-                            
+
                             // Skip jika title terlalu pendek atau tidak relevan
                             if (title.length < 3) return@mapNotNull null
                             
