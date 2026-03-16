@@ -10,11 +10,11 @@ import java.net.URI
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import com.CacheManager
-import com.rateLimitDelay
-import com.getRandomUserAgent
-import com.executeWithRetry
-import com.logError
+import com.layarKaca21.CacheManager
+import com.layarKaca21.rateLimitDelay
+import com.layarKaca21.getRandomUserAgent
+import com.layarKaca21.executeWithRetry
+import com.layarKaca21.logError
 
 // ============================================
 // OPTIMIZED CACHING CONFIGURATION

@@ -18,11 +18,11 @@ import kotlinx.coroutines.awaitAll
 // ============================================
 // OPTIMIZED: Import shared utilities
 // ============================================
-import com.CacheManager
-import com.rateLimitDelay
-import com.getRandomUserAgent
-import com.executeWithRetry
-import com.logError
+import com.hexated.CacheManager
+import com.hexated.rateLimitDelay
+import com.hexated.getRandomUserAgent
+import com.hexated.executeWithRetry
+import com.hexated.logError
 
 // ============================================
 // CACHING CONFIGURATION

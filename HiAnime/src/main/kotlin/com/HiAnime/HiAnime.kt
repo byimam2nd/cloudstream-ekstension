@@ -59,11 +59,11 @@ import org.json.JSONObject
 // ============================================
 // OPTIMIZED: Import shared utilities
 // ============================================
-import com.CacheManager
-import com.rateLimitDelay
-import com.getRandomUserAgent
-import com.executeWithRetry
-import com.logError
+import com.HiAnime.CacheManager
+import com.HiAnime.rateLimitDelay
+import com.HiAnime.getRandomUserAgent
+import com.HiAnime.executeWithRetry
+import com.HiAnime.logError
 
 // ============================================
 // CACHING CONFIGURATION

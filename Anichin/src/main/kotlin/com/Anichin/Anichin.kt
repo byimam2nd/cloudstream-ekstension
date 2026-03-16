@@ -40,11 +40,11 @@ import org.jsoup.nodes.Element
 // ============================================
 // OPTIMIZED: Import shared utilities
 // ============================================
-import com.CacheManager
-import com.rateLimitDelay
-import com.getRandomUserAgent
-import com.executeWithRetry
-import com.logError
+import com.Anichin.CacheManager
+import com.Anichin.rateLimitDelay
+import com.Anichin.getRandomUserAgent
+import com.Anichin.executeWithRetry
+import com.Anichin.logError
 
 // ============================================
 // CACHING CONFIGURATION
