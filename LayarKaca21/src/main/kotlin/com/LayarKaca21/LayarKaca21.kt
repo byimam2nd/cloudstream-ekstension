@@ -176,7 +176,7 @@ class LayarKaca21 : MainAPI() {
             return cached
         }
 
-        // FIX: Use HTML scraping dengan selector yang benar untuk search
+        // FIX: Use HTML scraping dengan selector yang spesifik untuk search results
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
@@ -197,25 +197,40 @@ class LayarKaca21 : MainAPI() {
                             headers = mapOf("User-Agent" to getRandomUserAgent())
                         ).documentLarge
 
-                        // Selector untuk search results - coba beberapa selector
-                        val searchResults = document.select("article")
+                        // Selector spesifik untuk search results
+                        // Cari container utama search results dulu
+                        val searchResults = document.select("div.listupd article, div.items article, article[data-id], .result-item")
                             .mapNotNull { article ->
-                                // Coba ambil title dari berbagai lokasi
-                                val title = article.selectFirst("h3, h2, .title, a[title]")?.text()?.trim()
+                                // Ambil title dari link
+                                val link = article.selectFirst("a[href]")
+                                val title = link?.attr("title")?.trim()
+                                    ?: link?.text()?.trim()
+                                    ?: article.selectFirst("h3, h2, .title")?.text()?.trim()
                                     ?: return@mapNotNull null
                                 
-                                val href = article.selectFirst("a[href]")?.attr("href")?.let { fixUrl(it) }
+                                val href = link?.attr("href")?.let { fixUrl(it) }
                                     ?: return@mapNotNull null
-                                
-                                val posterUrl = article.selectFirst("img")?.let { img ->
-                                    fixUrlNull(img.attr("src") ?: img.attr("data-src"))
+
+                                // Ambil poster dari img
+                                val img = article.selectFirst("img")
+                                val posterUrl = img?.let { 
+                                    fixUrlNull(it.attr("data-src") ?: it.attr("src"))
                                 }
+
+                                // Cek type dari struktur
+                                val isSeries = article.selectFirst(".episode, .epx, span:contains(Season)") != null
                                 
-                                newMovieSearchResponse(title, href, TvType.Movie) {
-                                    this.posterUrl = posterUrl
+                                if (isSeries) {
+                                    newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                                        this.posterUrl = posterUrl
+                                    }
+                                } else {
+                                    newMovieSearchResponse(title, href, TvType.Movie) {
+                                        this.posterUrl = posterUrl
+                                    }
                                 }
                             }
-                        
+
                         searchResults
                     } catch (e: Exception) {
                         logError("LayarKaca", "Search page $page failed: ${e.message}", e)
