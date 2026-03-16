@@ -17,6 +17,9 @@ internal const val MAX_CACHE_SIZE = 50                     // Max 50 entries
 
 // Rate limiting configuration
 internal const val MIN_REQUEST_DELAY = 100L
+
+// Debug mode
+private const val DEBUG_MODE = false
 internal const val MAX_REQUEST_DELAY = 500L
 
 // ============================================
@@ -144,7 +147,6 @@ internal suspend fun <T> executeWithRetry(
 }
 
 internal fun logDebug(tag: String, message: String) {
-    const val DEBUG_MODE = false
     if (DEBUG_MODE) {
         Log.d(tag, message)
     }

@@ -10,11 +10,11 @@ import java.net.URI
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import com.layarKaca21.CacheManager
-import com.layarKaca21.rateLimitDelay
-import com.layarKaca21.getRandomUserAgent
-import com.layarKaca21.executeWithRetry
-import com.layarKaca21.logError
+import com.layarKacaProvider.CacheManager
+import com.layarKacaProvider.rateLimitDelay
+import com.layarKacaProvider.getRandomUserAgent
+import com.layarKacaProvider.executeWithRetry
+import com.layarKacaProvider.logError
 
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(

@@ -1,4 +1,4 @@
-package com.layarKaca21
+package com.layarKacaProvider
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.HomePageResponse
@@ -30,6 +30,9 @@ internal const val CLEANUP_THRESHOLD = 80  // Mulai cleanup saat 80% full
 
 // Rate limiting configuration
 internal const val MIN_REQUEST_DELAY = 100L  // Minimal 100ms antar request
+
+// Debug mode
+private const val DEBUG_MODE = false
 internal const val MAX_REQUEST_DELAY = 500L  // Maksimal 500ms (random untuk natural behavior)
 
 // ============================================
@@ -204,7 +207,7 @@ internal suspend fun <T> executeWithRetry(
 /**
  * Logging conditional - hanya aktif saat debug mode
  */
-private const val DEBUG_MODE = false
+private val DEBUG_MODE = false
 
 internal fun logDebug(tag: String, message: String) {
     if (DEBUG_MODE) {
