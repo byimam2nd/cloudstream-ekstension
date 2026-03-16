@@ -48,8 +48,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.supervisorScope
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -57,18 +56,32 @@ import java.net.URI
 import okhttp3.OkHttpClient
 import org.json.JSONObject
 
-// CACHING for instant results (5 minute TTL)
-private data class CachedResult<T>(
-    val data: T,
-    val timestamp: Long,
-    val ttl: Long = 300000
-) {
-    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
-}
+// ============================================
+// OPTIMIZED: Import shared utilities
+// ============================================
+import com.CacheManager
+import com.rateLimitDelay
+import com.getRandomUserAgent
+import com.executeWithRetry
+import com.logError
 
-private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
-private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
-private val cacheMutex = Mutex()
+// ============================================
+// CACHING CONFIGURATION
+// ============================================
+private const val SEARCH_CACHE_TTL = 30 * 60 * 1000L      // 30 menit
+private const val MAINPAGE_CACHE_TTL = 10 * 60 * 1000L    // 10 menit
+private const val MAX_CACHE_SIZE = 50                     // Max 50 entries
+
+// Cache instances dengan TTL berbeda
+private val searchCache = CacheManager<List<SearchResponse>>(
+    ttl = SEARCH_CACHE_TTL,
+    maxSize = MAX_CACHE_SIZE
+)
+
+private val mainPageCache = CacheManager<HomePageResponse>(
+    ttl = MAINPAGE_CACHE_TTL,
+    maxSize = MAX_CACHE_SIZE
+)
 
 class HiAnime : MainAPI() {
     override var mainUrl = HiAnimeProviderPlugin.currentHiAnimeServer
@@ -80,13 +93,14 @@ class HiAnime : MainAPI() {
     override val usesWebView = true
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
 
+    // Standard timeout untuk semua request (10 detik)
+    private val requestTimeout = 10000L
+
     private fun Element.toSearchResult(): SearchResponse {
         val href = fixUrl(this.select("a").attr("href"))
         val title = this.select("h3.film-name").text()
-        val subCount =
-                this.selectFirst(".film-poster > .tick.ltr > .tick-sub")?.text()?.toIntOrNull()
-        val dubCount =
-                this.selectFirst(".film-poster > .tick.ltr > .tick-dub")?.text()?.toIntOrNull()
+        val subCount = this.selectFirst(".film-poster > .tick.ltr > .tick-sub")?.text()?.toIntOrNull()
+        val dubCount = this.selectFirst(".film-poster > .tick.ltr > .tick-dub")?.text()?.toIntOrNull()
 
         val posterUrl = fixUrl(this.select("img").attr("data-src"))
         val type = getType(this.selectFirst("div.fd-infor > span.fdi-item")?.text() ?: "")
@@ -121,6 +135,7 @@ class HiAnime : MainAPI() {
     companion object {
         private val client = OkHttpClient()
         const val userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/70.0.3538.77 Chrome/70.0.3538.77 Safari/537.36"
+
         fun getType(t: String): TvType {
             return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
             else if (t.contains("Movie")) TvType.AnimeMovie else TvType.Anime
@@ -135,72 +150,104 @@ class HiAnime : MainAPI() {
         }
     }
 
-    override val mainPage =
-            mainPageOf(
-                    "$mainUrl/recently-updated?page=" to "Latest Episodes",
-                    "$mainUrl/top-airing?page=" to "Top Airing",
-                    "$mainUrl/filter?status=2&language=1&sort=recently_updated&page=" to "Recently Updated (SUB)",
-                    "$mainUrl/filter?status=2&language=2&sort=recently_updated&page=" to "Recently Updated (DUB)",
-                    "$mainUrl/recently-added?page=" to "New On HiAnime",
-                    "$mainUrl/most-popular?page=" to "Most Popular",
-                    "$mainUrl/most-favorite?page=" to "Most Favorite",
-                    "$mainUrl/completed?page=" to "Latest Completed",
-            )
+    override val mainPage = mainPageOf(
+        "$mainUrl/recently-updated?page=" to "Latest Episodes",
+        "$mainUrl/top-airing?page=" to "Top Airing",
+        "$mainUrl/filter?status=2&language=1&sort=recently_updated&page=" to "Recently Updated (SUB)",
+        "$mainUrl/filter?status=2&language=2&sort=recently_updated&page=" to "Recently Updated (DUB)",
+        "$mainUrl/recently-added?page=" to "New On HiAnime",
+        "$mainUrl/most-popular?page=" to "Most Popular",
+        "$mainUrl/most-favorite?page=" to "Most Favorite",
+        "$mainUrl/completed?page=" to "Latest Completed",
+    )
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        // CACHING: Check cache first (instant load for 5 minutes)
+        // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
         val cacheKey = "search_${query}_${page}"
-        cacheMutex.withLock {
-            val cached = searchCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                return cached.data.toNewSearchResponseList()
-            }
+
+        // Check cache first
+        val cached = searchCache.get(cacheKey)
+        if (cached != null) {
+            return cached.toNewSearchResponseList()
         }
-        
-        val link = "$mainUrl/search?keyword=$query&page=$page"
-        val res = app.get(link, timeout = 10000L).documentLarge
-        val results = res.select("div.flw-item").map { it.toSearchResult() }.toNewSearchResponseList()
-        
+
+        // Fetch dengan retry logic dan rate limiting
+        val results = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            val link = "$mainUrl/search?keyword=$query&page=$page"
+            app.get(
+                link,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
+
+        val resultItems = results.select("div.flw-item").map {
+            runCatching { it.toSearchResult() }.getOrElse { null }
+        }
+
         // Cache the result
-        cacheMutex.withLock {
-            searchCache[cacheKey] = CachedResult(results.items, System.currentTimeMillis())
-            searchCache.entries.removeAll { it.value.isExpired() }
-        }
-        
-        return results
+        searchCache.put(cacheKey, resultItems)
+
+        return resultItems.toNewSearchResponseList()
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // CACHING: Check cache first (instant load for 5 minutes)
+        // OPTIMIZED: Gunakan CacheManager dengan TTL 10 menit
         val cacheKey = "${request.data}${page}"
-        cacheMutex.withLock {
-            val cached = mainPageCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                return cached.data
-            }
+
+        // Check cache first
+        val cached = mainPageCache.get(cacheKey)
+        if (cached != null) {
+            return cached
         }
-        
-        val document = app.get("${request.data}$page", timeout = 10000L).document
-        val items = document.select("div.flw-item").map { it.toSearchResult() }
+
+        // Fetch dengan retry logic dan rate limiting
+        val document = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                "${request.data}$page",
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).document
+        }
+
+        val items = document.select("div.flw-item").mapNotNull {
+            runCatching { it.toSearchResult() }.getOrElse { null }
+        }
+
         val response = newHomePageResponse(request.name, items)
-        
+
         // Cache the result
-        cacheMutex.withLock {
-            mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
-            mainPageCache.entries.removeAll { it.value.isExpired() }
-        }
-        
+        mainPageCache.put(cacheKey, response)
+
         return response
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url.replace("watch/", "")).document
+        val document = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                url.replace("watch/", ""),
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).document
+        }
 
         val syncData = tryParseJson<ZoroSyncData>(document.selectFirst("#syncData")?.data())
-        val syncMetaData = app.get("https://api.ani.zip/mappings?mal_id=${syncData?.malId}", timeout = 10000L).toString()
+        val syncMetaData = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                "https://api.ani.zip/mappings?mal_id=${syncData?.malId}",
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).toString()
+        }
+
         val animeMetaData = parseAnimeData(syncMetaData)
-        val title = document.selectFirst(".anisc-detail > .film-name")?.text().toString()
-        val description = document.select("div.film-description > div").text().ifEmpty { document.select("div.film-description div").text() }
+        val title = document.selectFirst(".anisc-detail > .film-name")?.text().orEmpty()
+        val description = document.select("div.film-description > div").text()
+            .ifEmpty { document.select("div.film-description div").text() }
         val poster = document.select("#ani_detail div.film-poster img").attr("src")
         val genres = document.select("div.item.item-list:has(> span.item-head:contains(Genres)) a").map { it.text() }
         val backgroundposter = animeMetaData?.images?.find { it.coverType == "Fanart" }?.url
@@ -210,8 +257,7 @@ class HiAnime : MainAPI() {
         val tmdbid = animeMetaData?.mappings?.themoviedbId
 
         val typeraw = document.select("div.film-stats div.tick").text()
-        val type = if (typeraw.contains("Movie",ignoreCase = true)) TvType.Movie else TvType.Anime
-
+        val type = if (typeraw.contains("Movie", ignoreCase = true)) TvType.Movie else TvType.Anime
 
         val subCount = document.selectFirst(".anisc-detail .tick-sub")?.text()?.toIntOrNull()
         val dubCount = document.selectFirst(".anisc-detail .tick-dub")?.text()?.toIntOrNull()
@@ -230,32 +276,38 @@ class HiAnime : MainAPI() {
 
         // Fetch all episode pages (for anime with 100+ episodes like Renegade Immortal)
         val allEpisodes = mutableListOf<Element>()
-        var page = 1
+        var currentPage = 1
         var hasMorePages = true
-        
+
         while (hasMorePages) {
             try {
-                val responseBody = app.get("$mainUrl/ajax/v2/episode/list/$animeId?page=$page", timeout = 10000L).body.string()
+                rateLimitDelay()
+                val responseBody = app.get(
+                    "$mainUrl/ajax/v2/episode/list/$animeId?page=$currentPage",
+                    timeout = requestTimeout,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                ).body.string()
+
                 val epRes = responseBody.stringParse<Response>()?.getDocument()
-                
+
                 if (epRes == null) {
                     hasMorePages = false
                     continue
                 }
-                
+
                 val episodesOnPage = epRes.select(".ss-list > a[href].ssl-item.ep-item")
-                
+
                 if (episodesOnPage.isEmpty()) {
                     hasMorePages = false
                 } else {
                     allEpisodes.addAll(episodesOnPage)
-                    page++
-                    
+                    currentPage++
+
                     // Safety limit to prevent infinite loops
-                    if (page > 20) hasMorePages = false
+                    if (currentPage > 20) hasMorePages = false
                 }
             } catch (e: Exception) {
-                // If any page fails, stop fetching more pages
+                logError("HiAnime", "Failed to fetch episode page $currentPage: ${e.message}", e)
                 hasMorePages = false
             }
         }
@@ -266,7 +318,6 @@ class HiAnime : MainAPI() {
             val episodeNum = ep.selectFirst(".ssli-order")?.text()?.toIntOrNull() ?: return@forEachIndexed
             val episodeKey = episodeNum.toString()
 
-            // --- Helper to get best episode title ---
             fun resolveTitle(ep: Element, episodeKey: String): String {
                 val titleMap = animeMetaData?.episodes?.get(episodeKey)?.title
                 val jsonTitle = titleMap?.get("en")
@@ -296,13 +347,17 @@ class HiAnime : MainAPI() {
             subCount?.let { if (index < it) subEpisodes += createEpisode("sub") }
             dubCount?.let { if (index < it) dubEpisodes += createEpisode("dub") }
         }
+
         val actors = document.select("div.block-actors-content div.bac-item").mapNotNull { it.getActorData() }
-        val recommendations = document.select("div.block_area_category div.flw-item").map { it.toSearchResult() }
+        val recommendations = document.select("div.block_area_category div.flw-item").mapNotNull {
+            runCatching { it.toSearchResult() }.getOrElse { null }
+        }
+
         return newAnimeLoadResponse(title, url, TvType.Anime) {
             engName = title
             posterUrl = poster
             backgroundPosterUrl = backgroundposter
-            try { this.logoUrl = logoUrl } catch(_:Throwable){}
+            try { this.logoUrl = logoUrl } catch (_: Throwable) {}
             this.tags = genres
             this.plot = description
             addEpisodes(DubStatus.Subbed, subEpisodes)
@@ -311,8 +366,8 @@ class HiAnime : MainAPI() {
             this.actors = actors
             addMalId(malId.toIntOrNull())
             addAniListId(anilistId.toIntOrNull())
-            try { addKitsuId(kitsuid) } catch(_:Throwable){}
-            // adding info
+            try { addKitsuId(kitsuid) } catch (_: Throwable) {}
+
             document.select(".anisc-info > .item").forEach { info ->
                 val infoType = info.select("span.item-head").text().removeSuffix(":")
                 when (infoType) {
@@ -320,7 +375,7 @@ class HiAnime : MainAPI() {
                     "Japanese" -> japName = info.selectFirst(".name")?.text()
                     "Premiered" -> year = info.selectFirst(".name")?.text()?.substringAfter(" ")?.toIntOrNull()
                     "Duration" -> duration = getDurationFromString(info.selectFirst(".name")?.text())
-                    "Status" -> showStatus = getStatus(info.selectFirst(".name")?.text().toString())
+                    "Status" -> showStatus = getStatus(info.selectFirst(".name")?.text().orEmpty())
                     "Genres" -> tags = info.select("a").map { it.text() }
                     "MAL Score" -> score = Score.from10(info.selectFirst(".name")?.text())
                     else -> {}
@@ -339,9 +394,16 @@ class HiAnime : MainAPI() {
             val dubType = data.removePrefix("$mainUrl/").substringBefore("|").ifEmpty { "raw" }
             val hrefPart = data.substringAfterLast("|")
             val epId = hrefPart.substringAfter("ep=")
-            val doc = app.get("$mainUrl/ajax/v2/episode/servers?episodeId=$epId", timeout = 10000L)
-                .parsed<Response>()
-                .getDocument()
+
+            val doc = executeWithRetry(maxRetries = 3) {
+                rateLimitDelay()
+                app.get(
+                    "$mainUrl/ajax/v2/episode/servers?episodeId=$epId",
+                    timeout = requestTimeout,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                ).parsed<Response>()
+            }.getDocument()
+
             val servers = doc.select(".server-item[data-type=$dubType][data-id], .server-item[data-type=raw][data-id]")
                 .mapNotNull {
                     val id = it.attr("data-id")
@@ -352,33 +414,41 @@ class HiAnime : MainAPI() {
                         null
                     }
                 }.distinctBy { it.first }
-            
-            // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
-            // 5x faster for episodes with multiple servers
-            coroutineScope {
+
+            // OPTIMIZED: Parallel link extraction dengan rate limiting
+            supervisorScope {
                 servers.map { (id, label) ->
                     async {
-                        val sourceurl = app.get("${mainUrl}/ajax/v2/episode/sources?id=$id", timeout = 10000L).parsedSafe<EpisodeServers>()?.link
-                        if (sourceurl != null) {
-                            loadCustomExtractor(
-                                "HiAnime [$label]",
-                                sourceurl,
-                                "",
-                                subtitleCallback,
-                                callback,
-                            )
+                        try {
+                            rateLimitDelay()
+                            val sourceUrl = app.get(
+                                "${mainUrl}/ajax/v2/episode/sources?id=$id",
+                                timeout = requestTimeout,
+                                headers = mapOf("User-Agent" to getRandomUserAgent())
+                            ).parsedSafe<EpisodeServers>()?.link
+
+                            if (sourceUrl != null) {
+                                loadCustomExtractor(
+                                    "HiAnime [$label]",
+                                    sourceUrl,
+                                    "",
+                                    subtitleCallback,
+                                    callback,
+                                )
+                            }
+                        } catch (e: Exception) {
+                            logError("HiAnime", "Failed to load server $id: ${e.message}", e)
                         }
                     }
                 }.awaitAll()
             }
+
             return true
         } catch (e: Exception) {
-            Log.e("HiAnime", "Critical error in loadLinks: ${e.localizedMessage}")
+            logError("HiAnime", "Critical error in loadLinks: ${e.localizedMessage}", e)
             return false
         }
     }
-
-
 
     data class Response(
         @SerializedName("status") val status: Boolean,
@@ -390,33 +460,13 @@ class HiAnime : MainAPI() {
     }
 
     private data class ZoroSyncData(
-            @JsonProperty("mal_id") val malId: String?,
-            @JsonProperty("anilist_id") val aniListId: String?,
+        @JsonProperty("mal_id") val malId: String?,
+        @JsonProperty("anilist_id") val aniListId: String?,
     )
 
     // HiAnime Response
-
-    data class HiAnimeResponse(
-        val headers: HiAnimeHeaders,
-        val intro: HiAnimeIntro,
-        val outro: HiAnimeOutro,
-        val sources: List<HiAnimeSource>,
-        val subtitles: List<HiAnimeSubtitle>,
-    )
-
     data class HiAnimeHeaders(
-        @JsonProperty("Referer")
-        val referer: String,
-    )
-
-    data class HiAnimeIntro(
-        val start: Long,
-        val end: Long,
-    )
-
-    data class HiAnimeOutro(
-        val start: Long,
-        val end: Long,
+        @JsonProperty("Referer") val referer: String,
     )
 
     data class HiAnimeSource(
@@ -424,12 +474,6 @@ class HiAnime : MainAPI() {
         val isM3U8: Boolean,
         val type: String,
     )
-
-    data class HiAnimeSubtitle(
-        val url: String,
-        val lang: String,
-    )
-
 
     data class HiAnimeAPI(
         val sources: List<Source>,
@@ -455,9 +499,6 @@ class HiAnime : MainAPI() {
         val htmlGuide: String,
     )
 
-
-
-
     // Metadata
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class MetaImage(
@@ -468,8 +509,8 @@ class HiAnime : MainAPI() {
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class MetaEpisode(
         @JsonProperty("episode") val episode: String?,
-        @JsonProperty("airDateUtc") val airDateUtc: String?,  // Keeping only one field
-        @JsonProperty("runtime") val runtime: Int?,     // Keeping only one field
+        @JsonProperty("airDateUtc") val airDateUtc: String?,
+        @JsonProperty("runtime") val runtime: Int?,
         @JsonProperty("image") val image: String?,
         @JsonProperty("title") val title: Map<String, String>?,
         @JsonProperty("overview") val overview: String?,
@@ -484,7 +525,6 @@ class HiAnime : MainAPI() {
         @JsonProperty("episodes") val episodes: Map<String, MetaEpisode>?,
         @JsonProperty("mappings") val mappings: MetaMappings? = null
     )
-
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class MetaMappings(
@@ -501,7 +541,7 @@ class HiAnime : MainAPI() {
             val objectMapper = ObjectMapper()
             objectMapper.readValue(jsonString, MetaAnimeData::class.java)
         } catch (_: Exception) {
-            null // Return null for invalid JSON instead of crashing
+            null
         }
     }
 
@@ -510,7 +550,7 @@ class HiAnime : MainAPI() {
             Gson().fromJson(this, T::class.java)
         } catch (e: Exception) {
             e.printStackTrace()
-            null // Return null if JSON parsing fails
+            null
         }
     }
 

@@ -14,21 +14,33 @@ import java.net.URI
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
-// CACHING for instant results (5 minute TTL)
-private data class CachedResult<T>(
-    val data: T,
-    val timestamp: Long,
-    val ttl: Long = 300000
-) {
-    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
-}
+// ============================================
+// OPTIMIZED: Import shared utilities
+// ============================================
+import com.CacheManager
+import com.rateLimitDelay
+import com.getRandomUserAgent
+import com.executeWithRetry
+import com.logError
 
-private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
-private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
-private val cacheMutex = Mutex()
+// ============================================
+// CACHING CONFIGURATION
+// ============================================
+private const val SEARCH_CACHE_TTL = 30 * 60 * 1000L      // 30 menit
+private const val MAINPAGE_CACHE_TTL = 10 * 60 * 1000L    // 10 menit
+private const val MAX_CACHE_SIZE = 50                     // Max 50 entries
+
+// Cache instances dengan TTL berbeda
+private val searchCache = CacheManager<List<SearchResponse>>(
+    ttl = SEARCH_CACHE_TTL,
+    maxSize = MAX_CACHE_SIZE
+)
+
+private val mainPageCache = CacheManager<HomePageResponse>(
+    ttl = MAINPAGE_CACHE_TTL,
+    maxSize = MAX_CACHE_SIZE
+)
 
 class IdlixProvider : MainAPI() {
     override var mainUrl = "https://idlixian.com"
@@ -43,6 +55,9 @@ class IdlixProvider : MainAPI() {
         TvType.Anime,
         TvType.AsianDrama
     )
+
+    // Standard timeout untuk semua request (10 detik)
+    private val requestTimeout = 10000L
 
     override val mainPage = mainPageOf(
         "$mainUrl/" to "Featured",
@@ -67,39 +82,51 @@ class IdlixProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        // CACHING: Check cache first (instant load for 5 minutes)
+        // OPTIMIZED: Gunakan CacheManager dengan TTL 10 menit
         val cacheKey = "${request.data}${page}"
-        cacheMutex.withLock {
-            val cached = mainPageCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                return cached.data
-            }
+
+        // Check cache first
+        val cached = mainPageCache.get(cacheKey)
+        if (cached != null) {
+            return cached
         }
-        
+
         val url = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1
-        val req = if (nonPaged) {
-            app.get(request.data, timeout = 5000L)
-        } else {
-            app.get("${url.first()}$page/?${url.lastOrNull()}", timeout = 5000L)
+
+        val req = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            if (nonPaged) {
+                app.get(
+                    request.data,
+                    timeout = requestTimeout,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                )
+            } else {
+                app.get(
+                    "${url.first()}$page/?${url.lastOrNull()}",
+                    timeout = requestTimeout,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                )
+            }
         }
+
         mainUrl = getBaseUrl(req.url)
         val document = req.documentLarge
+
         val home = (if (nonPaged) {
             document.select("div.items.featured article")
         } else {
             document.select("div.items.full article, div#archive-content article")
         }).mapNotNull {
-            it.toSearchResult()
+            runCatching { it.toSearchResult() }.getOrElse { null }
         }
+
         val response = newHomePageResponse(request.name, home)
-        
+
         // Cache the result
-        cacheMutex.withLock {
-            mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
-            mainPageCache.entries.removeAll { it.value.isExpired() }
-        }
-        
+        mainPageCache.put(cacheKey, response)
+
         return response
     }
 
@@ -117,9 +144,7 @@ class IdlixProvider : MainAPI() {
                 "$mainUrl/tvseries/$title"
             }
 
-            else -> {
-                uri
-            }
+            else -> uri
         }
     }
 
@@ -128,55 +153,67 @@ class IdlixProvider : MainAPI() {
         val href = getProperLink(this.selectFirst("h3 > a")!!.attr("href"))
         val posterUrl = this.select("div.poster > img").attr("src")
         val quality = getQualityFromString(this.select("span.quality").text())
+
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = quality
         }
-
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        // CACHING: Check cache first (instant load for 5 minutes)
+        // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
         val cacheKey = "search_${query}"
-        cacheMutex.withLock {
-            val cached = searchCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                return cached.data
-            }
+
+        // Check cache first
+        val cached = searchCache.get(cacheKey)
+        if (cached != null) {
+            return cached
         }
-        
-        // OPTIMIZED: Parallel search with timeout (3x faster)
+
+        // OPTIMIZED: Parallel search dengan rate limiting
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
                     try {
-                        val req = app.get("$mainUrl/search/$query/page/$page", timeout = 5000L)
+                        rateLimitDelay()
+                        val req = app.get(
+                            "$mainUrl/search/$query/page/$page",
+                            timeout = requestTimeout,
+                            headers = mapOf("User-Agent" to getRandomUserAgent())
+                        )
                         mainUrl = getBaseUrl(req.url)
                         val document = req.documentLarge
-                        document.select("div.result-item").mapNotNull { it.toSearchResult() }
+                        document.select("div.result-item").mapNotNull {
+                            runCatching { it.toSearchResult() }.getOrElse { null }
+                        }
                     } catch (e: Exception) {
+                        logError("Idlix", "Search page $page failed: ${e.message}", e)
                         emptyList<SearchResponse>()
                     }
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }
-        
+
         // Cache the result
-        cacheMutex.withLock {
-            searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
-            searchCache.entries.removeAll { it.value.isExpired() }
-        }
-        
+        searchCache.put(cacheKey, results)
+
         return results
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val request = app.get(url, timeout = 5000L)
+        val request = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                url,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            )
+        }
+
         directUrl = getBaseUrl(request.url)
         val document = request.documentLarge
-        val title =
-            document.selectFirst("div.data > h1")?.text()?.replace(Regex("\\(\\d{4}\\)"), "")
-                ?.trim().toString()
+
+        val title = document.selectFirst("div.data > h1")?.text()?.replace(Regex("\\(\\d{4}\\)"), "")?.trim().orEmpty()
         val images = document.select("div.g-item")
 
         val poster = images
@@ -185,24 +222,31 @@ class IdlixProvider : MainAPI() {
             ?.selectFirst("a")
             ?.attr("href")
             ?: document.select("div.poster > img").attr("src")
+
         val tags = document.select("div.sgeneros > a").map { it.text() }
         val year = Regex(",\\s?(\\d+)").find(
             document.select("span.date").text().trim()
-        )?.groupValues?.get(1).toString().toIntOrNull()
-        val tvType = if (document.select("ul#section > li:nth-child(1)").text().contains("Episodes")
-        ) TvType.TvSeries else TvType.Movie
+        )?.groupValues?.get(1)?.toIntOrNull()
+
+        val tvType = if (document.select("ul#section > li:nth-child(1)").text().contains("Episodes"))
+            TvType.TvSeries else TvType.Movie
+
         val description = document.select("p:nth-child(3)").text().trim()
         val trailer = document.selectFirst("div.embed iframe")?.attr("src")
         val rating = document.selectFirst("span.dt_rating_vgs")?.text()
+
         val actors = document.select("div.persons > div[itemprop=actor]").map {
-            Actor(it.select("meta[itemprop=name]").attr("content"), it.select("img").attr("src"))
+            Actor(
+                it.select("meta[itemprop=name]").attr("content"),
+                it.select("img").attr("src")
+            )
         }
 
-        val recommendations = document.select("div.owl-item").map {
-            val recName =
-                it.selectFirst("a")!!.attr("href").removeSuffix("/").split("/").last()
-            val recHref = it.selectFirst("a")!!.attr("href")
-            val recPosterUrl = it.selectFirst("img")?.attr("src").toString()
+        val recommendations = document.select("div.owl-item").mapNotNull {
+            val recName = it.selectFirst("a")?.attr("href")?.removeSuffix("/")?.split("/")?.last().orEmpty()
+            val recHref = it.selectFirst("a")?.attr("href").orEmpty()
+            val recPosterUrl = it.selectFirst("img")?.attr("src").orEmpty()
+
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
             }
@@ -213,18 +257,17 @@ class IdlixProvider : MainAPI() {
                 val href = it.select("a").attr("href")
                 val name = fixTitle(it.select("div.episodiotitle > a").text().trim())
                 val image = it.select("div.imagen > img").attr("src")
-                val episode = it.select("div.numerando").text().replace(" ", "").split("-").last()
-                    .toIntOrNull()
-                val season = it.select("div.numerando").text().replace(" ", "").split("-").first()
-                    .toIntOrNull()
-                newEpisode(href)
-                {
-                        this.name=name
-                        this.season=season
-                        this.episode=episode
-                        this.posterUrl=image
+                val episode = it.select("div.numerando").text().replace(" ", "").split("-").last().toIntOrNull()
+                val season = it.select("div.numerando").text().replace(" ", "").split("-").first().toIntOrNull()
+
+                newEpisode(href) {
+                    this.name = name
+                    this.season = season
+                    this.episode = episode
+                    this.posterUrl = image
                 }
             }
+
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.year = year
@@ -255,45 +298,69 @@ class IdlixProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        try {
+            val document = executeWithRetry(maxRetries = 3) {
+                rateLimitDelay()
+                app.get(
+                    data,
+                    timeout = requestTimeout,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                ).documentLarge
+            }
 
-        val document = app.get(data).documentLarge
-        val scriptRegex = """window\.idlixNonce=['"]([a-f0-9]+)['"].*?window\.idlixTime=(\d+).*?""".toRegex(RegexOption.DOT_MATCHES_ALL)
-        val script = document.select("script:containsData(window.idlix)").toString()
-        val match = scriptRegex.find(script)
-        val idlixNonce = match?.groups?.get(1)?.value ?: ""
-        val idlixTime = match?.groups?.get(2)?.value ?: ""
+            val scriptRegex = """window\.idlixNonce=['"]([a-f0-9]+)['"].*?window\.idlixTime=(\d+).*?""".toRegex(RegexOption.DOT_MATCHES_ALL)
+            val script = document.select("script:containsData(window.idlix)").toString()
+            val match = scriptRegex.find(script)
+            val idlixNonce = match?.groups?.get(1)?.value ?: ""
+            val idlixTime = match?.groups?.get(2)?.value ?: ""
 
-        document.select("ul#playeroptionsul > li").map {
+            document.select("ul#playeroptionsul > li").map {
                 Triple(
                     it.attr("data-post"),
                     it.attr("data-nume"),
                     it.attr("data-type")
                 )
             }.amap { (id, nume, type) ->
-            val json = app.post(
-                url = "$directUrl/wp-admin/admin-ajax.php",
-                data = mapOf(
-                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type, "_n" to idlixNonce, "_p" to id, "_t" to idlixTime
-                ),
-                referer = data,
-                headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest")
-            ).parsedSafe<ResponseHash>() ?: return@amap
-            val metrix = AppUtils.parseJson<AesData>(json.embed_url).m
-            val password = createKey(json.key, metrix)
-            val decrypted =
-                AesHelper.cryptoAESHandler(json.embed_url, password.toByteArray(), false)
-                    ?.fixBloat() ?: return@amap
-            Log.d("Phisher",decrypted.toJson())
+                try {
+                    val json = app.post(
+                        url = "$directUrl/wp-admin/admin-ajax.php",
+                        data = mapOf(
+                            "action" to "doo_player_ajax",
+                            "post" to id,
+                            "nume" to nume,
+                            "type" to type,
+                            "_n" to idlixNonce,
+                            "_p" to id,
+                            "_t" to idlixTime
+                        ),
+                        referer = data,
+                        headers = mapOf(
+                            "Accept" to "*/*",
+                            "X-Requested-With" to "XMLHttpRequest",
+                            "User-Agent" to getRandomUserAgent()
+                        )
+                    ).parsedSafe<ResponseHash>() ?: return@amap
 
-            when {
-                !decrypted.contains("youtube") ->
-                    loadExtractor(decrypted,directUrl,subtitleCallback,callback)
-                else -> return@amap
+                    val metrix = AppUtils.parseJson<AesData>(json.embed_url).m
+                    val password = createKey(json.key, metrix)
+                    val decrypted = AesHelper.cryptoAESHandler(json.embed_url, password.toByteArray(), false)?.fixBloat()
+                        ?: return@amap
+
+                    when {
+                        !decrypted.contains("youtube") ->
+                            loadExtractor(decrypted, directUrl, subtitleCallback, callback)
+                        else -> return@amap
+                    }
+                } catch (e: Exception) {
+                    logError("Idlix", "Failed to load links for ($id, $nume, $type): ${e.message}", e)
+                }
             }
 
+            return true
+        } catch (e: Exception) {
+            logError("Idlix", "loadLinks failed: ${e.message}", e)
+            return false
         }
-
-        return true
     }
 
     private fun createKey(r: String, m: String): String {
@@ -301,11 +368,13 @@ class IdlixProvider : MainAPI() {
         var n = ""
         var reversedM = m.split("").reversed().joinToString("")
         while (reversedM.length % 4 != 0) reversedM += "="
+
         val decodedBytes = try {
             base64Decode(reversedM)
         } catch (_: Exception) {
             return ""
         }
+
         val decodedM = String(decodedBytes.toCharArray())
         for (s in decodedM.split("|")) {
             try {
@@ -343,6 +412,4 @@ class IdlixProvider : MainAPI() {
     data class AesData(
         @JsonProperty("m") val m: String,
     )
-
-
 }

@@ -1,6 +1,5 @@
 package com.Anichin
 
-
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
@@ -35,35 +34,47 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.supervisorScope
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
-// Caching for instant search results (5 minute TTL)
-private data class CachedResult<T>(
-    val data: T,
-    val timestamp: Long,
-    val ttl: Long = 300000 // 5 minutes
-) {
-    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
-}
+// ============================================
+// OPTIMIZED: Import shared utilities
+// ============================================
+import com.CacheManager
+import com.rateLimitDelay
+import com.getRandomUserAgent
+import com.executeWithRetry
+import com.logError
 
-// Cache size limits to prevent memory leaks
-private const val MAX_CACHE_SIZE = 50
+// ============================================
+// CACHING CONFIGURATION
+// ============================================
+private const val SEARCH_CACHE_TTL = 30 * 60 * 1000L      // 30 menit
+private const val MAINPAGE_CACHE_TTL = 10 * 60 * 1000L    // 10 menit
+private const val MAX_CACHE_SIZE = 50                     // Max 50 entries
 
-private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
-private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
-private val cacheMutex = Mutex()
+// Cache instances dengan TTL berbeda
+private val searchCache = CacheManager<List<SearchResponse>>(
+    ttl = SEARCH_CACHE_TTL,
+    maxSize = MAX_CACHE_SIZE
+)
+
+private val mainPageCache = CacheManager<HomePageResponse>(
+    ttl = MAINPAGE_CACHE_TTL,
+    maxSize = MAX_CACHE_SIZE
+)
 
 open class Anichin : MainAPI() {
-    override var mainUrl              = "https://anichin.cafe"
-    override var name                 = "Anichin"
-    override val hasMainPage          = true
-    override var lang                 = "id"
-    override val hasDownloadSupport   = true
-    override val usesWebView          = true
-    override val supportedTypes       = setOf(TvType.Anime, TvType.AnimeMovie, TvType.TvSeries)
+    override var mainUrl = "https://anichin.cafe"
+    override var name = "Anichin"
+    override val hasMainPage = true
+    override var lang = "id"
+    override val hasDownloadSupport = true
+    override val usesWebView = true
+    override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.TvSeries)
+
+    // Standard timeout untuk semua request (10 detik)
+    private val requestTimeout = 10000L
 
     override val mainPage = mainPageOf(
         "seri/?status=&type=&order=popular&page=" to "Popular Donghua",
@@ -74,17 +85,29 @@ open class Anichin : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // CACHING: Check cache first (instant load for 5 minutes)
+        // OPTIMIZED: Gunakan CacheManager dengan TTL 10 menit
         val cacheKey = "${request.data}${page}"
-        cacheMutex.withLock {
-            val cached = mainPageCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                return cached.data
-            }
+
+        // Check cache first
+        val cached = mainPageCache.get(cacheKey)
+        if (cached != null) {
+            return cached
         }
-        
-        val document = app.get("$mainUrl/${request.data}$page", timeout = 5000L).documentLarge
-        val home = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
+
+        // Fetch dengan retry logic dan rate limiting
+        val document = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                "$mainUrl/${request.data}$page",
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
+
+        val home = document.select("div.listupd > article").mapNotNull {
+            runCatching { it.toSearchResult() }.getOrElse { null }
+        }
+
         val response = newHomePageResponse(
             list = HomePageList(
                 name = request.name,
@@ -93,46 +116,41 @@ open class Anichin : MainAPI() {
             ),
             hasNext = true
         )
-        
+
         // Cache the result
-        cacheMutex.withLock {
-            mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
-            // Clean old cache entries
-            mainPageCache.entries.removeAll { it.value.isExpired() }
-        }
-        
+        mainPageCache.put(cacheKey, response)
+
         return response
     }
 
     suspend fun Element.toSearchResult(): SearchResponse {
-        val title     = this.select("div.bsx > a").attr("title")
-        val href      = fixUrl(this.select("div.bsx > a").attr("href"))
+        val title = this.select("div.bsx > a").attr("title")
+        val href = fixUrl(this.select("div.bsx > a").attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
 
-        // FIX: Use correct selector - .epx for status (Ongoing/Completed)
-        // Real HTML: <span class="epx">Ongoing</span>
+        // Fix: Use correct selector - .epx for status (Ongoing/Completed)
         val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
         val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
 
-        // FIX: Fetch episode count from detail page for badge display
-        // This adds 1 HTTP request per anime, but shows "Eps XXX" badge on poster
+        // Fetch episode count from detail page for badge display
         val episodeCount = runCatching {
-            val doc = app.get(href, timeout = 5000L).documentLarge
+            val doc = app.get(
+                href,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
             doc.select(".eplister li[data-index]").mapNotNull { ep ->
                 ep.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
             }.maxOrNull()
         }.getOrNull()
 
-        // Show episode count badge on poster (top-right corner)
-        // Format: "Sub Eps 129" - Cloudstream requires subExist=true for badge to appear
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            // Must have subExist=true or dubExist=true for badge to show
             addDubStatus(
                 dubExist = false,
-                subExist = true,  // Required for badge to appear
+                subExist = true,
                 dubEpisodes = null,
-                subEpisodes = episodeCount  // Shows "Eps XXX" next to "Sub"
+                subEpisodes = episodeCount
             )
         }
     }
@@ -145,80 +163,75 @@ open class Anichin : MainAPI() {
         }
     }
 
-
     override suspend fun search(query: String): List<SearchResponse> {
-        // CACHING: Check cache first (instant load for 5 minutes)
+        // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
         val cacheKey = "search_${query}"
-        cacheMutex.withLock {
-            val cached = searchCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                Log.d("AnichinSearch", "Cache hit for: $query")
-                return cached.data
-            }
+
+        // Check cache first
+        val cached = searchCache.get(cacheKey)
+        if (cached != null) {
+            return cached
         }
 
-        Log.d("AnichinSearch", "Searching for: $query")
-
-        // FIX: Correct search URL pattern
-        // Page 1: /?s=query (NOT /page/1/?s=query)
-        // Page 2+: /page/2/?s=query
-        // OPTIMIZED: Parallel search with timeout (3x faster)
+        // OPTIMIZED: Parallel search dengan rate limiting
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
                     try {
-                        // URL encode the query to handle spaces and special characters
+                        rateLimitDelay()
                         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-                        
+
                         // WordPress search: page 1 has no /page/1/ in URL
                         val searchUrl = if (page == 1) {
                             "${mainUrl}/?s=$encodedQuery"
                         } else {
                             "${mainUrl}/page/$page/?s=$encodedQuery"
                         }
-                        Log.d("AnichinSearch", "Fetching page $page: $searchUrl")
-                        val document = app.get(searchUrl, timeout = 5000L).documentLarge
-                        val articles = document.select("div.listupd > article")
-                        Log.d("AnichinSearch", "Page $page found ${articles.size} articles")
-                        articles.mapNotNull { it.toSearchResult() }
+
+                        val document = app.get(
+                            searchUrl,
+                            timeout = requestTimeout,
+                            headers = mapOf("User-Agent" to getRandomUserAgent())
+                        ).documentLarge
+
+                        document.select("div.listupd > article").mapNotNull {
+                            runCatching { it.toSearchResult() }.getOrElse { null }
+                        }
                     } catch (e: Exception) {
-                        Log.e("AnichinSearch", "Error fetching page $page: ${e.message}")
+                        logError("Anichin", "Search page $page failed: ${e.message}", e)
                         emptyList<SearchResponse>()
                     }
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }
 
-        Log.d("AnichinSearch", "Total results: ${results.size}")
-        
-        // Cache the result with size limit
-        cacheMutex.withLock {
-            // Enforce cache size limit to prevent memory leaks
-            if (searchCache.size > MAX_CACHE_SIZE) {
-                searchCache.clear()
-            }
-            searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
-            // Clean old cache entries
-            searchCache.entries.removeAll { it.value.isExpired() }
-        }
-        
+        // Cache the result
+        searchCache.put(cacheKey, results)
+
         return results
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url, timeout = 5000L).documentLarge
-        val title = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
+        val document = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                url,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
+
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
         val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
         var poster = document.select("div.thumb > img").attr("src")
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
-        
-        // FIX: Robust type detection with fallback
-        // Check .spe for Type field, fallback to URL pattern
+
+        // Fix: Robust type detection with fallback
         val type = document.selectFirst(".spe")?.text() ?: ""
         val isMovie = type.contains("Movie", ignoreCase = true) || url.contains("-movie-", ignoreCase = true)
-        val tvtag = if (isMovie) TvType.AnimeMovie else TvType.Anime
+        val tvType = if (isMovie) TvType.AnimeMovie else TvType.Anime
 
-        // FIX 5: Set showStatus from real .spe element
+        // Set showStatus from real .spe element
         val statusText = document.select(".spe").text().lowercase()
         val showStatus = when {
             "ongoing" in statusText -> ShowStatus.Ongoing
@@ -226,33 +239,19 @@ open class Anichin : MainAPI() {
             else -> null
         }
 
-        return if (tvtag == TvType.Anime) {
-            // FIX 2: Episode list is ALREADY on this page (.eplister li)
-            // No need to fetch another page!
+        return if (tvType == TvType.Anime) {
             val allEpisodes = document.select(".eplister li[data-index]")
 
-            // FIX: Use correct selector .epl-num for episode number
-            // Real HTML: <div class="epl-num">129</div>
-            val lastEpisodeNum = allEpisodes.mapNotNull { ep ->
-                ep.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
-            }.maxOrNull()
-
-            // FIX 3: Direct parsing without unnecessary async
             val episodes = allEpisodes.map { info ->
                 val href1 = info.select("a").attr("href")
-
-                // Use correct selectors: .epl-num for episode, .epl-title for name
                 val episodeNumber = info.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
                 val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
-
-                // Extract clean name by removing series title
                 val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()
-
                 var posterr = info.selectFirst("a img")?.attr("data-src") ?: ""
 
                 // Image optimization
                 if (posterr.isNotEmpty()) {
-                    posterr = optimizeImageUrl(posterr, 500)
+                    posterr = optimizeImageUrl(posterr)
                 }
 
                 newEpisode(href1) {
@@ -263,23 +262,21 @@ open class Anichin : MainAPI() {
             }.reversed()
 
             if (poster.isEmpty()) {
-                poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
+                poster = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
             } else {
-                poster = optimizeImageUrl(poster, 500)
+                poster = optimizeImageUrl(poster)
             }
 
-            // Title is clean now - episode count shown in badge on poster
             newTvSeriesLoadResponse(title, url, TvType.Anime, episodes) {
                 this.posterUrl = poster
                 this.plot = description
                 this.showStatus = showStatus
             }
         } else {
-            // Anime movie
             if (poster.isEmpty()) {
-                poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
+                poster = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
             } else {
-                poster = optimizeImageUrl(poster, 500)
+                poster = optimizeImageUrl(poster)
             }
             newMovieLoadResponse(title, url, TvType.AnimeMovie, href) {
                 this.posterUrl = poster
@@ -288,16 +285,10 @@ open class Anichin : MainAPI() {
         }
     }
 
-    // OPTIMIZED: Image URL optimizer - resize for mobile screens
-    // Prevents image breaking on non-Android TV devices
+    // OPTIMIZED: Image URL optimizer
     private fun optimizeImageUrl(url: String, maxWidth: Int = 500): String {
         return when {
-            // Anichin uses direct image URLs
-            url.contains("anichin") -> {
-                // Keep original quality for Anichin (they already optimize)
-                url
-            }
-            // Add more site-specific optimizations here
+            url.contains("anichin") -> url  // Anichin already optimizes
             else -> url
         }
     }
@@ -308,11 +299,18 @@ open class Anichin : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val html = app.get(data, timeout = 5000L).documentLarge
+        val html = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                data,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
+
         val options = html.select("option[data-index]")
 
-        // FIX 5: Use supervisorScope for exception safety
-        // One server failing won't cancel all others
+        // OPTIMIZED: Use supervisorScope for exception safety
         supervisorScope {
             options.map { option ->
                 async {
@@ -322,8 +320,8 @@ open class Anichin : MainAPI() {
 
                     val decodedHtml = try {
                         base64Decode(base64)
-                    } catch (_: Exception) {
-                        Log.w("Error", "Base64 decode failed: $base64")
+                    } catch (e: Exception) {
+                        logError("Anichin", "Base64 decode failed: $base64", e)
                         return@async
                     }
 
@@ -332,7 +330,6 @@ open class Anichin : MainAPI() {
 
                     // Handle different server types
                     when {
-                        // Direct MP4 files
                         iframeUrl.endsWith(".mp4") -> {
                             callback(
                                 newExtractorLink(
@@ -346,7 +343,6 @@ open class Anichin : MainAPI() {
                                 }
                             )
                         }
-                        // Use loadExtractor for supported extractors (OK.ru, Dailymotion, etc.)
                         else -> {
                             loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
                         }
@@ -358,4 +354,3 @@ open class Anichin : MainAPI() {
         return true
     }
 }
-// cache test
