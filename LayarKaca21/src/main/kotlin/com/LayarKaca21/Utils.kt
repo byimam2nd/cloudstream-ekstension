@@ -207,8 +207,6 @@ internal suspend fun <T> executeWithRetry(
 /**
  * Logging conditional - hanya aktif saat debug mode
  */
-private val DEBUG_MODE = false
-
 internal fun logDebug(tag: String, message: String) {
     if (DEBUG_MODE) {
         Log.d(tag, message)
