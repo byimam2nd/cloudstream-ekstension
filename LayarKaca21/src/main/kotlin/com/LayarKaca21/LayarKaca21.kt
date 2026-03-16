@@ -176,31 +176,47 @@ class LayarKaca21 : MainAPI() {
             return cached
         }
 
-        // FIX: Use HTML scraping instead of JSON API (API mungkin down)
+        // FIX: Use HTML scraping dengan selector yang benar untuk search
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
                     try {
                         rateLimitDelay()
                         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-                        
+
                         // WordPress search URL pattern
                         val searchUrl = if (page == 1) {
                             "$mainUrl/?s=$encodedQuery"
                         } else {
                             "$mainUrl/page/$page/?s=$encodedQuery"
                         }
-                        
+
                         val document = app.get(
                             searchUrl,
                             timeout = requestTimeout,
                             headers = mapOf("User-Agent" to getRandomUserAgent())
                         ).documentLarge
 
-                        // Scraping hasil search dari HTML
-                        document.select("article figure").mapNotNull {
-                            it.toSearchResult()
-                        }
+                        // Selector untuk search results - coba beberapa selector
+                        val searchResults = document.select("article")
+                            .mapNotNull { article ->
+                                // Coba ambil title dari berbagai lokasi
+                                val title = article.selectFirst("h3, h2, .title, a[title]")?.text()?.trim()
+                                    ?: return@mapNotNull null
+                                
+                                val href = article.selectFirst("a[href]")?.attr("href")?.let { fixUrl(it) }
+                                    ?: return@mapNotNull null
+                                
+                                val posterUrl = article.selectFirst("img")?.let { img ->
+                                    fixUrlNull(img.attr("src") ?: img.attr("data-src"))
+                                }
+                                
+                                newMovieSearchResponse(title, href, TvType.Movie) {
+                                    this.posterUrl = posterUrl
+                                }
+                            }
+                        
+                        searchResults
                     } catch (e: Exception) {
                         logError("LayarKaca", "Search page $page failed: ${e.message}", e)
                         emptyList<SearchResponse>()
