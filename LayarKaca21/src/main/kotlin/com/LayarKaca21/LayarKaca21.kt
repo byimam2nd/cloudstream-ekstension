@@ -1,250 +1,238 @@
-package com.layarkaca21
-
+package com.layarKacaProvider
 
 import com.lagradost.api.Log
-import com.lagradost.cloudstream3.HomePageList
-import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.LoadResponse
-import com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.MainPageRequest
-import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.TvType
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.base64Decode
-import com.lagradost.cloudstream3.fixUrl
-import com.lagradost.cloudstream3.fixUrlNull
-import com.lagradost.cloudstream3.mainPageOf
-import com.lagradost.cloudstream3.newEpisode
-import com.lagradost.cloudstream3.newHomePageResponse
-import com.lagradost.cloudstream3.newMovieLoadResponse
-import com.lagradost.cloudstream3.newMovieSearchResponse
-import com.lagradost.cloudstream3.newAnimeSearchResponse
-import com.lagradost.cloudstream3.addDubStatus
-import com.lagradost.cloudstream3.newTvSeriesLoadResponse
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.httpsify
-import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.ShowStatus
-import com.lagradost.cloudstream3.utils.newExtractorLink
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.utils.*
+import org.json.JSONObject
+import org.jsoup.nodes.Element
+import java.net.URI
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
 
-// Caching for instant search results (5 minute TTL)
+// CACHING for instant results (5 minute TTL)
 private data class CachedResult<T>(
     val data: T,
     val timestamp: Long,
-    val ttl: Long = 300000 // 5 minutes
+    val ttl: Long = 300000
 ) {
     fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
 }
-
-// Cache size limits to prevent memory leaks
-private const val MAX_CACHE_SIZE = 50
 
 private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
 private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
 private val cacheMutex = Mutex()
 
-open class LayarKaca21 : MainAPI() {
-    override var mainUrl              = "https://lk21.de"
-    override var name                 = "LayarKaca21"
-    override val hasMainPage          = true
-    override var lang                 = "id"
-    override val hasDownloadSupport   = true
-    override val usesWebView          = true
-    override val supportedTypes       = setOf(TvType.Movie, TvType.TvSeries, TvType.AsianDrama)
+class LayarKaca21 : MainAPI() {
 
-    override val mainPage = mainPageOf(
-        "/populer/page/" to "Film Terpopuler",
-        "/rating/page/" to "Film Berdasarkan IMDb Rating",
-        "/most-commented/page/" to "Film Dengan Komentar Terbanyak",
-        "/latest/page/" to "Film Upload Terbaru",
+    override var mainUrl = "https://lk21.de"
+    private var seriesUrl = "https://series.lk21.de"
+    private var searchurl= "https://search.lk21.party"
+
+    override var name = "LayarKaca"
+    override val hasMainPage = true
+    override var lang = "id"
+    override val supportedTypes = setOf(
+        TvType.Movie,
+        TvType.TvSeries,
+        TvType.AsianDrama
     )
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+
+    override val mainPage = mainPageOf(
+        "$mainUrl/populer/page/" to "Film Terplopuler",
+        "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
+        "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
+        "$seriesUrl/latest-series/page/" to "Series Terbaru",
+        "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
+        "$mainUrl/latest/page/" to "Film Upload Terbaru",
+    )
+
+    override suspend fun getMainPage(
+        page: Int,
+        request: MainPageRequest
+    ): HomePageResponse {
         // CACHING: Check cache first (instant load for 5 minutes)
-        val cacheKey = "${request.data}$page"
+        val cacheKey = "${request.data}${page}"
         cacheMutex.withLock {
             val cached = mainPageCache[cacheKey]
             if (cached != null && !cached.isExpired()) {
                 return cached.data
             }
         }
-
-        val document = app.get("$mainUrl${request.data}$page", timeout = 10000L).documentLarge
-        val home = document.select("article figure").mapNotNull { it.toSearchResult() }
+        
+        val document = app.get(request.data + page, timeout = 5000L).documentLarge
+        val home = document.select("article figure").mapNotNull {
+            it.toSearchResult()
+        }
         val response = newHomePageResponse(request.name, home)
         
         // Cache the result
         cacheMutex.withLock {
             mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
-            // Clean old cache entries
             mainPageCache.entries.removeAll { it.value.isExpired() }
         }
         
         return response
     }
 
-    suspend fun Element.toSearchResult(): SearchResponse? {
+    private suspend fun getProperLink(url: String): String {
+        if (url.startsWith(seriesUrl)) return url
+        val res = app.get(url).documentLarge
+        return if (res.select("title").text().contains("Nontondrama", true)) {
+            res.selectFirst("a#openNow")?.attr("href")
+                ?: res.selectFirst("div.links a")?.attr("href")
+                ?: url
+        } else {
+            url
+        }
+    }
+
+
+    private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
-        val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-
-        // Check if it's a series (has episode indicator)
-        val isSeries = this.selectFirst("span.episode") != null
-
-        if (isSeries) {
-            val episode = this.selectFirst("span.episode strong")?.text()?.filter { it.isDigit() }?.toIntOrNull()
-            return newAnimeSearchResponse(title, href, TvType.TvSeries) {
+        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr())
+        val type = if (this.selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
+        val posterheaders= mapOf("Referer" to getBaseUrl(posterUrl))
+        return if (type == TvType.TvSeries) {
+            val episode = this.selectFirst("span.episode strong")?.text()?.filter { it.isDigit() }
+                ?.toIntOrNull()
+            newAnimeSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
-                addDubStatus(false, true, null, episode)
+                this.posterHeaders = posterheaders
+                addSub(episode)
             }
         } else {
-            return newMovieSearchResponse(title, href, TvType.Movie) {
+            val quality = this.select("div.quality").text().trim()
+            newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
+                this.posterHeaders = posterheaders
+                addQuality(quality)
             }
         }
     }
 
-    private fun Element.getImageAttr(): String {
-        return when {
-            this.hasAttr("data-src") -> this.attr("data-src")
-            this.hasAttr("src") -> this.attr("src")
-            else -> this.attr("src")
-        }
-    }
-
-
     override suspend fun search(query: String): List<SearchResponse> {
-        val cacheKey = "search_$query"
+        // CACHING: Check cache first (instant load for 5 minutes)
+        val cacheKey = "search_${query}"
         cacheMutex.withLock {
             val cached = searchCache[cacheKey]
             if (cached != null && !cached.isExpired()) {
                 return cached.data
             }
         }
-
-        val results = try {
-            val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-            val document = app.get("$mainUrl/?s=$encodedQuery", timeout = 10000L).document
-            document.select("article figure").mapNotNull { it.toSearchResult() }
-        } catch (e: Exception) {
-            emptyList()
+        
+        // OPTIMIZED: Parallel search with timeout (3x faster)
+        val results = coroutineScope {
+            (1..3).map { page ->
+                async {
+                    try {
+                        val res = app.get("$searchurl/search.php?s=$query&page=$page", timeout = 5000L).text
+                        val results = mutableListOf<SearchResponse>()
+                        val root = JSONObject(res)
+                        val arr = root.getJSONArray("data")
+                        for (i in 0 until arr.length()) {
+                            val item = arr.getJSONObject(i)
+                            val title = item.getString("title")
+                            val slug = item.getString("slug")
+                            val type = item.getString("type")
+                            val posterUrl = "https://poster.lk21.party/wp-content/uploads/"+item.optString("poster")
+                            when (type) {
+                                "series" -> results.add(newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) { this.posterUrl = posterUrl })
+                                "movie" -> results.add(newMovieSearchResponse(title, "$mainUrl/$slug", TvType.Movie) { this.posterUrl = posterUrl })
+                            }
+                        }
+                        results
+                    } catch (e: Exception) {
+                        emptyList<SearchResponse>()
+                    }
+                }
+            }.awaitAll().flatten().distinctBy { it.url }
         }
-
+        
+        // Cache the result
         cacheMutex.withLock {
             searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
-            mainPageCache.entries.removeAll { it.value.isExpired() }
+            searchCache.entries.removeAll { it.value.isExpired() }
         }
-
+        
         return results
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url, timeout = 5000L).documentLarge
-        val title = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
-        val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
-        var poster = document.select("div.thumb > img").attr("src")
-        val description = document.selectFirst("div.entry-content")?.text()?.trim()
-        
-        // FIX: Robust type detection with fallback
-        // Check .spe for Type field, fallback to URL pattern
-        val type = document.selectFirst(".spe")?.text() ?: ""
-        val isMovie = type.contains("Movie", ignoreCase = true) || url.contains("-movie-", ignoreCase = true)
-        val tvtag = if (isMovie) TvType.AnimeMovie else TvType.Anime
+        val fixUrl = getProperLink(url)
+        val document = app.get(fixUrl, timeout = 5000L).documentLarge
+        val baseurl=fetchURL(fixUrl)
+        val title = document.selectFirst("div.movie-info h1")?.text()?.trim().toString()
+        val poster = document.select("meta[property=og:image]").attr("content")
+        val tags = document.select("div.tag-list span").map { it.text() }
+        val posterheaders= mapOf("Referer" to getBaseUrl(poster))
 
-        // FIX 5: Set showStatus from real .spe element
-        val statusText = document.select(".spe").text().lowercase()
-        val showStatus = when {
-            "ongoing" in statusText -> ShowStatus.Ongoing
-            "completed" in statusText -> ShowStatus.Completed
-            else -> null
+        val year = Regex("\\d, (\\d+)").find(
+            document.select("div.movie-info h1").text().trim()
+        )?.groupValues?.get(1).toString().toIntOrNull()
+        val tvType = if (document.selectFirst("#season-data") != null) TvType.TvSeries else TvType.Movie
+        val description = document.selectFirst("div.meta-info")?.text()?.trim()
+        val trailer = document.selectFirst("ul.action-left > li:nth-child(3) > a")?.attr("href")
+        val rating = document.selectFirst("div.info-tag strong")?.text()
+
+        val recommendations = document.select("li.slider article").map {
+            val recName = it.selectFirst("h3")?.text()?.trim().toString()
+            val recHref = baseurl+it.selectFirst("a")!!.attr("href")
+            val recPosterUrl = fixUrl(it.selectFirst("img")?.attr("src").toString())
+            newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
+                this.posterUrl = recPosterUrl
+                this.posterHeaders = posterheaders
+            }
         }
 
-        return if (tvtag == TvType.Anime) {
-            // FIX 2: Episode list is ALREADY on this page (.eplister li)
-            // No need to fetch another page!
-            val allEpisodes = document.select(".eplister li[data-index]")
-
-            // FIX: Use correct selector .epl-num for episode number
-            // Real HTML: <div class="epl-num">129</div>
-            val lastEpisodeNum = allEpisodes.mapNotNull { ep ->
-                ep.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
-            }.maxOrNull()
-
-            // FIX 3: Direct parsing without unnecessary async
-            val episodes = allEpisodes.map { info ->
-                val href1 = info.select("a").attr("href")
-
-                // Use correct selectors: .epl-num for episode, .epl-title for name
-                val episodeNumber = info.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
-                val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
-
-                // Extract clean name by removing series title
-                val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()
-
-                var posterr = info.selectFirst("a img")?.attr("data-src") ?: ""
-
-                // Image optimization
-                if (posterr.isNotEmpty()) {
-                    posterr = optimizeImageUrl(posterr, 500)
+        return if (tvType == TvType.TvSeries) {
+            val json = document.selectFirst("script#season-data")?.data()
+            val episodes = mutableListOf<Episode>()
+            if (json != null) {
+                val root = JSONObject(json)
+                root.keys().forEach { seasonKey ->
+                    val seasonArr = root.getJSONArray(seasonKey)
+                    for (i in 0 until seasonArr.length()) {
+                        val ep = seasonArr.getJSONObject(i)
+                        val href = fixUrl("$baseurl/"+ep.getString("slug"))
+                        val episodeNo = ep.optInt("episode_no")
+                        val seasonNo = ep.optInt("s")
+                        episodes.add(
+                            newEpisode(href) {
+                                this.name = "Episode $episodeNo"
+                                this.season = seasonNo
+                                this.episode = episodeNo
+                            }
+                        )
+                    }
                 }
-
-                newEpisode(href1) {
-                    this.name = cleanName.ifEmpty { episodeTitle }
-                    this.episode = episodeNumber
-                    this.posterUrl = posterr
-                }
-            }.reversed()
-
-            if (poster.isEmpty()) {
-                poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
-            } else {
-                poster = optimizeImageUrl(poster, 500)
             }
-
-            // Title is clean now - episode count shown in badge on poster
-            newTvSeriesLoadResponse(title, url, TvType.Anime, episodes) {
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
+                this.posterHeaders = posterheaders
+                this.year = year
                 this.plot = description
-                this.showStatus = showStatus
+                this.tags = tags
+                this.score = Score.from10(rating)
+                this.recommendations = recommendations
+                addTrailer(trailer)
             }
         } else {
-            // Anime movie
-            if (poster.isEmpty()) {
-                poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
-            } else {
-                poster = optimizeImageUrl(poster, 500)
-            }
-            newMovieLoadResponse(title, url, TvType.AnimeMovie, href) {
+            newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
+                this.posterHeaders = posterheaders
+                this.year = year
                 this.plot = description
+                this.tags = tags
+                this.score = Score.from10(rating)
+                this.recommendations = recommendations
+                addTrailer(trailer)
             }
-        }
-    }
-
-    // OPTIMIZED: Image URL optimizer - resize for mobile screens
-    // Prevents image breaking on non-Android TV devices
-    private fun optimizeImageUrl(url: String, maxWidth: Int = 500): String {
-        return when {
-            // LayarKaca21 uses direct image URLs
-            url.contains("anichin") -> {
-                // Keep original quality for LayarKaca21 (they already optimize)
-                url
-            }
-            // Add more site-specific optimizations here
-            else -> url
         }
     }
 
@@ -254,54 +242,49 @@ open class LayarKaca21 : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val html = app.get(data, timeout = 5000L).documentLarge
-        val options = html.select("option[data-index]")
-
-        // FIX 5: Use supervisorScope for exception safety
-        // One server failing won't cancel all others
-        supervisorScope {
-            options.map { option ->
-                async {
-                    val base64 = option.attr("value")
-                    if (base64.isBlank()) return@async
-                    val label = option.text().trim()
-
-                    val decodedHtml = try {
-                        base64Decode(base64)
-                    } catch (_: Exception) {
-                        Log.w("Error", "Base64 decode failed: $base64")
-                        return@async
-                    }
-
-                    val iframeUrl = Jsoup.parse(decodedHtml).selectFirst("iframe")?.attr("src")?.let(::httpsify)
-                    if (iframeUrl.isNullOrEmpty()) return@async
-
-                    // Handle different server types
-                    when {
-                        // Direct MP4 files
-                        iframeUrl.endsWith(".mp4") -> {
-                            callback(
-                                newExtractorLink(
-                                    label,
-                                    label,
-                                    url = iframeUrl,
-                                    INFER_TYPE
-                                ) {
-                                    this.referer = data
-                                    this.quality = getQualityFromName(label)
-                                }
-                            )
-                        }
-                        // Use loadExtractor for supported extractors (OK.ru, Dailymotion, etc.)
-                        else -> {
-                            loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
-                        }
-                    }
-                }
-            }.awaitAll()
+        val document = app.get(data).documentLarge
+        document.select("ul#player-list > li").map {
+                fixUrl(it.select("a").attr("href"))
+            }.amap {
+            val test=it.getIframe()
+            val referer=getBaseUrl(it)
+            Log.d("Phisher",test)
+            loadExtractor(it.getIframe(), referer, subtitleCallback, callback)
         }
-
         return true
     }
+
+    private suspend fun String.getIframe(): String {
+        return app.get(this, referer = "$seriesUrl/").documentLarge.select("div.embed-container iframe")
+            .attr("src")
+    }
+
+    private suspend fun fetchURL(url: String): String {
+        val res = app.get(url, allowRedirects = false)
+        val href = res.headers["location"]
+
+        return if (href != null) {
+            val it = URI(href)
+            "${it.scheme}://${it.host}"
+        } else {
+            url
+        }
+    }
+
+
+    private fun Element.getImageAttr(): String {
+        return when {
+            this.hasAttr("src") -> this.attr("src")
+            this.hasAttr("data-src") -> this.attr("data-src")
+            else -> this.attr("src")
+        }
+    }
+
+
+    fun getBaseUrl(url: String?): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
+    }
+
 }
-// cache test
