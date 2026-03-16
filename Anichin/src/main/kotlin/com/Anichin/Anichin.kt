@@ -45,8 +45,8 @@ import com.Anichin.rateLimitDelay
 import com.Anichin.getRandomUserAgent
 import com.Anichin.executeWithRetry
 import com.Anichin.logError
-import com.CacheFingerprint
-import com.CacheValidationResult
+import com.Anichin.CacheFingerprint
+import com.Anichin.CacheValidationResult
 
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(

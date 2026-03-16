@@ -23,8 +23,8 @@ import com.hexated.rateLimitDelay
 import com.hexated.getRandomUserAgent
 import com.hexated.executeWithRetry
 import com.hexated.logError
-import com.CacheFingerprint
-import com.CacheValidationResult
+import com.hexated.CacheFingerprint
+import com.hexated.CacheValidationResult
 
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(

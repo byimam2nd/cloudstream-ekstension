@@ -15,9 +15,9 @@ import com.layarKacaProvider.rateLimitDelay
 import com.layarKacaProvider.getRandomUserAgent
 import com.layarKacaProvider.executeWithRetry
 import com.layarKacaProvider.logError
-import com.CacheFingerprint
-import com.SmartCacheMonitor
-import com.CacheValidationResult
+import com.layarKacaProvider.CacheFingerprint
+import com.layarKacaProvider.SmartCacheMonitor
+import com.layarKacaProvider.CacheValidationResult
 
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(

@@ -64,8 +64,8 @@ import com.HiAnime.rateLimitDelay
 import com.HiAnime.getRandomUserAgent
 import com.HiAnime.executeWithRetry
 import com.HiAnime.logError
-import com.CacheFingerprint
-import com.CacheValidationResult
+import com.HiAnime.CacheFingerprint
+import com.HiAnime.CacheValidationResult
 
 // Cache instances dengan TTL berbeda
 private val searchCache = CacheManager<List<SearchResponse>>(
