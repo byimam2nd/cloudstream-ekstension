@@ -11,7 +11,7 @@ import com.lagradost.cloudstream3.utils.*
 
 class Pencurimovie : MainAPI() {
     override var mainUrl = "https://ww73.pencurimovie.bond"
-    override var name = "Pencurimovie🍕"
+    override var name = "Pencurimovie"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
@@ -141,12 +141,91 @@ class Pencurimovie : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
-        document.select("div.movieplay iframe").forEach {
-            val href = it.attr("data-src")
-            loadExtractor(href,subtitleCallback, callback)
+        try {
+            val document = app.get(data).document
+            
+            // =========================
+            // 1. Ambil semua kemungkinan link server
+            // =========================
+            val links = mutableSetOf<String>()
+            
+            // iframe dengan data-src atau src
+            document.select("iframe").forEach {
+                val src = it.attr("data-src").ifEmpty { it.attr("src") }
+                if (src.isNotEmpty() && src.startsWith("http")) {
+                    links.add(fixUrl(src))
+                }
+            }
+            
+            // data-link attribute (server list)
+            document.select("[data-link]").forEach {
+                val link = it.attr("data-link")
+                if (link.isNotEmpty() && link.startsWith("http")) {
+                    links.add(fixUrl(link))
+                }
+            }
+            
+            // Fallback: cari URL server di JavaScript/HTML
+            val serverPatterns = listOf("voe", "do7go", "dhcplay", "listeamed", "hglink", "dsvplay")
+            Regex("""https?://[^\s'"]+""")
+                .findAll(document.html())
+                .map { it.value }
+                .filter { url ->
+                    serverPatterns.any { url.contains(it) }
+                }
+                .forEach { links.add(it) }
+            
+            // =========================
+            // 2. Resolve setiap link (PENTING!)
+            // =========================
+            links.amap { link ->
+                try {
+                    val realUrl = resolveLink(link)
+                    
+                    // Filter hanya server yang supported
+                    if (serverPatterns.any { realUrl.contains(it) }) {
+                        loadExtractor(realUrl, data, subtitleCallback, callback)
+                    }
+                } catch (e: Exception) {
+                    // Skip link yang error
+                }
+            }
+            
+            return true
+        } catch (e: Exception) {
+            return false
         }
-        return true
+    }
+    
+    // =========================
+    // Resolver Function (KUNCI UTAMA)
+    // =========================
+    private suspend fun resolveLink(url: String): String {
+        try {
+            // Follow redirect
+            val response = app.get(url, allowRedirects = true)
+            val finalUrl = response.url
+            
+            // Cek apakah masih ada iframe lagi (nested)
+            val doc = response.document
+            val iframe = doc.selectFirst("iframe")?.attr("src")
+            
+            if (!iframe.isNullOrEmpty() && iframe.startsWith("http")) {
+                // Recursive resolve untuk nested iframe
+                return resolveLink(fixUrl(iframe))
+            }
+            
+            // Cek data-src lagi
+            val dataSrc = doc.selectFirst("iframe")?.attr("data-src")
+            if (!dataSrc.isNullOrEmpty() && dataSrc.startsWith("http")) {
+                return resolveLink(fixUrl(dataSrc))
+            }
+            
+            return finalUrl
+        } catch (e: Exception) {
+            // Fallback ke URL asli jika error
+            return url
+        }
     }
 }
 
