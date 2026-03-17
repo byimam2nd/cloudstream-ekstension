@@ -11,11 +11,12 @@ import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import java.net.URI
+import java.util.concurrent.atomic.AtomicInteger
 
 
 class Pencurimovie : MainAPI() {
     override var mainUrl = "https://ww73.pencurimovie.bond"
-    override var name = "Pencurimovie🍕"
+    override var name = "Pencurimovie"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
@@ -26,7 +27,7 @@ class Pencurimovie : MainAPI() {
     // =========================
     companion object {
         private const val MAX_LINKS = 15
-        private const val MAX_FOUND = 5
+        private const val MAX_FOUND = 8
         private const val MAX_DEPTH = 2
     }
     
@@ -48,6 +49,14 @@ class Pencurimovie : MainAPI() {
         } catch (e: Exception) {
             url
         }
+    }
+    
+    private fun isVideoUrl(url: String): Boolean {
+        return url.contains(".m3u8") ||
+               url.contains(".mp4") ||
+               url.contains("stream", ignoreCase = true) ||
+               url.contains("play", ignoreCase = true) ||
+               url.contains("embed", ignoreCase = true)
     }
 
 
@@ -223,22 +232,29 @@ class Pencurimovie : MainAPI() {
             }.take(MAX_LINKS) // LIMIT: max 15 links
             
             // =========================
-            // STEP 3: Parallel resolve with depth limit
+            // STEP 3: Parallel resolve (THREAD-SAFE)
             // =========================
-            var found = 0
+            val found = AtomicInteger(0)
             
             sortedLinks.amap { link ->
-                if (found >= MAX_FOUND) return@amap
+                if (found.get() >= MAX_FOUND) return@amap
                 
                 try {
-                    val resolved = deepResolve(link, data, depth = 0)
+                    val resolved = deepResolve(link, data, depth = 0).distinct()
                     
                     resolved.forEach { realUrl ->
-                        if (found >= MAX_FOUND) return@forEach
+                        if (found.get() >= MAX_FOUND) return@forEach
                         
-                        // Try built-in extractor first
-                        if (loadExtractor(realUrl, data, subtitleCallback, callback)) {
-                            found++
+                        val success = loadExtractor(realUrl, data, subtitleCallback, callback)
+                        
+                        if (success) {
+                            found.incrementAndGet()
+                        } else {
+                            // Fallback universal extractor
+                            val extracted = universalExtract(realUrl, data, subtitleCallback, callback)
+                            if (extracted) {
+                                found.incrementAndGet()
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -282,19 +298,28 @@ class Pencurimovie : MainAPI() {
             // Add final URL
             results.add(finalUrl)
             
-            // Step 2: Extract m3u8 directly
+            // Step 2: Extract m3u8 directly (FILTER video only)
             Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
                 .findAll(text)
-                .forEach { results.add(it.value) }
+                .forEach { 
+                    val url = it.value
+                    if (isVideoUrl(url)) results.add(url)
+                }
             
-            // Step 3: Extract file:/src: patterns
+            // Step 3: Extract file:/src: patterns (FILTER video only)
             Regex("""file["']?\s*:\s*["']([^"']+)["']""")
                 .findAll(text)
-                .forEach { results.add(it.groupValues[1]) }
+                .forEach { 
+                    val url = it.groupValues[1]
+                    if (isVideoUrl(url)) results.add(url)
+                }
             
             Regex("""src["']?\s*:\s*["']([^"']+)["']""")
                 .findAll(text)
-                .forEach { results.add(it.groupValues[1]) }
+                .forEach { 
+                    val url = it.groupValues[1]
+                    if (isVideoUrl(url)) results.add(url)
+                }
             
             // Step 4: Extract iframes (nested) - with depth limit
             Regex("""<iframe[^>]*src=["']([^"']+)["']""")
@@ -308,31 +333,99 @@ class Pencurimovie : MainAPI() {
                     }
                 }
             
-            // Step 5: Detect API endpoints
+            // Step 5: Detect API endpoints (FILTER video only)
             val apiMatch = Regex("""fetch\(["']([^"']+)["']""").find(text)
             if (apiMatch != null) {
                 val apiUrl = fixUrl(apiMatch.groupValues[1])
                 try {
                     val json = app.get(apiUrl, headers = headers).text
                     Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
-                        .find(json)?.value?.let { results.add(it) }
+                        .find(json)?.value?.let { 
+                            if (isVideoUrl(it)) results.add(it)
+                        }
                 } catch (e: Exception) {
                     // Ignore API errors
                 }
             }
             
-            // Step 6: Unpack JavaScript (if packed)
+            // Step 6: Unpack JavaScript (if packed) (FILTER video only)
             val unpacked = getAndUnpack(text)
             if (unpacked != null) {
                 Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
                     .findAll(unpacked)
-                    .forEach { results.add(it.value) }
+                    .forEach { 
+                        val url = it.value
+                        if (isVideoUrl(url)) results.add(url)
+                    }
             }
             
         } catch (e: Exception) {
             Log.e("Pencurimovie", "Deep resolve error: $url")
         }
         
-        return results.toList()
+        // Dedup + normalize
+        return results.map { normalizeUrl(it) }.distinct()
+    }
+    
+    // =========================
+    // UNIVERSAL EXTRACTOR (Fallback)
+    // =========================
+    private suspend fun universalExtract(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        return try {
+            val res = app.get(url, headers = mapOf(
+                "User-Agent" to USER_AGENT,
+                "Referer" to (referer ?: url)
+            ))
+            
+            val text = getAndUnpack(res.text) ?: res.text
+            
+            // Priority 1: M3U8
+            val m3u8 = Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
+                .find(text)?.value
+            
+            if (m3u8 != null) {
+                callback.invoke(
+                    newExtractorLink(
+                        "Universal",
+                        "Universal",
+                        m3u8,
+                        ExtractorLinkType.M3U8
+                    ) {
+                        this.referer = referer ?: url
+                        this.quality = Qualities.Unknown.value
+                    }
+                )
+                return true
+            }
+            
+            // Priority 2: MP4 fallback
+            val mp4 = Regex("""https?://[^\s'"]+\.mp4[^\s'"]*""")
+                .find(text)?.value
+            
+            if (mp4 != null) {
+                callback.invoke(
+                    newExtractorLink(
+                        "Universal",
+                        "Universal",
+                        mp4,
+                        ExtractorLinkType.VIDEO
+                    ) {
+                        this.referer = referer ?: url
+                        this.quality = Qualities.Unknown.value
+                    }
+                )
+                return true
+            }
+            
+            false
+        } catch (e: Exception) {
+            Log.e("Pencurimovie", "Universal extract error: $url")
+            false
+        }
     }
 }
