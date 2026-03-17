@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 // Extractor untuk server-server Pencurimovie
 // Server yang digunakan: do7go.com, dhcplay.com, listeamed.net, voe.sx
 
+@Suppress("DEPRECATION")
 class Do7go : ExtractorApi() {
     override var name = "Do7go"
     override var mainUrl = "https://do7go.com"
@@ -58,6 +59,7 @@ class Do7go : ExtractorApi() {
     }
 }
 
+@Suppress("DEPRECATION")
 class Dhcplay : ExtractorApi() {
     override var name = "Dhcplay"
     override var mainUrl = "https://dhcplay.com"
@@ -97,6 +99,7 @@ class Dhcplay : ExtractorApi() {
     }
 }
 
+@Suppress("DEPRECATION")
 class Listeamed : ExtractorApi() {
     override var name = "Listeamed"
     override var mainUrl = "https://listeamed.net"
@@ -136,6 +139,7 @@ class Listeamed : ExtractorApi() {
     }
 }
 
+@Suppress("DEPRECATION")
 class Voe : ExtractorApi() {
     override var name = "Voe"
     override var mainUrl = "https://voe.sx"
