@@ -209,7 +209,7 @@ class Pencurimovie : MainAPI() {
                                 loadExtractor(href, subtitleCallback, callback)
                             }
                         } catch (e: Exception) {
-                            Log.e("Pencurimovie", "Failed to load iframe: ${iframe.attr("data-src")}", e)
+                            Log.e("Pencurimovie", "Failed to load iframe: ${iframe.attr("data-src")}")
                         }
                     }
                 }.awaitAll()
@@ -217,7 +217,7 @@ class Pencurimovie : MainAPI() {
 
             return true
         } catch (e: Exception) {
-            Log.e("Pencurimovie", "loadLinks failed: ${e.message}", e)
+            Log.e("Pencurimovie", "loadLinks failed: ${e.message}")
             return false
         }
     }
