@@ -98,8 +98,7 @@ class Pencurimovie : MainAPI() {
             }
         }
 
-        // PERBAIKI: Mengikuti cara ExtCloud/Pencurimovie yang sederhana
-        // Hanya ambil halaman pertama, tanpa multi-page yang kompleks
+        // ORIGINAL: Simple search like ExtCloud/Pencurimovie
         val results = try {
             val document = app.get("${mainUrl}?s=$query", timeout = 10000L).documentLarge
             document.select("div.ml-item").mapNotNull { 
