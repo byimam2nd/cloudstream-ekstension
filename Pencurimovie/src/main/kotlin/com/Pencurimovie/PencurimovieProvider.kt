@@ -1,16 +1,15 @@
 package com.Pencurimovie
 
-import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
+import com.lagradost.cloudstream3.plugins.Plugin
+import android.content.Context
 
 @CloudstreamPlugin
-class PencurimovieProvider: BasePlugin() {
-    override fun load() {
+class PencurimovieProvider: Plugin() {
+    override fun load(context: Context) {
+        Pencurimovie.context = context
         registerMainAPI(Pencurimovie())
-        // Register extractor untuk server-server yang tidak didukung bawaan CloudStream
-        registerExtractorAPI(Do7go())
-        registerExtractorAPI(Dhcplay())
-        registerExtractorAPI(Listeamed())
-        registerExtractorAPI(Voe())
+        registerExtractorAPI(Dsvplay())
+        registerExtractorAPI(Hglink())
     }
 }
