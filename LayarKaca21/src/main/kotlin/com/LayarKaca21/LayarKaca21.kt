@@ -7,9 +7,6 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import com.layarKacaProvider.CacheManager
 import com.layarKacaProvider.rateLimitDelay
 import com.layarKacaProvider.getRandomUserAgent
@@ -176,38 +173,47 @@ class LayarKaca21 : MainAPI() {
             return cached
         }
 
-        // SAMA PERSIS dengan selector Anichin yang bekerja
-        val results = coroutineScope {
-            (1..3).map { page ->
-                async {
-                    try {
-                        rateLimitDelay()
-                        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+        // MENGIKUTI CARA EXTCloud/LayarKacaProvider.kt - Menggunakan API JSON
+        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+        val searchApiUrl = "$searchUrl/search.php?s=$encodedQuery"
 
-                        // WordPress search URL pattern
-                        val searchUrl = if (page == 1) {
-                            "$mainUrl/?s=$encodedQuery"
-                        } else {
-                            "$mainUrl/page/$page/?s=$encodedQuery"
+        val results = try {
+            rateLimitDelay()
+            val responseText = app.get(
+                searchApiUrl,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).text
+
+            val root = JSONObject(responseText)
+            val arr = root.getJSONArray("data")
+            val searchResults = mutableListOf<SearchResponse>()
+
+            for (i in 0 until arr.length()) {
+                val item = arr.getJSONObject(i)
+                val title = item.getString("title")
+                val slug = item.getString("slug")
+                val type = item.getString("type")
+                val posterUrl = "https://poster.lk21.party/wp-content/uploads/" + item.optString("poster")
+
+                when (type) {
+                    "series" -> searchResults.add(
+                        newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
+                            this.posterUrl = posterUrl
                         }
-
-                        val document = app.get(
-                            searchUrl,
-                            timeout = requestTimeout,
-                            headers = mapOf("User-Agent" to getRandomUserAgent())
-                        ).documentLarge
-
-                        // Selector yang sama dengan Anichin (yang bekerja)
-                        document.select("div.listupd > article figure, div.items > article figure")
-                            .mapNotNull {
-                                runCatching { it.toSearchResult() }.getOrElse { null }
-                            }
-                    } catch (e: Exception) {
-                        logError("LayarKaca", "Search page $page failed: ${e.message}", e)
-                        emptyList<SearchResponse>()
-                    }
+                    )
+                    "movie" -> searchResults.add(
+                        newMovieSearchResponse(title, "$mainUrl/$slug", TvType.Movie) {
+                            this.posterUrl = posterUrl
+                        }
+                    )
                 }
-            }.awaitAll().flatten().distinctBy { it.url }
+            }
+
+            searchResults
+        } catch (e: Exception) {
+            logError("LayarKaca", "Search failed for query: $query", e)
+            emptyList()
         }
 
         // Cache the result
