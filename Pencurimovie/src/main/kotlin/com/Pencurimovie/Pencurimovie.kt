@@ -330,17 +330,12 @@ class Pencurimovie : MainAPI() {
                     
                     resolved.forEach { realUrl ->
                         if (found.get() >= MAX_FOUND) return@forEach
-                        
-                        val success = loadExtractor(realUrl, data, subtitleCallback, callback)
-                        
+
+                        // DIRECTLY call extractors (lebih reliable)
+                        val success = extractVideo(realUrl, data, subtitleCallback, callback)
+
                         if (success) {
                             found.incrementAndGet()
-                        } else {
-                            // Fallback universal extractor
-                            val extracted = universalExtract(realUrl, data, subtitleCallback, callback)
-                            if (extracted) {
-                                found.incrementAndGet()
-                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -451,6 +446,47 @@ class Pencurimovie : MainAPI() {
         
         // Dedup + normalize
         return results.map { normalizeUrl(it) }.distinct()
+    }
+    
+    // =========================
+    // DIRECT EXTRACTOR (call extractors explicitly)
+    // =========================
+    private suspend fun extractVideo(
+        url: String,
+        referer: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        return try {
+            when {
+                // Dhcplay & Do7go - StreamWish based
+                url.contains("dhcplay.com") -> {
+                    Dhcplay().getUrl(url, referer, subtitleCallback, callback)
+                    true
+                }
+                url.contains("do7go.com") -> {
+                    Do7go().getUrl(url, referer, subtitleCallback, callback)
+                    true
+                }
+                // Listeamed - VidStack based
+                url.contains("listeamed.net") -> {
+                    Listeamed().getUrl(url, referer, subtitleCallback, callback)
+                    true
+                }
+                // Voe - Custom extractor
+                url.contains("voe.sx") -> {
+                    Voe().getUrl(url, referer, subtitleCallback, callback)
+                    true
+                }
+                // Fallback to built-in extractor
+                else -> {
+                    loadExtractor(url, referer, subtitleCallback, callback)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Pencurimovie", "Extract error: $url - ${e.message}")
+            false
+        }
     }
     
     // =========================
