@@ -97,27 +97,24 @@ class Pencurimovie : MainAPI() {
                 return cached.data
             }
         }
-        
-        // OPTIMIZED: Parallel search with timeout (3x faster)
-        val results = coroutineScope {
-            (1..3).map { page ->
-                async {
-                    try {
-                        val document = app.get("${mainUrl}?s=$query&page=$page", timeout = 5000L).documentLarge
-                        document.select("div.ml-item").mapNotNull { it.toSearchResult() }
-                    } catch (e: Exception) {
-                        emptyList<SearchResponse>()
-                    }
-                }
-            }.awaitAll().flatten().distinctBy { it.url }
+
+        // PERBAIKI: Mengikuti cara ExtCloud/Pencurimovie yang sederhana
+        // Hanya ambil halaman pertama, tanpa multi-page yang kompleks
+        val results = try {
+            val document = app.get("${mainUrl}?s=$query", timeout = 10000L).documentLarge
+            document.select("div.ml-item").mapNotNull { 
+                runCatching { it.toSearchResult() }.getOrElse { null }
+            }
+        } catch (e: Exception) {
+            emptyList<SearchResponse>()
         }
-        
+
         // Cache the result
         cacheMutex.withLock {
             searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
             searchCache.entries.removeAll { it.value.isExpired() }
         }
-        
+
         return results
     }
 

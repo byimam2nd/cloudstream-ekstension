@@ -173,44 +173,24 @@ class LayarKaca21 : MainAPI() {
             return cached
         }
 
-        // MENGIKUTI CARA EXTCloud/LayarKacaProvider.kt - Menggunakan API JSON
+        // PERBAIKI: Scraping HTML langsung karena API search.lk21.party sudah down (404)
+        // Mengikuti cara ExtCloud/LayarKacaProvider tapi dengan scraping HTML
         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-        val searchApiUrl = "$searchUrl/search.php?s=$encodedQuery"
+        val searchUrl = "$mainUrl/?s=$encodedQuery"
 
         val results = try {
             rateLimitDelay()
-            val responseText = app.get(
-                searchApiUrl,
+            val document = app.get(
+                searchUrl,
                 timeout = requestTimeout,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
-            ).text
+            ).documentLarge
 
-            val root = JSONObject(responseText)
-            val arr = root.getJSONArray("data")
-            val searchResults = mutableListOf<SearchResponse>()
-
-            for (i in 0 until arr.length()) {
-                val item = arr.getJSONObject(i)
-                val title = item.getString("title")
-                val slug = item.getString("slug")
-                val type = item.getString("type")
-                val posterUrl = "https://poster.lk21.party/wp-content/uploads/" + item.optString("poster")
-
-                when (type) {
-                    "series" -> searchResults.add(
-                        newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
-                            this.posterUrl = posterUrl
-                        }
-                    )
-                    "movie" -> searchResults.add(
-                        newMovieSearchResponse(title, "$mainUrl/$slug", TvType.Movie) {
-                            this.posterUrl = posterUrl
-                        }
-                    )
+            // Selector untuk hasil search - sama dengan yang digunakan di getMainPage
+            document.select("article figure")
+                .mapNotNull {
+                    runCatching { it.toSearchResult() }.getOrElse { null }
                 }
-            }
-
-            searchResults
         } catch (e: Exception) {
             logError("LayarKaca", "Search failed for query: $query", e)
             emptyList()
