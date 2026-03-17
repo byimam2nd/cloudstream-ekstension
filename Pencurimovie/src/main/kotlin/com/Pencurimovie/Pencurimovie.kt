@@ -8,6 +8,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.amap
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 
 
 class Pencurimovie : MainAPI() {
@@ -144,13 +146,12 @@ class Pencurimovie : MainAPI() {
     ): Boolean {
         try {
             val document = app.get(data).document
-            
-            // =========================
-            // 1. Ambil semua kemungkinan link server
-            // =========================
             val links = mutableSetOf<String>()
             
-            // iframe dengan data-src atau src
+            // =========================
+            // STEP 1: Collect ALL possible links (NO HARDCODE)
+            // =========================
+            // iframe with data-src or src
             document.select("iframe").forEach {
                 val src = it.attr("data-src").ifEmpty { it.attr("src") }
                 if (src.isNotEmpty() && src.startsWith("http")) {
@@ -158,44 +159,48 @@ class Pencurimovie : MainAPI() {
                 }
             }
             
-            // data-link attribute (server list)
-            document.select("[data-link]").forEach {
-                val link = it.attr("data-link")
+            // All attributes that might contain video URLs
+            document.select("[src], [data-src], [data-link], a[href]").forEach {
+                val link = it.attr("data-src")
+                    .ifEmpty { it.attr("data-link") }
+                    .ifEmpty { it.attr("src") }
+                    .ifEmpty { it.attr("href") }
+                
                 if (link.isNotEmpty() && link.startsWith("http")) {
-                    links.add(fixUrl(link))
+                    links.add(link)
                 }
             }
             
-            // Fallback: cari URL server di JavaScript/HTML
-            val serverPatterns = listOf("voe", "do7go", "dhcplay", "listeamed", "hglink", "dsvplay")
+            // Fallback: regex for JS-embedded URLs
             Regex("""https?://[^\s'"]+""")
                 .findAll(document.html())
                 .map { it.value }
                 .filter { url ->
-                    serverPatterns.any { url.contains(it) }
+                    url.contains("voe") || 
+                    url.contains("do7go") || 
+                    url.contains("dhcplay") || 
+                    url.contains("listeamed") ||
+                    url.contains("hglink") ||
+                    url.contains("dsvplay")
                 }
                 .forEach { links.add(it) }
             
             // =========================
-            // 2. Resolve setiap link (PENTING!)
+            // STEP 2: Deep Resolve & Extract
             // =========================
-            val resolvedLinks = links.mapNotNull { link ->
+            links.forEach { link ->
                 try {
-                    resolveLink(link)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-            
-            // Load extractor untuk semua resolved links
-            resolvedLinks.amap { realUrl ->
-                try {
-                    // Filter hanya server yang supported
-                    if (serverPatterns.any { realUrl.contains(it) }) {
-                        loadExtractor(realUrl, data, subtitleCallback, callback)
+                    val resolved = deepResolve(link, data)
+                    
+                    resolved.forEach { realUrl ->
+                        // Try built-in extractor first
+                        if (!loadExtractor(realUrl, data, subtitleCallback, callback)) {
+                            // Fallback to universal extraction
+                            universalExtract(realUrl, data, callback)
+                        }
                     }
                 } catch (e: Exception) {
-                    // Skip link yang error
+                    Log.e("Pencurimovie", "Error resolving: $link")
                 }
             }
             
@@ -206,33 +211,132 @@ class Pencurimovie : MainAPI() {
     }
     
     // =========================
-    // Resolver Function (KUNCI UTAMA)
+    // DEEP RESOLVER (Multi-Layer)
     // =========================
-    private suspend fun resolveLink(url: String): String {
+    private suspend fun deepResolve(url: String, referer: String?): List<String> {
+        val results = mutableSetOf<String>()
+        
         try {
-            // Follow redirect
-            val response = app.get(url, allowRedirects = true)
-            val finalUrl = response.url
+            // Build session with proper headers
+            val headers = mapOf(
+                "User-Agent" to USER_AGENT,
+                "Referer" to (referer ?: url),
+                "Accept" to "*/*",
+                "Accept-Language" to "en-US,en;q=0.9"
+            )
             
-            // Cek apakah masih ada iframe lagi (nested)
-            val doc = response.document
-            val iframe = doc.selectFirst("iframe")?.attr("src")
+            // Step 1: Initial request (get cookies)
+            val res = app.get(url, headers = headers, allowRedirects = true)
+            val text = res.text
+            val finalUrl = res.url
             
-            if (!iframe.isNullOrEmpty() && iframe.startsWith("http")) {
-                // Recursive resolve untuk nested iframe
-                return resolveLink(fixUrl(iframe))
+            // Add final URL
+            results.add(finalUrl)
+            
+            // Step 2: Extract m3u8 directly
+            Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
+                .findAll(text)
+                .forEach { results.add(it.value) }
+            
+            // Step 3: Extract file:/src: patterns
+            Regex("""file["']?\s*:\s*["']([^"']+)["']""")
+                .findAll(text)
+                .forEach { results.add(it.groupValues[1]) }
+            
+            Regex("""src["']?\s*:\s*["']([^"']+)["']""")
+                .findAll(text)
+                .forEach { results.add(it.groupValues[1]) }
+            
+            // Step 4: Extract iframes (nested)
+            Regex("""<iframe[^>]*src=["']([^"']+)["']""")
+                .findAll(text)
+                .forEach { 
+                    val iframeUrl = fixUrl(it.groupValues[1])
+                    if (iframeUrl.startsWith("http")) {
+                        results.add(iframeUrl)
+                    }
+                }
+            
+            // Step 5: Detect API endpoints
+            val apiMatch = Regex("""fetch\(["']([^"']+)["']""").find(text)
+            if (apiMatch != null) {
+                val apiUrl = fixUrl(apiMatch.groupValues[1])
+                try {
+                    val json = app.get(apiUrl, headers = headers).text
+                    Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
+                        .find(json)?.value?.let { results.add(it) }
+                } catch (e: Exception) {
+                    // Ignore API errors
+                }
             }
             
-            // Cek data-src lagi
-            val dataSrc = doc.selectFirst("iframe")?.attr("data-src")
-            if (!dataSrc.isNullOrEmpty() && dataSrc.startsWith("http")) {
-                return resolveLink(fixUrl(dataSrc))
+            // Step 6: Unpack JavaScript (if packed)
+            val unpacked = getAndUnpack(text)
+            if (unpacked != null) {
+                Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
+                    .findAll(unpacked)
+                    .forEach { results.add(it.value) }
             }
             
-            return finalUrl
         } catch (e: Exception) {
-            // Fallback ke URL asli jika error
-            return url
+            Log.e("Pencurimovie", "Deep resolve error: $url")
+        }
+        
+        return results.toList()
+    }
+    
+    // =========================
+    // UNIVERSAL EXTRACTOR (Fallback)
+    // =========================
+    private suspend fun universalExtract(
+        url: String,
+        referer: String?,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        try {
+            val headers = mapOf(
+                "User-Agent" to USER_AGENT,
+                "Referer" to (referer ?: url)
+            )
+            
+            val res = app.get(url, headers = headers)
+            val text = getAndUnpack(res.text) ?: res.text
+            
+            // Priority 1: Direct m3u8
+            Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
+                .find(text)?.value?.let { m3u8Url ->
+                    callback.invoke(
+                        newExtractorLink(
+                            "Universal",
+                            "Universal",
+                            m3u8Url,
+                            ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = referer ?: url
+                            this.quality = Qualities.Unknown.value
+                        }
+                    )
+                }
+            
+            // Priority 2: file: pattern
+            Regex("""file["']?\s*:\s*["']([^"']+)["']""")
+                .find(text)?.groupValues?.get(1)?.let { fileUrl ->
+                    val isM3u8 = fileUrl.contains(".m3u8")
+                    callback.invoke(
+                        newExtractorLink(
+                            "Universal",
+                            "Universal",
+                            fileUrl,
+                            if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                        ) {
+                            this.referer = referer ?: url
+                            this.quality = Qualities.Unknown.value
+                        }
+                    )
+                }
+                
+        } catch (e: Exception) {
+            // Ignore universal extract errors
         }
     }
 }
