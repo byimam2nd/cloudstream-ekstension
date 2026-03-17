@@ -5,19 +5,24 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 
 // Extractor untuk server-server Pencurimovie
 // Server: do7go.com, dhcplay.com, listeamed.net, voe.sx
 
-@Suppress("DEPRECATION")
 class Do7go : ExtractorApi() {
-    override var name = "Do7go"
-    override var mainUrl = "https://do7go.com"
+    override val name: String = "Do7go"
+    override val mainUrl: String = "https://do7go.com"
     override val requiresReferer = false
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
         try {
             val document = app.get(url).document
             // Cari script yang mengandung player.src atau sources
@@ -32,15 +37,17 @@ class Do7go : ExtractorApi() {
                     
                     if (videoUrl != null && videoUrl.startsWith("http")) {
                         val isM3u8 = videoUrl.contains(".m3u8")
-                        callback(
-                            ExtractorLink(
-                                name,
-                                name,
+                        callback.invoke(
+                            newExtractorLink(
+                                this.name,
+                                this.name,
                                 videoUrl,
-                                mainUrl,
-                                Qualities.P1080.value,
-                                if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                            )
+                                INFER_TYPE
+                            ) {
+                                this.referer = mainUrl
+                                this.quality = Qualities.P1080.value
+                                this.isM3u8 = isM3u8
+                            }
                         )
                         return
                     }
@@ -54,13 +61,17 @@ class Do7go : ExtractorApi() {
     }
 }
 
-@Suppress("DEPRECATION")
 class Dhcplay : ExtractorApi() {
-    override var name = "Dhcplay"
-    override var mainUrl = "https://dhcplay.com"
+    override val name: String = "Dhcplay"
+    override val mainUrl: String = "https://dhcplay.com"
     override val requiresReferer = false
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
         try {
             val document = app.get(url).document
             val scripts = document.select("script")
@@ -73,15 +84,17 @@ class Dhcplay : ExtractorApi() {
                     
                     if (videoUrl != null && videoUrl.startsWith("http")) {
                         val isM3u8 = videoUrl.contains(".m3u8")
-                        callback(
-                            ExtractorLink(
-                                name,
-                                name,
+                        callback.invoke(
+                            newExtractorLink(
+                                this.name,
+                                this.name,
                                 videoUrl,
-                                mainUrl,
-                                Qualities.P1080.value,
-                                if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                            )
+                                INFER_TYPE
+                            ) {
+                                this.referer = mainUrl
+                                this.quality = Qualities.P1080.value
+                                this.isM3u8 = isM3u8
+                            }
                         )
                         return
                     }
@@ -94,13 +107,17 @@ class Dhcplay : ExtractorApi() {
     }
 }
 
-@Suppress("DEPRECATION")
 class Listeamed : ExtractorApi() {
-    override var name = "Listeamed"
-    override var mainUrl = "https://listeamed.net"
+    override val name: String = "Listeamed"
+    override val mainUrl: String = "https://listeamed.net"
     override val requiresReferer = false
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
         try {
             val document = app.get(url).document
             val scripts = document.select("script")
@@ -113,15 +130,17 @@ class Listeamed : ExtractorApi() {
                     
                     if (videoUrl != null && videoUrl.startsWith("http")) {
                         val isM3u8 = videoUrl.contains(".m3u8")
-                        callback(
-                            ExtractorLink(
-                                name,
-                                name,
+                        callback.invoke(
+                            newExtractorLink(
+                                this.name,
+                                this.name,
                                 videoUrl,
-                                mainUrl,
-                                Qualities.P1080.value,
-                                if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                            )
+                                INFER_TYPE
+                            ) {
+                                this.referer = mainUrl
+                                this.quality = Qualities.P1080.value
+                                this.isM3u8 = isM3u8
+                            }
                         )
                         return
                     }
@@ -134,13 +153,17 @@ class Listeamed : ExtractorApi() {
     }
 }
 
-@Suppress("DEPRECATION")
 class Voe : ExtractorApi() {
-    override var name = "Voe"
-    override var mainUrl = "https://voe.sx"
+    override val name: String = "Voe"
+    override val mainUrl: String = "https://voe.sx"
     override val requiresReferer = false
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
         try {
             val document = app.get(url).document
             val scripts = document.select("script")
@@ -153,15 +176,17 @@ class Voe : ExtractorApi() {
                     
                     if (videoUrl != null && videoUrl.startsWith("http")) {
                         val isM3u8 = videoUrl.contains(".m3u8")
-                        callback(
-                            ExtractorLink(
-                                name,
-                                name,
+                        callback.invoke(
+                            newExtractorLink(
+                                this.name,
+                                this.name,
                                 videoUrl,
-                                mainUrl,
-                                Qualities.P1080.value,
-                                if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                            )
+                                INFER_TYPE
+                            ) {
+                                this.referer = mainUrl
+                                this.quality = Qualities.P1080.value
+                                this.isM3u8 = isM3u8
+                            }
                         )
                         return
                     }
