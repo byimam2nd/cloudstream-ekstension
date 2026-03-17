@@ -10,15 +10,45 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
+import java.net.URI
 
 
 class Pencurimovie : MainAPI() {
     override var mainUrl = "https://ww73.pencurimovie.bond"
-    override var name = "Pencurimovie"
+    override var name = "Pencurimovie🍕"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.Movie, TvType.Anime, TvType.Cartoon)
+    
+    // =========================
+    // CONFIG (PRODUCTION SETTINGS)
+    // =========================
+    companion object {
+        private const val MAX_LINKS = 15
+        private const val MAX_FOUND = 5
+        private const val MAX_DEPTH = 2
+    }
+    
+    // Dynamic domain whitelist (anti-noise)
+    private val allowedDomains = listOf(
+        "voe", "do7go", "dhcplay", "listeamed",
+        "hglink", "dsvplay", "streamwish", "dood",
+        "filemoon", "mixdrop", "vidhide"
+    )
+    
+    private fun isValidVideoHost(url: String): Boolean {
+        return allowedDomains.any { url.contains(it, ignoreCase = true) }
+    }
+    
+    private fun normalizeUrl(url: String): String {
+        return try {
+            val uri = URI(url)
+            "${uri.scheme}://${uri.host}${uri.path}"
+        } catch (e: Exception) {
+            url
+        }
+    }
 
 
     override val mainPage = mainPageOf(
@@ -149,13 +179,13 @@ class Pencurimovie : MainAPI() {
             val links = mutableSetOf<String>()
             
             // =========================
-            // STEP 1: Collect ALL possible links (NO HARDCODE)
+            // STEP 1: Collect links with DOMAIN FILTER (anti-noise)
             // =========================
             // iframe with data-src or src
             document.select("iframe").forEach {
                 val src = it.attr("data-src").ifEmpty { it.attr("src") }
-                if (src.isNotEmpty() && src.startsWith("http")) {
-                    links.add(fixUrl(src))
+                if (src.isNotEmpty() && src.startsWith("http") && isValidVideoHost(src)) {
+                    links.add(normalizeUrl(fixUrl(src)))
                 }
             }
             
@@ -166,37 +196,49 @@ class Pencurimovie : MainAPI() {
                     .ifEmpty { it.attr("src") }
                     .ifEmpty { it.attr("href") }
                 
-                if (link.isNotEmpty() && link.startsWith("http")) {
-                    links.add(link)
+                if (link.isNotEmpty() && link.startsWith("http") && isValidVideoHost(link)) {
+                    links.add(normalizeUrl(link))
                 }
             }
             
-            // Fallback: regex for JS-embedded URLs
+            // Fallback: regex for JS-embedded URLs (with domain filter)
             Regex("""https?://[^\s'"]+""")
                 .findAll(document.html())
                 .map { it.value }
                 .filter { url ->
-                    url.contains("voe") || 
-                    url.contains("do7go") || 
-                    url.contains("dhcplay") || 
-                    url.contains("listeamed") ||
-                    url.contains("hglink") ||
-                    url.contains("dsvplay")
+                    isValidVideoHost(url)
                 }
-                .forEach { links.add(it) }
+                .forEach { links.add(normalizeUrl(it)) }
             
             // =========================
-            // STEP 2: Deep Resolve & Extract
+            // STEP 2: Priority sorting (smart ordering)
             // =========================
-            links.forEach { link ->
+            val sortedLinks = links.sortedByDescending {
+                when {
+                    it.contains(".m3u8") -> 5
+                    it.contains("embed") -> 4
+                    it.contains("stream") -> 3
+                    else -> 1
+                }
+            }.take(MAX_LINKS) // LIMIT: max 15 links
+            
+            // =========================
+            // STEP 3: Parallel resolve with depth limit
+            // =========================
+            var found = 0
+            
+            sortedLinks.amap { link ->
+                if (found >= MAX_FOUND) return@amap
+                
                 try {
-                    val resolved = deepResolve(link, data)
+                    val resolved = deepResolve(link, data, depth = 0)
                     
                     resolved.forEach { realUrl ->
+                        if (found >= MAX_FOUND) return@forEach
+                        
                         // Try built-in extractor first
-                        if (!loadExtractor(realUrl, data, subtitleCallback, callback)) {
-                            // Fallback to universal extraction
-                            universalExtract(realUrl, data, callback)
+                        if (loadExtractor(realUrl, data, subtitleCallback, callback)) {
+                            found++
                         }
                     }
                 } catch (e: Exception) {
@@ -211,9 +253,16 @@ class Pencurimovie : MainAPI() {
     }
     
     // =========================
-    // DEEP RESOLVER (Multi-Layer)
+    // DEEP RESOLVER (with depth limit)
     // =========================
-    private suspend fun deepResolve(url: String, referer: String?): List<String> {
+    private suspend fun deepResolve(
+        url: String,
+        referer: String?,
+        depth: Int = 0
+    ): List<String> {
+        // DEPTH LIMIT: prevent infinite recursion
+        if (depth > MAX_DEPTH) return emptyList()
+        
         val results = mutableSetOf<String>()
         
         try {
@@ -247,13 +296,15 @@ class Pencurimovie : MainAPI() {
                 .findAll(text)
                 .forEach { results.add(it.groupValues[1]) }
             
-            // Step 4: Extract iframes (nested)
+            // Step 4: Extract iframes (nested) - with depth limit
             Regex("""<iframe[^>]*src=["']([^"']+)["']""")
                 .findAll(text)
                 .forEach { 
                     val iframeUrl = fixUrl(it.groupValues[1])
-                    if (iframeUrl.startsWith("http")) {
-                        results.add(iframeUrl)
+                    if (iframeUrl.startsWith("http") && isValidVideoHost(iframeUrl)) {
+                        // RECURSIVE with depth+1
+                        val nested = deepResolve(iframeUrl, url, depth + 1)
+                        results.addAll(nested)
                     }
                 }
             
@@ -284,60 +335,4 @@ class Pencurimovie : MainAPI() {
         
         return results.toList()
     }
-    
-    // =========================
-    // UNIVERSAL EXTRACTOR (Fallback)
-    // =========================
-    private suspend fun universalExtract(
-        url: String,
-        referer: String?,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        try {
-            val headers = mapOf(
-                "User-Agent" to USER_AGENT,
-                "Referer" to (referer ?: url)
-            )
-            
-            val res = app.get(url, headers = headers)
-            val text = getAndUnpack(res.text) ?: res.text
-            
-            // Priority 1: Direct m3u8
-            Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
-                .find(text)?.value?.let { m3u8Url ->
-                    callback.invoke(
-                        newExtractorLink(
-                            "Universal",
-                            "Universal",
-                            m3u8Url,
-                            ExtractorLinkType.M3U8
-                        ) {
-                            this.referer = referer ?: url
-                            this.quality = Qualities.Unknown.value
-                        }
-                    )
-                }
-            
-            // Priority 2: file: pattern
-            Regex("""file["']?\s*:\s*["']([^"']+)["']""")
-                .find(text)?.groupValues?.get(1)?.let { fileUrl ->
-                    val isM3u8 = fileUrl.contains(".m3u8")
-                    callback.invoke(
-                        newExtractorLink(
-                            "Universal",
-                            "Universal",
-                            fileUrl,
-                            if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                        ) {
-                            this.referer = referer ?: url
-                            this.quality = Qualities.Unknown.value
-                        }
-                    )
-                }
-                
-        } catch (e: Exception) {
-            // Ignore universal extract errors
-        }
-    }
 }
-
