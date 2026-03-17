@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.spec.IvParameterSpec
-import android.util.Base64
 
 
 class Pencurimovie : MainAPI() {
@@ -123,7 +122,8 @@ class Pencurimovie : MainAPI() {
             
             cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
             
-            val decoded = Base64.decode(encrypted, Base64.DEFAULT)
+            // Use Java Base64 decoder (cross-platform)
+            val decoded = java.util.Base64.getDecoder().decode(encrypted)
             val decrypted = cipher.doFinal(decoded)
             
             String(decrypted)
