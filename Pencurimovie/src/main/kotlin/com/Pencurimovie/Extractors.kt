@@ -29,14 +29,14 @@ class Do7go : ExtractorApi() {
                 
                 if (videoUrl != null) {
                     callback(
-                        ExtractorLink(
+                        newExtractorLink(
                             name,
                             name,
                             videoUrl,
-                            referer ?: mainUrl,
-                            Qualities.P1080.value,
-                            INFER_TYPE
-                        )
+                            referer ?: mainUrl
+                        ) {
+                            isM3u8 = videoUrl.contains(".m3u8")
+                        }
                     )
                     return
                 }
@@ -74,14 +74,14 @@ class Dhcplay : ExtractorApi() {
                 
                 if (videoUrl != null) {
                     callback(
-                        ExtractorLink(
+                        newExtractorLink(
                             name,
                             name,
                             videoUrl,
-                            referer ?: mainUrl,
-                            Qualities.P1080.value,
-                            INFER_TYPE
-                        )
+                            referer ?: mainUrl
+                        ) {
+                            isM3u8 = videoUrl.contains(".m3u8")
+                        }
                     )
                     return
                 }
@@ -112,14 +112,14 @@ class Listeamed : ExtractorApi() {
                 
                 if (videoUrl != null) {
                     callback(
-                        ExtractorLink(
+                        newExtractorLink(
                             name,
                             name,
                             videoUrl,
-                            referer ?: mainUrl,
-                            Qualities.P1080.value,
-                            INFER_TYPE
-                        )
+                            referer ?: mainUrl
+                        ) {
+                            isM3u8 = videoUrl.contains(".m3u8")
+                        }
                     )
                     return
                 }
@@ -150,14 +150,14 @@ class Voe : ExtractorApi() {
                 
                 if (videoUrl != null) {
                     callback(
-                        ExtractorLink(
+                        newExtractorLink(
                             name,
                             name,
                             videoUrl,
-                            referer ?: mainUrl,
-                            Qualities.P1080.value,
-                            INFER_TYPE
-                        )
+                            referer ?: mainUrl
+                        ) {
+                            isM3u8 = videoUrl.contains(".m3u8")
+                        }
                     )
                     return
                 }
