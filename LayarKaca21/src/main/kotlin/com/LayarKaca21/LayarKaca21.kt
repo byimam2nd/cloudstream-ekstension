@@ -35,7 +35,7 @@ class LayarKaca21 : MainAPI() {
 
     override var mainUrl = "https://lk21.de"
     private var seriesUrl = "https://series.lk21.de"
-    private var searchUrl = "https://search.lk21.party"
+    private var searchUrl = "https://tv9.lk21official.cc"
 
     override var name = "LayarKaca"
     override val hasMainPage = true
@@ -164,40 +164,32 @@ class LayarKaca21 : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
-        val cacheKey = "search_${query}"
+        // MENIRU PERSIS ExtCloud/LayarKacaProvider yang bekerja dengan baik
+        val res = app.get("$searchUrl/search.php?s=$query").text
+        val results = mutableListOf<SearchResponse>()
 
-        // Check cache first
-        val cached = searchCache.get(cacheKey)
-        if (cached != null) {
-            return cached
+        val root = JSONObject(res)
+        val arr = root.getJSONArray("data")
+
+        for (i in 0 until arr.length()) {
+            val item = arr.getJSONObject(i)
+            val title = item.getString("title")
+            val slug = item.getString("slug")
+            val type = item.getString("type")
+            val posterUrl = "https://poster.lk21.party/wp-content/uploads/"+item.optString("poster")
+            when (type) {
+                "series" -> results.add(
+                    newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
+                        this.posterUrl = posterUrl
+                    }
+                )
+                "movie" -> results.add(
+                    newMovieSearchResponse(title, "$mainUrl/$slug", TvType.Movie) {
+                        this.posterUrl = posterUrl
+                    }
+                )
+            }
         }
-
-        // PERBAIKI: Scraping HTML langsung karena API search.lk21.party sudah down (404)
-        // Mengikuti cara ExtCloud/LayarKacaProvider tapi dengan scraping HTML
-        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-        val searchUrl = "$mainUrl/?s=$encodedQuery"
-
-        val results = try {
-            rateLimitDelay()
-            val document = app.get(
-                searchUrl,
-                timeout = requestTimeout,
-                headers = mapOf("User-Agent" to getRandomUserAgent())
-            ).documentLarge
-
-            // Selector untuk hasil search - sama dengan yang digunakan di getMainPage
-            document.select("article figure")
-                .mapNotNull {
-                    runCatching { it.toSearchResult() }.getOrElse { null }
-                }
-        } catch (e: Exception) {
-            logError("LayarKaca", "Search failed for query: $query", e)
-            emptyList()
-        }
-
-        // Cache the result
-        searchCache.put(cacheKey, results)
 
         return results
     }
