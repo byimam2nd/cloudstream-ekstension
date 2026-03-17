@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.utils.INFER_TYPE
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
@@ -42,11 +42,10 @@ class Do7go : ExtractorApi() {
                                 this.name,
                                 this.name,
                                 videoUrl,
-                                INFER_TYPE
+                                if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
                             ) {
                                 this.referer = mainUrl
                                 this.quality = Qualities.P1080.value
-                                this.isM3u8 = isM3u8
                             }
                         )
                         return
@@ -89,11 +88,10 @@ class Dhcplay : ExtractorApi() {
                                 this.name,
                                 this.name,
                                 videoUrl,
-                                INFER_TYPE
+                                if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
                             ) {
                                 this.referer = mainUrl
                                 this.quality = Qualities.P1080.value
-                                this.isM3u8 = isM3u8
                             }
                         )
                         return
@@ -135,11 +133,10 @@ class Listeamed : ExtractorApi() {
                                 this.name,
                                 this.name,
                                 videoUrl,
-                                INFER_TYPE
+                                if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
                             ) {
                                 this.referer = mainUrl
                                 this.quality = Qualities.P1080.value
-                                this.isM3u8 = isM3u8
                             }
                         )
                         return
@@ -181,11 +178,10 @@ class Voe : ExtractorApi() {
                                 this.name,
                                 this.name,
                                 videoUrl,
-                                INFER_TYPE
+                                if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
                             ) {
                                 this.referer = mainUrl
                                 this.quality = Qualities.P1080.value
-                                this.isM3u8 = isM3u8
                             }
                         )
                         return
