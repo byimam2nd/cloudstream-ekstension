@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.spec.IvParameterSpec
@@ -41,17 +42,19 @@ class Pencurimovie : MainAPI() {
         "filemoon", "mixdrop", "vidhide"
     )
     
-    // Dynamic domain learning (auto-detect new hosts)
-    private val dynamicDomains = mutableSetOf<String>()
+    // Dynamic domain learning (auto-detect new hosts) - THREAD-SAFE
+    private val dynamicDomains = ConcurrentHashMap.newKeySet<String>()
     
     private fun learnDomain(url: String) {
         try {
             val host = URI(url).host ?: return
             
-            // Filter basic (anti-spam)
-            if (!host.contains("google") &&
+            // Filter basic (anti-spam) - MORE STRICT
+            if (host.contains(".") &&
+                !host.contains("google") &&
                 !host.contains("facebook") &&
                 !host.contains("doubleclick") &&
+                !host.contains("cloudflare") &&
                 !host.contains("analytics")
             ) {
                 dynamicDomains.add(host)
@@ -67,23 +70,20 @@ class Pencurimovie : MainAPI() {
     }
     
     private fun normalizeUrl(url: String): String {
-        return try {
-            val uri = URI(url)
-            "${uri.scheme}://${uri.host}${uri.path}"
-        } catch (e: Exception) {
-            url
-        }
+        // Don't remove query params (needed for tokens!)
+        return url.substringBefore("#")
     }
     
     // =========================
-    // CACHING LAYER (suspend-aware)
+    // CACHING LAYER (suspend-aware, THREAD-SAFE)
     // =========================
     data class CacheEntry(
         val data: List<String>,
         val timestamp: Long
     )
     
-    private val cache = mutableMapOf<String, CacheEntry>()
+    // THREAD-SAFE cache
+    private val cache = ConcurrentHashMap<String, CacheEntry>()
     
     private suspend fun getCachedOrFetch(
         url: String,
@@ -134,11 +134,11 @@ class Pencurimovie : MainAPI() {
     }
     
     private fun isVideoUrl(url: String): Boolean {
+        // More precise - only video extensions
         return url.contains(".m3u8") ||
                url.contains(".mp4") ||
-               url.contains("stream", ignoreCase = true) ||
-               url.contains("play", ignoreCase = true) ||
-               url.contains("embed", ignoreCase = true)
+               url.contains(".mkv") ||
+               url.contains(".webm")
     }
 
 
@@ -325,8 +325,8 @@ class Pencurimovie : MainAPI() {
                 learnDomain(link)
                 
                 try {
-                    // Use cache (5 min TTL)
-                    val resolved = getCachedOrFetch(link, 5 * 60 * 1000, data).distinct()
+                    // Use cache (5 min TTL) - with proper referer
+                    val resolved = getCachedOrFetch(link, 5 * 60 * 1000, link).distinct()
                     
                     resolved.forEach { realUrl ->
                         if (found.get() >= MAX_FOUND) return@forEach
@@ -376,8 +376,8 @@ class Pencurimovie : MainAPI() {
                 "Accept-Language" to "en-US,en;q=0.9"
             )
             
-            // Step 1: Initial request (get cookies)
-            val res = app.get(url, headers = headers, allowRedirects = true)
+            // Step 1: Initial request (get cookies) - WITH TIMEOUT
+            val res = app.get(url, headers = headers, allowRedirects = true, timeout = 20L)
             val text = res.text
             val finalUrl = res.url
             
@@ -470,21 +470,16 @@ class Pencurimovie : MainAPI() {
             
             val text = getAndUnpack(res.text) ?: res.text
             
-            // Priority 1: M3U8
+            // Priority 1: M3U8 (use generateM3u8 for HLS)
             val m3u8 = Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
                 .find(text)?.value
             
             if (m3u8 != null) {
-                callback.invoke(
-                    newExtractorLink(
-                        "Universal",
-                        "Universal",
-                        m3u8,
-                        ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = referer ?: url
-                        this.quality = Qualities.Unknown.value
-                    }
+                generateM3u8(
+                    "Universal",
+                    m3u8,
+                    referer ?: url,
+                    callback
                 )
                 return true
             }
