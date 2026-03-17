@@ -4,13 +4,10 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.base64Decode
-import java.net.URI
 
 // Extractor untuk server-server Pencurimovie
 // Server yang digunakan: do7go.com, dhcplay.com, listeamed.net, voe.sx
@@ -18,7 +15,7 @@ import java.net.URI
 class Do7go : ExtractorApi() {
     override var name = "Do7go"
     override var mainUrl = "https://do7go.com"
-    override val usesWebView = true
+    override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         try {
@@ -63,7 +60,7 @@ class Do7go : ExtractorApi() {
 class Dhcplay : ExtractorApi() {
     override var name = "Dhcplay"
     override var mainUrl = "https://dhcplay.com"
-    override val usesWebView = true
+    override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         try {
@@ -101,7 +98,7 @@ class Dhcplay : ExtractorApi() {
 class Listeamed : ExtractorApi() {
     override var name = "Listeamed"
     override var mainUrl = "https://listeamed.net"
-    override val usesWebView = true
+    override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         try {
@@ -139,7 +136,7 @@ class Listeamed : ExtractorApi() {
 class Voe : ExtractorApi() {
     override var name = "Voe"
     override var mainUrl = "https://voe.sx"
-    override val usesWebView = true
+    override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         try {
