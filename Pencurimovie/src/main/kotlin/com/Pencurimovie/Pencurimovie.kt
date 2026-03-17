@@ -183,36 +183,15 @@ class Pencurimovie : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        try {
-            val document = app.get(data, timeout = 10000L).documentLarge
-
-            // PERBAIKI: Gunakan selector yang lebih general untuk mengambil SEMUA iframe
-            // Selector "div.movieplay iframe" mungkin terlalu spesifik dan melewatkan beberapa server
-            // Gunakan selector yang mengambil semua iframe dengan data-src attribute
-            val iframes = document.select("iframe[data-src]")
-            
-            Log.d("Pencurimovie", "Found ${iframes.size} iframes with data-src")
-
-            // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
-            // 5x faster for episodes with multiple servers
-            iframes.amap { iframe ->
-                try {
-                    val href = iframe.attr("data-src")
-                    if (href.isNotEmpty() && !href.contains("youtube")) {
-                        Log.d("Pencurimovie", "Loading server: $href")
-                        // Gunakan referer dari mainUrl
-                        loadExtractor(href, "$mainUrl/", subtitleCallback, callback)
-                    }
-                } catch (e: Exception) {
-                    Log.e("Pencurimovie", "Failed to load iframe: ${iframe.attr("data-src")}")
-                }
+        // SAMA PERSIS seperti ExtCloud/Pencurimovie yang bekerja
+        val document = app.get(data).document
+        document.select("div.movieplay iframe").forEach {
+            val href = it.attr("data-src")
+            if (href.isNotEmpty()) {
+                loadExtractor(href, subtitleCallback, callback)
             }
-
-            return true
-        } catch (e: Exception) {
-            Log.e("Pencurimovie", "loadLinks failed: ${e.message}")
-            return false
         }
+        return true
     }
 }
 
