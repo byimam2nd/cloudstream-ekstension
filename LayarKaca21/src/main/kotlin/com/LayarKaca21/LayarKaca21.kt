@@ -35,7 +35,7 @@ class LayarKaca21 : MainAPI() {
 
     override var mainUrl = "https://lk21.de"
     private var seriesUrl = "https://series.lk21.de"
-    private var searchUrl = "https://tv9.lk21official.cc"
+    private var searchUrl = "https://gudangvape.com"
 
     override var name = "LayarKaca"
     override val hasMainPage = true
@@ -164,8 +164,9 @@ class LayarKaca21 : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        // MENIRU PERSIS ExtCloud/LayarKacaProvider yang bekerja dengan baik
-        val res = app.get("$searchUrl/search.php?s=$query").text
+        // MENIRU PERSIS ExtCloud/LayarKacaProvider yang sudah diupdate
+        val refer = app.get(mainUrl).url
+        val res = app.get("$searchUrl/search.php?s=$query", referer = refer).text
         val results = mutableListOf<SearchResponse>()
 
         val root = JSONObject(res)
