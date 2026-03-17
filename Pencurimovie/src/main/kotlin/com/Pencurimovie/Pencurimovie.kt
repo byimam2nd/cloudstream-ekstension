@@ -12,6 +12,10 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
+import javax.crypto.spec.IvParameterSpec
+import android.util.Base64
 
 
 class Pencurimovie : MainAPI() {
@@ -38,8 +42,29 @@ class Pencurimovie : MainAPI() {
         "filemoon", "mixdrop", "vidhide"
     )
     
+    // Dynamic domain learning (auto-detect new hosts)
+    private val dynamicDomains = mutableSetOf<String>()
+    
+    private fun learnDomain(url: String) {
+        try {
+            val host = URI(url).host ?: return
+            
+            // Filter basic (anti-spam)
+            if (!host.contains("google") &&
+                !host.contains("facebook") &&
+                !host.contains("doubleclick") &&
+                !host.contains("analytics")
+            ) {
+                dynamicDomains.add(host)
+            }
+        } catch (_: Exception) {}
+    }
+    
     private fun isValidVideoHost(url: String): Boolean {
-        return allowedDomains.any { url.contains(it, ignoreCase = true) }
+        val host = try { URI(url).host } catch (e: Exception) { return false }
+        
+        return allowedDomains.any { host.contains(it) } ||
+               dynamicDomains.any { host.contains(it) }
     }
     
     private fun normalizeUrl(url: String): String {
@@ -48,6 +73,63 @@ class Pencurimovie : MainAPI() {
             "${uri.scheme}://${uri.host}${uri.path}"
         } catch (e: Exception) {
             url
+        }
+    }
+    
+    // =========================
+    // CACHING LAYER (suspend-aware)
+    // =========================
+    data class CacheEntry(
+        val data: List<String>,
+        val timestamp: Long
+    )
+    
+    private val cache = mutableMapOf<String, CacheEntry>()
+    
+    private suspend fun getCachedOrFetch(
+        url: String,
+        ttl: Long,
+        referer: String?
+    ): List<String> {
+        val now = System.currentTimeMillis()
+        val cached = cache[url]
+        
+        // Return cached if not expired
+        if (cached != null && now - cached.timestamp < ttl) {
+            return cached.data
+        }
+        
+        // Fetch fresh data
+        val fresh = deepResolve(url, referer)
+        
+        // Cache the result
+        cache[url] = CacheEntry(fresh, now)
+        
+        return fresh
+    }
+    
+    // =========================
+    // AES DECRYPTION (for listeamed etc)
+    // =========================
+    private fun decryptAES(
+        encrypted: String,
+        key: String,
+        iv: String
+    ): String? {
+        return try {
+            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+            val keySpec = SecretKeySpec(key.toByteArray(), "AES")
+            val ivSpec = IvParameterSpec(iv.toByteArray())
+            
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
+            
+            val decoded = Base64.decode(encrypted, Base64.DEFAULT)
+            val decrypted = cipher.doFinal(decoded)
+            
+            String(decrypted)
+        } catch (e: Exception) {
+            Log.e("Pencurimovie", "AES decrypt error: ${e.message}")
+            null
         }
     }
     
@@ -232,15 +314,19 @@ class Pencurimovie : MainAPI() {
             }.take(MAX_LINKS) // LIMIT: max 15 links
             
             // =========================
-            // STEP 3: Parallel resolve (THREAD-SAFE)
+            // STEP 3: Parallel resolve (THREAD-SAFE + CACHED)
             // =========================
             val found = AtomicInteger(0)
             
             sortedLinks.amap { link ->
                 if (found.get() >= MAX_FOUND) return@amap
                 
+                // Auto-learn domain
+                learnDomain(link)
+                
                 try {
-                    val resolved = deepResolve(link, data, depth = 0).distinct()
+                    // Use cache (5 min TTL)
+                    val resolved = getCachedOrFetch(link, 5 * 60 * 1000, data).distinct()
                     
                     resolved.forEach { realUrl ->
                         if (found.get() >= MAX_FOUND) return@forEach
