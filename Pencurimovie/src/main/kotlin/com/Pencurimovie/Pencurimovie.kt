@@ -184,8 +184,8 @@ class Pencurimovie : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         try {
-            val document = app.get(data, timeout = 5000L).documentLarge
-            
+            val document = app.get(data, timeout = 10000L).documentLarge
+
             // PERBAIKI: Gunakan selector yang lebih general untuk mengambil SEMUA iframe
             // Selector "div.movieplay iframe" mungkin terlalu spesifik dan melewatkan beberapa server
             // Gunakan selector yang mengambil semua iframe dengan data-src attribute
@@ -195,20 +195,17 @@ class Pencurimovie : MainAPI() {
 
             // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
             // 5x faster for episodes with multiple servers
-            coroutineScope {
-                iframes.map { iframe ->
-                    async {
-                        try {
-                            val href = iframe.attr("data-src")
-                            if (href.isNotEmpty() && !href.contains("youtube")) {
-                                Log.d("Pencurimovie", "Loading server: $href")
-                                loadExtractor(href, subtitleCallback, callback)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("Pencurimovie", "Failed to load iframe: ${iframe.attr("data-src")}")
-                        }
+            iframes.amap { iframe ->
+                try {
+                    val href = iframe.attr("data-src")
+                    if (href.isNotEmpty() && !href.contains("youtube")) {
+                        Log.d("Pencurimovie", "Loading server: $href")
+                        // Gunakan referer dari mainUrl
+                        loadExtractor(href, "$mainUrl/", subtitleCallback, callback)
                     }
-                }.awaitAll()
+                } catch (e: Exception) {
+                    Log.e("Pencurimovie", "Failed to load iframe: ${iframe.attr("data-src")}")
+                }
             }
 
             return true
