@@ -187,21 +187,39 @@ class Pencurimovie : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data, timeout = 5000L).documentLarge
-        val iframes = document.select("div.movieplay iframe")
-        
-        // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
-        // 5x faster for episodes with multiple servers
-        coroutineScope {
-            iframes.map { iframe ->
-                async {
-                    val href = iframe.attr("data-src")
-                    loadExtractor(href, subtitleCallback, callback)
-                }
-            }.awaitAll()
+        try {
+            val document = app.get(data, timeout = 5000L).documentLarge
+            
+            // PERBAIKI: Gunakan selector yang lebih general untuk mengambil SEMUA iframe
+            // Selector "div.movieplay iframe" mungkin terlalu spesifik dan melewatkan beberapa server
+            // Gunakan selector yang mengambil semua iframe dengan data-src attribute
+            val iframes = document.select("iframe[data-src]")
+            
+            Log.d("Pencurimovie", "Found ${iframes.size} iframes with data-src")
+
+            // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
+            // 5x faster for episodes with multiple servers
+            coroutineScope {
+                iframes.map { iframe ->
+                    async {
+                        try {
+                            val href = iframe.attr("data-src")
+                            if (href.isNotEmpty() && !href.contains("youtube")) {
+                                Log.d("Pencurimovie", "Loading server: $href")
+                                loadExtractor(href, subtitleCallback, callback)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("Pencurimovie", "Failed to load iframe: ${iframe.attr("data-src")}", e)
+                        }
+                    }
+                }.awaitAll()
+            }
+
+            return true
+        } catch (e: Exception) {
+            Log.e("Pencurimovie", "loadLinks failed: ${e.message}", e)
+            return false
         }
-        
-        return true
     }
 }
 
