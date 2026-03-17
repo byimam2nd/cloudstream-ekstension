@@ -60,11 +60,16 @@ class Voe : ExtractorApi() {
         // Extract m3u8 from script
         Regex("""['"]hls['"]\s*:\s*['"]([^'"]+)['"]""").find(script)?.groupValues?.get(1)?.let { hlsUrl ->
             val decodedUrl = hlsUrl.replace("\\/", "/")
-            generateM3u8(
-                name,
-                decodedUrl,
-                "$mainUrl/",
-                callback
+            callback.invoke(
+                newExtractorLink(
+                    name,
+                    name,
+                    decodedUrl,
+                    ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = Qualities.Unknown.value
+                }
             )
         }
     }

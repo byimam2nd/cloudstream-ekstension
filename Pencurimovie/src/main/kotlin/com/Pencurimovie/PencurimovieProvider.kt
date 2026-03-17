@@ -12,8 +12,5 @@ class PencurimovieProvider: BasePlugin() {
         registerExtractorAPI(Dhcplay())
         registerExtractorAPI(Listeamed())
         registerExtractorAPI(Voe())
-        // Existing extractors
-        registerExtractorAPI(Dsvplay())
-        registerExtractorAPI(Hglink())
     }
 }
