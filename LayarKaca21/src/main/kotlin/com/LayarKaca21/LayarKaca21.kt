@@ -176,7 +176,6 @@ class LayarKaca21 : MainAPI() {
             return cached
         }
 
-        // Gunakan selector yang SAMA PERSIS dengan homepage
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
@@ -197,11 +196,23 @@ class LayarKaca21 : MainAPI() {
                             headers = mapOf("User-Agent" to getRandomUserAgent())
                         ).documentLarge
 
-                        // SAMA PERSIS dengan selector di getMainPage
-                        document.select("article figure")
+                        // FIX: Selector spesifik untuk search results
+                        // Hanya ambil dari main content area, bukan sidebar
+                        val searchResults = document.select("div.listupd article figure, div.items article figure, #content article figure")
                             .mapNotNull {
                                 runCatching { it.toSearchResult() }.getOrElse { null }
                             }
+                        
+                        // Fallback: jika tidak ada hasil, coba selector umum tapi filter manual
+                        if (searchResults.isEmpty()) {
+                            document.select("article figure")
+                                .take(20) // Ambil max 20 untuk hindari sidebar
+                                .mapNotNull {
+                                    runCatching { it.toSearchResult() }.getOrElse { null }
+                                }
+                        } else {
+                            searchResults
+                        }
                     } catch (e: Exception) {
                         logError("LayarKaca", "Search page $page failed: ${e.message}", e)
                         emptyList<SearchResponse>()
