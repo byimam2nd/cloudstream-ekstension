@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.amap
 
 
 class Pencurimovie : MainAPI() {
@@ -178,10 +179,17 @@ class Pencurimovie : MainAPI() {
             // =========================
             // 2. Resolve setiap link (PENTING!)
             // =========================
-            links.amap { link ->
+            val resolvedLinks = links.mapNotNull { link ->
                 try {
-                    val realUrl = resolveLink(link)
-                    
+                    resolveLink(link)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            
+            // Load extractor untuk semua resolved links
+            resolvedLinks.amap { realUrl ->
+                try {
                     // Filter hanya server yang supported
                     if (serverPatterns.any { realUrl.contains(it) }) {
                         loadExtractor(realUrl, data, subtitleCallback, callback)
