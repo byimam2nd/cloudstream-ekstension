@@ -7,7 +7,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.Qualities
 
 // Extractor untuk server-server Pencurimovie
 // Server yang digunakan: do7go.com, dhcplay.com, listeamed.net, voe.sx
@@ -28,15 +27,15 @@ class Do7go : ExtractorApi() {
                 val videoUrl = match?.groupValues?.get(1)
                 
                 if (videoUrl != null) {
+                    val isM3u8 = videoUrl.contains(".m3u8")
                     callback(
                         newExtractorLink(
                             name,
                             name,
                             videoUrl,
-                            referer ?: mainUrl
-                        ) {
-                            isM3u8 = videoUrl.contains(".m3u8")
-                        }
+                            referer ?: mainUrl,
+                            if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                        )
                     )
                     return
                 }
@@ -73,15 +72,15 @@ class Dhcplay : ExtractorApi() {
                 val videoUrl = match?.groupValues?.get(1)
                 
                 if (videoUrl != null) {
+                    val isM3u8 = videoUrl.contains(".m3u8")
                     callback(
                         newExtractorLink(
                             name,
                             name,
                             videoUrl,
-                            referer ?: mainUrl
-                        ) {
-                            isM3u8 = videoUrl.contains(".m3u8")
-                        }
+                            referer ?: mainUrl,
+                            if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                        )
                     )
                     return
                 }
@@ -111,15 +110,15 @@ class Listeamed : ExtractorApi() {
                 val videoUrl = match?.groupValues?.get(1)
                 
                 if (videoUrl != null) {
+                    val isM3u8 = videoUrl.contains(".m3u8")
                     callback(
                         newExtractorLink(
                             name,
                             name,
                             videoUrl,
-                            referer ?: mainUrl
-                        ) {
-                            isM3u8 = videoUrl.contains(".m3u8")
-                        }
+                            referer ?: mainUrl,
+                            if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                        )
                     )
                     return
                 }
@@ -149,15 +148,15 @@ class Voe : ExtractorApi() {
                 val videoUrl = match?.groupValues?.get(1)
                 
                 if (videoUrl != null) {
+                    val isM3u8 = videoUrl.contains(".m3u8")
                     callback(
                         newExtractorLink(
                             name,
                             name,
                             videoUrl,
-                            referer ?: mainUrl
-                        ) {
-                            isM3u8 = videoUrl.contains(".m3u8")
-                        }
+                            referer ?: mainUrl,
+                            if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                        )
                     )
                     return
                 }
