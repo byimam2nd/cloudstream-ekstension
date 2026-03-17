@@ -475,11 +475,16 @@ class Pencurimovie : MainAPI() {
                 .find(text)?.value
             
             if (m3u8 != null) {
-                generateM3u8(
-                    "Universal",
-                    m3u8,
-                    referer ?: url,
-                    callback
+                callback.invoke(
+                    newExtractorLink(
+                        "Universal",
+                        "Universal",
+                        m3u8,
+                        ExtractorLinkType.M3U8
+                    ) {
+                        this.referer = referer ?: url
+                        this.quality = Qualities.Unknown.value
+                    }
                 )
                 return true
             }
