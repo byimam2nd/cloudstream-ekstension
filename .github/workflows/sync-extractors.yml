@@ -103,28 +103,19 @@ jobs:
           echo "  📄 $file ($COUNT classes)"
         done
 
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
-    - name: Build with Gradle
+    - name: Commit and push if changes exist
       run: |
         echo ""
-        echo "🔨 Building all extensions..."
-        chmod +x gradlew
-        ./gradlew clean build --continue || true
-
-        echo ""
-        echo "📊 Build Results:"
-        find . -name "*.cs3" -type f | while read file; do
-          SIZE=$(du -h "$file" | cut -f1)
-          echo "  ✅ $file ($SIZE)"
-        done
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: cloudstream-extensions
-        path: '**/build/*.cs3'
+        echo "🔄 Checking for changes to commit..."
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        if ! git diff --quiet; then
+          echo "Changes detected, committing..."
+          git add -A
+          git commit -m "chore: auto-sync extractors from MasterExtractors.kt [skip ci]"
+          git push
+          echo "✅ Changes pushed successfully"
+        else
+          echo "✅ No changes to commit"
+        fi
