@@ -1,0 +1,89 @@
+name: Sync Master Extractors
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  sync-extractors:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Sync Master Extractors to all sites
+      run: |
+        echo "📦 Syncing Master Extractors to all sites..."
+        
+        # List of sites that need extractors
+        SITES=(
+          "Pencurimovie"
+          "LayarKaca21"
+          "Donghuastream"
+          "Funmovieslix"
+          "HiAnime"
+          "IdlixProvider"
+          "Anichin"
+        )
+        
+        # Master Extractors file location
+        MASTER_FILE="docs/MasterExtractors.kt"
+        
+        # Copy to each site
+        for SITE in "${SITES[@]}"; do
+          echo "📋 Copying to $SITE..."
+          
+          # Destination directory
+          DEST_DIR="$SITE/src/main/kotlin/com/$SITE"
+          DEST_FILE="$DEST_DIR/Extractors.kt"
+          
+          # Create directory if not exists
+          mkdir -p "$DEST_DIR"
+          
+          # Copy master extractors if exists
+          if [ -f "$MASTER_FILE" ]; then
+            # Update package name to match site package
+            sed "s/package com.MasterExtractors/package com.$SITE/g" "$MASTER_FILE" > "$DEST_FILE"
+            echo "✅ Copied Master Extractors to $SITE"
+          else
+            echo "⚠️ Master Extractors file not found"
+          fi
+        done
+        
+        echo "✅ Sync completed!"
+        echo "📊 Extractor count: $(grep -c "^class " "$MASTER_FILE" 2>/dev/null || echo 0) classes"
+    
+    - name: Verify extraction
+      run: |
+        echo "🔍 Verifying extractor files..."
+        echo "Files copied:"
+        find . -path "*/src/main/kotlin/com/*/Extractors.kt" -type f
+        
+        echo ""
+        echo "📊 Extractor classes per site:"
+        for file in $(find . -path "*/src/main/kotlin/com/*/Extractors.kt" -type f); do
+          count=$(grep -c "^class " "$file" 2>/dev/null || echo 0)
+          echo "  - $file: $count classes"
+        done
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Build with Gradle
+      run: |
+        echo "🔨 Building all extensions..."
+        ./gradlew build
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: cloudstream-extensions
+        path: '**/build/*.cs3'
