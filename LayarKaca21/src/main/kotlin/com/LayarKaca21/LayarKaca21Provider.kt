@@ -2,6 +2,7 @@ package com.LayarKaca21
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.layarKacaProvider.LayarKaca21
 
 @CloudstreamPlugin
 class LayarKaca21Provider: BasePlugin() {
