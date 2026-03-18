@@ -1,6 +1,6 @@
 name: Build
 
-# https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#concurrency
+# SEPARATE concurrency group from Sync workflow
 concurrency:
   group: "build"
   cancel-in-progress: true
@@ -8,11 +8,17 @@ concurrency:
 on:
   push:
     branches:
-      # choose your default branch
       - master
       - main
     paths-ignore:
       - '*.md'
+  # ALSO trigger after Sync Master Extractors completes
+  workflow_run:
+    workflows: ["Sync Master Extractors"]
+    types:
+      - completed
+    branches:
+      - master
 
 jobs:
   build:

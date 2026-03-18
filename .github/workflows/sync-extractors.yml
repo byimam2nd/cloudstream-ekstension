@@ -1,5 +1,10 @@
 name: Sync Master Extractors
 
+# SEPARATE concurrency group from Build workflow
+concurrency:
+  group: "sync-extractors"
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ master ]
