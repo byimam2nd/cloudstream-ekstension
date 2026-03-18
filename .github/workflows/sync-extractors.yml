@@ -8,23 +8,28 @@ concurrency:
 on:
   push:
     branches: [ master ]
+    paths:
+      - 'docs/MasterExtractors.kt'
   pull_request:
     branches: [ master ]
+    paths:
+      - 'docs/MasterExtractors.kt'
+  workflow_dispatch:
 
 jobs:
   sync-extractors:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Sync Master Extractors to all sites
       run: |
         echo "📦 Syncing Master Extractors to all sites..."
-        
+
         # List of ALL sites that need extractors
         SITES=(
           "Pencurimovie"
@@ -35,72 +40,89 @@ jobs:
           "IdlixProvider"
           "Anichin"
         )
-        
+
         # Master Extractors file location
         MASTER_FILE="docs/MasterExtractors.kt"
-        
+
+        # Check if master file exists
+        if [ ! -f "$MASTER_FILE" ]; then
+          echo "❌ Master Extractors file not found at $MASTER_FILE"
+          exit 1
+        fi
+
         # Copy to each site
         for SITE in "${SITES[@]}"; do
+          echo ""
           echo "📋 Copying to $SITE..."
-          
+
           # Destination directory
           DEST_DIR="$SITE/src/main/kotlin/com/$SITE"
           DEST_FILE="$DEST_DIR/Extractors.kt"
-          
+
           # Create directory if not exists
           mkdir -p "$DEST_DIR"
-          
-          # Copy master extractors if exists
-          if [ -f "$MASTER_FILE" ]; then
-            # Update package name to match site package
-            sed "s/package com.MasterExtractors/package com.$SITE/g" "$MASTER_FILE" > "$DEST_FILE"
-            echo "✅ Copied Master Extractors to $SITE ($(grep -c "^class " "$DEST_FILE") classes)"
-          else
-            echo "⚠️ Master Extractors file not found"
-          fi
+
+          # Copy master extractors with correct package name
+          # Using awk for better package replacement
+          awk -v site="$SITE" '
+            NR==1 { print "// ========================================" }
+            NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
+            NR==3 { print "// Synced from docs/MasterExtractors.kt" }
+            NR==4 { print "// ========================================" }
+            /^package / { print "package com." site; next }
+            { print }
+          ' "$MASTER_FILE" > "$DEST_FILE"
+
+          # Count extractor classes
+          CLASS_COUNT=$(grep -c "^class \|^open class " "$DEST_FILE" 2>/dev/null || echo 0)
+          echo "✅ Copied Master Extractors to $SITE ($CLASS_COUNT classes)"
         done
-        
+
         echo ""
         echo "✅ Sync completed!"
+        echo ""
         echo "📊 Summary:"
         for SITE in "${SITES[@]}"; do
           DEST_FILE="$SITE/src/main/kotlin/com/$SITE/Extractors.kt"
           if [ -f "$DEST_FILE" ]; then
-            COUNT=$(grep -c "^class " "$DEST_FILE" 2>/dev/null || echo 0)
+            COUNT=$(grep -c "^class \|^open class " "$DEST_FILE" 2>/dev/null || echo 0)
             echo "  ✅ $SITE: $COUNT extractor classes"
           else
             echo "  ❌ $SITE: No Extractors.kt found"
           fi
         done
-    
-    - name: Verify extraction
+
+    - name: Verify extractor files
       run: |
+        echo ""
         echo "🔍 Verifying extractor files..."
         echo ""
         echo "Files created/updated:"
         find . -path "*/src/main/kotlin/com/*/Extractors.kt" -type f | while read file; do
-          COUNT=$(grep -c "^class " "$file" 2>/dev/null || echo 0)
+          COUNT=$(grep -c "^class \|^open class " "$file" 2>/dev/null || echo 0)
           echo "  📄 $file ($COUNT classes)"
         done
-    
+
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-    
+
     - name: Build with Gradle
       run: |
+        echo ""
         echo "🔨 Building all extensions..."
+        chmod +x gradlew
         ./gradlew clean build --continue || true
-        
+
         echo ""
         echo "📊 Build Results:"
         find . -name "*.cs3" -type f | while read file; do
           SIZE=$(du -h "$file" | cut -f1)
           echo "  ✅ $file ($SIZE)"
         done
-        
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:

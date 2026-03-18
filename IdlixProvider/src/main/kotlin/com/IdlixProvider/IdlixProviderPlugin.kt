@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.plugins.BasePlugin
 class IdlixProvider: BasePlugin() {
     override fun load() {
         registerMainAPI(IdlixProvider())
-        
+
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
         AllExtractors.list.forEach { extractor ->

@@ -1,9 +1,10 @@
 // ========================================
-// MASTER EXTRACTORS COLLECTION
+// MASTER EXTRACTORS COLLECTION - v2.0
 // Kumpulan 75+ Extractor untuk CloudStream
 // ========================================
-// Source: ExtCloud + cloudstream-ekstension + Built-in
-// Last Updated: 2026-03-17
+// Source: ExtCloud + cloudstream-ekstension + CloudStream Built-in
+// Last Updated: 2026-03-18
+// Maintainer: Phisher98
 // ========================================
 
 package com.MasterExtractors
@@ -18,6 +19,12 @@ import com.lagradost.cloudstream3.extractors.*
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.json.JSONObject
 import java.net.URI
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.NativeJSON
+import org.mozilla.javascript.NativeObject
+import org.mozilla.javascript.Scriptable
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 // ========================================
 // HELPER FUNCTIONS
@@ -42,12 +49,12 @@ class Movearnpre : Dingtezuni() {
 }
 
 class Minochinos : Dingtezuni() {
-    override var name = "Earnvids"
+    override var name = "Minochinos"
     override var mainUrl = "https://minochinos.com"
 }
 
 class Mivalyo : Dingtezuni() {
-    override var name = "Earnvids"
+    override var name = "Mivalyo"
     override var mainUrl = "https://mivalyo.com"
 }
 
@@ -57,12 +64,12 @@ class Ryderjet : Dingtezuni() {
 }
 
 class Bingezove : Dingtezuni() {
-    override var name = "Earnvids"
+    override var name = "Bingezove"
     override var mainUrl = "https://bingezove.com"
 }
 
 open class Dingtezuni : ExtractorApi() {
-    override val name = "Earnvids"
+    override val name = "Dingtezuni"
     override val mainUrl = "https://dingtezuni.com"
     override val requiresReferer = true
 
@@ -83,7 +90,7 @@ open class Dingtezuni : ExtractorApi() {
         val response = app.get(getEmbedUrl(url), referer = referer)
         val script = if (!getPacked(response.text).isNullOrEmpty()) {
             var result = getAndUnpack(response.text)
-            if(result.contains("var links")){
+            if (result.contains("var links")) {
                 result = result.substringAfter("var links")
             }
             result
@@ -121,7 +128,7 @@ class Ghbrisk : StreamWishExtractor() {
     override val mainUrl = "https://ghbrisk.com"
 }
 
-class Dhcplay: StreamWishExtractor() {
+class Dhcplay : StreamWishExtractor() {
     override var name = "DHC Play"
     override var mainUrl = "https://dhcplay.com"
 }
@@ -171,7 +178,7 @@ class Meplayer : VidStack() {
 // ========================================
 
 open class Dintezuvio : ExtractorApi() {
-    override val name = "Earnvids"
+    override val name = "Dintezuvio"
     override val mainUrl = "https://dintezuvio.com"
     override val requiresReferer = true
 
@@ -192,7 +199,7 @@ open class Dintezuvio : ExtractorApi() {
         val response = app.get(getEmbedUrl(url), referer = referer)
         val script = if (!getPacked(response.text).isNullOrEmpty()) {
             var result = getAndUnpack(response.text)
-            if(result.contains("var links")){
+            if (result.contains("var links")) {
                 result = result.substringAfter("var links")
             }
             result
@@ -243,8 +250,7 @@ class Veev : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val mediaId = pattern.find(url)?.groupValues?.get(1)
-            ?: return
+        val mediaId = pattern.find(url)?.groupValues?.get(1) ?: return
         val pageUrl = "$mainUrl/e/$mediaId"
         val html = app.get(
             pageUrl,
@@ -275,31 +281,18 @@ class Veev : ExtractorApi() {
             val dv = file.getJSONArray("dv").getJSONObject(0).getString("s")
             val decoded = decodeUrl(veevDecode(dv), buildArray(ch)[0])
 
-            val fileMimeType = file.optString("file_mime_type", "")
-
             callback.invoke(
                 newExtractorLink(
                     name,
                     name,
                     decoded,
                     INFER_TYPE
-                )
-                {
+                ) {
                     this.referer = mainUrl
                     this.quality = Qualities.Unknown.value
                 }
             )
             return
-        }
-    }
-
-    fun String.toExoPlayerMimeType(): String {
-        return when (this.lowercase()) {
-            "video/x-matroska", "video/webm" -> HlsPlaylistParser.MimeTypes.VIDEO_MATROSKA
-            "video/mp4" -> HlsPlaylistParser.MimeTypes.VIDEO_MP4
-            "application/x-mpegurl", "application/vnd.apple.mpegurl" -> HlsPlaylistParser.MimeTypes.APPLICATION_M3U8
-            "video/avi" -> HlsPlaylistParser.MimeTypes.VIDEO_AVI
-            else -> ""
         }
     }
 
@@ -338,7 +331,6 @@ class Veev : ExtractorApi() {
         return result
     }
 
-
     private fun decodeUrl(encoded: String, rules: List<Int>): String {
         var text = encoded
         for (r in rules) {
@@ -351,7 +343,7 @@ class Veev : ExtractorApi() {
 }
 
 // ========================================
-// PENCURIMOVIE EXTRACTORS (From cloudstream-ekstension)
+// PENCURIMOVIE EXTRACTORS
 // ========================================
 
 class Do7go : StreamWishExtractor() {
@@ -381,10 +373,10 @@ class Voe : ExtractorApi() {
     ) {
         val mediaId = pattern.find(url)?.groupValues?.get(1) ?: return
         val pageUrl = "$mainUrl/e/$mediaId"
-        
+
         val html = app.get(pageUrl).text
         val script = getAndUnpack(html)
-        
+
         Regex("""['"]hls['"]\s*:\s*['"]([^'"]+)['"]""").find(script)?.groupValues?.get(1)?.let { hlsUrl ->
             val decodedUrl = hlsUrl.replace("\\/", "/")
             callback.invoke(
@@ -402,56 +394,27 @@ class Voe : ExtractorApi() {
     }
 }
 
-// ========================================
-// DAILYMOTION EXTRACTOR (From ExtCloud/AnichinMoe)
-// ========================================
-
-class Dailymotion : ExtractorApi() {
-    override val name = "Dailymotion"
-    override val mainUrl = "https://www.dailymotion.com"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val response = app.get(url).text
-        val jsonData = response.substringAfter("playerConfig\\\"=").substringBefore("\\", "")
-        val json = try {
-            org.json.JSONObject(jsonData)
-        } catch (e: Exception) {
-            return
-        }
-
-        val qualityArray = json.optJSONArray("qualities")
-        val autoPlay = qualityArray?.getJSONObject(0)
-        val autoUrl = autoPlay?.optString("url")
-
-        if (autoUrl != null) {
-            callback.invoke(
-                newExtractorLink(
-                    name,
-                    name,
-                    autoUrl,
-                    ExtractorLinkType.M3U8
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = Qualities.Unknown.value
-                }
-            )
-        }
-    }
+class Dsvplay : DoodLaExtractor() {
+    override var mainUrl = "https://dsvplay.com"
 }
 
 // ========================================
-// OK.RU EXTRACTOR (From ExtCloud/AnichinMoe)
+// OK.RU EXTRACTORS (From ExtCloud/AnichinMoe)
 // ========================================
 
-class Okru : ExtractorApi() {
-    override val name = "OK.RU"
-    override val mainUrl = "https://ok.ru"
+class OkRuSSL : Odnoklassniki() {
+    override var name = "OkRuSSL"
+    override var mainUrl = "https://ok.ru"
+}
+
+class OkRuHTTP : Odnoklassniki() {
+    override var name = "OkRuHTTP"
+    override var mainUrl = "http://ok.ru"
+}
+
+open class Odnoklassniki : ExtractorApi() {
+    override val name = "Odnoklassniki"
+    override val mainUrl = "https://odnoklassniki.ru"
     override val requiresReferer = false
 
     override suspend fun getUrl(
@@ -460,47 +423,58 @@ class Okru : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url).document
-        val script = response.selectFirst("script[data-module=OKVideo]")?.attr("data-options")
+        val headers = mapOf(
+            "Accept" to "*/*",
+            "Connection" to "keep-alive",
+            "Sec-Fetch-Dest" to "empty",
+            "Sec-Fetch-Mode" to "cors",
+            "Sec-Fetch-Site" to "cross-site",
+            "Origin" to mainUrl,
+            "User-Agent" to USER_AGENT,
+        )
+        val embedUrl = url.replace("/video/", "/videoembed/")
+        val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
+            .replace("\\\\", "\\")
+            .replace(Regex("""\\u([0-9A-Fa-f]{4})""")) { matchResult ->
+                Integer.parseInt(matchResult.groupValues[1], 16).toChar().toString()
+            }
+
+        val videosStr = Regex("""\"videos\":(\[[^]]*])""").find(videoReq)?.groupValues?.get(1)
             ?: return
+        val videos = tryParseJson<List<OkRuVideo>>(videosStr) ?: return
 
-        val data = try {
-            org.json.JSONObject(script).getJSONObject("flashvars").getString("metadata")
-        } catch (e: Exception) {
-            return
-        }
+        for (video in videos) {
+            val videoUrl = if (video.url.startsWith("//")) "https:${video.url}" else video.url
 
-        val json = org.json.JSONObject(data)
-        val videos = json.getJSONArray("videos")
-
-        for (i in 0 until videos.length()) {
-            val video = videos.getJSONObject(i)
-            val url = video.getString("url")
-            val quality = video.getString("name")
+            val quality = video.name.uppercase()
+                .replace("MOBILE", "144p")
+                .replace("LOWEST", "240p")
+                .replace("LOW", "360p")
+                .replace("SD", "480p")
+                .replace("HD", "720p")
+                .replace("FULL", "1080p")
+                .replace("QUAD", "1440p")
+                .replace("ULTRA", "4k")
 
             callback.invoke(
                 newExtractorLink(
-                    name,
-                    name,
-                    url,
-                    ExtractorLinkType.VIDEO
+                    source = this.name,
+                    name = this.name,
+                    url = videoUrl,
+                    type = INFER_TYPE
                 ) {
                     this.referer = "$mainUrl/"
-                    this.quality = when (quality.lowercase()) {
-                        "ultra" -> Qualities.P2160.value
-                        "quad" -> Qualities.P1440.value
-                        "full" -> Qualities.P1080.value
-                        "hd" -> Qualities.P720.value
-                        "sd" -> Qualities.P480.value
-                        "low" -> Qualities.P360.value
-                        "lowest" -> Qualities.P240.value
-                        "mobile" -> Qualities.P144.value
-                        else -> Qualities.Unknown.value
-                    }
+                    this.quality = getQualityFromName(quality)
+                    this.headers = headers
                 }
             )
         }
     }
+
+    data class OkRuVideo(
+        @JsonProperty("name") val name: String,
+        @JsonProperty("url") val url: String,
+    )
 }
 
 // ========================================
@@ -508,8 +482,8 @@ class Okru : ExtractorApi() {
 // ========================================
 
 class Rumble : ExtractorApi() {
-    override val name = "Rumble"
-    override val mainUrl = "https://rumble.com"
+    override var name = "Rumble"
+    override var mainUrl = "https://rumble.com"
     override val requiresReferer = false
 
     override suspend fun getUrl(
@@ -518,22 +492,39 @@ class Rumble : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url).text
-        val pattern = Regex("""\"playbackUrl\"\\s*:\\s*\"([^\"]+)\"""")
-        val match = pattern.find(response)
+        val response = app.get(url, referer = referer ?: "$mainUrl/")
+        val scriptData = response.document.selectFirst("script:containsData(mp4)")?.data()
+            ?.substringAfter("{\"mp4")?.substringBefore("\"evt\":{")
+        if (scriptData == null) return
 
-        match?.groupValues?.get(1)?.let { playbackUrl ->
-            callback.invoke(
-                newExtractorLink(
-                    name,
-                    name,
-                    playbackUrl,
-                    ExtractorLinkType.VIDEO
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = Qualities.Unknown.value
-                }
-            )
+        val regex = """"url":"(.*?)"|h":(.*?)\}""".toRegex()
+        val matches = regex.findAll(scriptData)
+
+        val processedUrls = mutableSetOf<String>()
+
+        for (match in matches) {
+            val rawUrl = match.groupValues[1]
+            if (rawUrl.isBlank()) continue
+
+            val cleanedUrl = rawUrl.replace("\\/", "/")
+            if (!cleanedUrl.contains("rumble.com")) continue
+            if (!cleanedUrl.endsWith(".m3u8")) continue
+            if (!processedUrls.add(cleanedUrl)) continue
+
+            val m3u8Response = app.get(cleanedUrl)
+            val variantCount = "#EXT-X-STREAM-INF".toRegex().findAll(m3u8Response.text).count()
+
+            if (variantCount > 1) {
+                callback.invoke(
+                    newExtractorLink(
+                        this@Rumble.name,
+                        "Rumble",
+                        cleanedUrl,
+                        ExtractorLinkType.M3U8
+                    )
+                )
+                break
+            }
         }
     }
 }
@@ -542,9 +533,9 @@ class Rumble : ExtractorApi() {
 // STREAMRUBY EXTRACTOR (From ExtCloud/AnichinMoe)
 // ========================================
 
-class StreamRuby : ExtractorApi() {
+open class StreamRuby : ExtractorApi() {
     override val name = "StreamRuby"
-    override val mainUrl = "https://streamruby.com"
+    override val mainUrl = "https://rubyvidhub.com"
     override val requiresReferer = true
 
     override suspend fun getUrl(
@@ -553,37 +544,66 @@ class StreamRuby : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url, referer = referer ?: mainUrl).text
-        val packed = getAndUnpack(response)
-        val script = if (packed.isNotEmpty()) packed else response
-
-        val pattern = Regex("""sources:\s*\[\s*\{\s*file:\s*['"](.*?)['"]""")
-        val match = pattern.find(script)
-
-        match?.groupValues?.get(1)?.let { fileUrl ->
-            callback.invoke(
-                newExtractorLink(
-                    name,
-                    name,
-                    fileUrl,
-                    ExtractorLinkType.M3U8
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = Qualities.Unknown.value
-                }
-            )
+        val id = "embed-([a-zA-Z0-9]+)\\.html".toRegex().find(url)?.groupValues?.get(1) ?: return
+        val response = app.post(
+            "$mainUrl/dl", data = mapOf(
+                "op" to "embed",
+                "file_code" to id,
+                "auto" to "1",
+                "referer" to "",
+            ), referer = referer
+        )
+        val script = if (!getPacked(response.text).isNullOrEmpty()) {
+            getAndUnpack(response.text)
+        } else {
+            response.document.selectFirst("script:containsData(sources:)")?.data()
         }
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = this.name,
+                url = m3u8.toString(),
+                type = ExtractorLinkType.M3U8,
+            ) {
+                quality = Qualities.Unknown.value
+                this.referer = mainUrl
+            }
+        )
     }
+}
+
+class Svanila : StreamRuby() {
+    override var name = "svanila"
+    override var mainUrl = "https://streamruby.net"
+}
+
+class Svilla : StreamRuby() {
+    override var name = "svilla"
+    override var mainUrl = "https://streamruby.com"
 }
 
 // ========================================
 // VIDGUARD EXTRACTOR (From ExtCloud/AnichinMoe)
 // ========================================
 
-class VidGuard : ExtractorApi() {
-    override val name = "VidGuard"
+class Vidguardto1 : Vidguardto() {
+    override val mainUrl = "https://bembed.net"
+}
+
+class Vidguardto2 : Vidguardto() {
+    override val mainUrl = "https://listeamed.net"
+}
+
+class Vidguardto3 : Vidguardto() {
+    override val mainUrl = "https://vgfplay.com"
+}
+
+open class Vidguardto : ExtractorApi() {
+    override val name = "Vidguard"
     override val mainUrl = "https://vidguard.to"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
@@ -591,36 +611,101 @@ class VidGuard : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url, referer = referer ?: mainUrl)
-        val script = response.document.selectFirst("script:containsData(writable)")?.data()
-            ?: return
+        val res = app.get(getEmbedUrl(url))
+        val resc = res.document.select("script:containsData(eval)").firstOrNull()?.data()
+        resc?.let {
+            val jsonStr2 = parseJson<SvgObject>(runJS2(it))
+            val watchlink = sigDecode(jsonStr2.stream)
 
-        val linkPattern = Regex("""sources:\s*\"([^\"]+)\"""")
-        val linkMatch = linkPattern.find(script)
-
-        linkMatch?.groupValues?.get(1)?.let { encodedSources ->
-            try {
-                // Use Java Base64 decoder (cross-platform)
-                val decoded = base64DecodeStr(encodedSources)
-                val json = org.json.JSONObject(decoded)
-                val file = json.getString("file")
-
-                callback.invoke(
-                    newExtractorLink(
-                        name,
-                        name,
-                        file,
-                        ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = "$mainUrl/"
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
-            } catch (e: Exception) {
-                // Ignore decode errors
-            }
+            callback.invoke(
+                newExtractorLink(
+                    this.name,
+                    name,
+                    watchlink,
+                ) {
+                    this.referer = mainUrl
+                }
+            )
         }
     }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun sigDecode(url: String): String {
+        val sig = url.split("sig=")[1].split("&")[0]
+        val t = sig.chunked(2)
+            .joinToString("") { (Integer.parseInt(it, 16) xor 2).toChar().toString() }
+            .let {
+                val padding = when (it.length % 4) {
+                    2 -> "=="
+                    3 -> "="
+                    else -> ""
+                }
+                String(Base64.decode((it + padding).toByteArray(Charsets.UTF_8)))
+            }
+            .dropLast(5)
+            .reversed()
+            .toCharArray()
+            .apply {
+                for (i in indices step 2) {
+                    if (i + 1 < size) {
+                        this[i] = this[i + 1].also { this[i + 1] = this[i] }
+                    }
+                }
+            }
+            .concatToString()
+            .dropLast(5)
+        return url.replace(sig, t)
+    }
+
+    private fun runJS2(hideMyHtmlContent: String): String {
+        var result = ""
+        val r = Runnable {
+            val rhino = Context.enter()
+            rhino.optimizationLevel = -1
+            val scope: Scriptable = rhino.initSafeStandardObjects()
+            scope.put("window", scope, scope)
+            try {
+                rhino.evaluateString(
+                    scope,
+                    hideMyHtmlContent,
+                    "JavaScript",
+                    1,
+                    null
+                )
+                val svgObject = scope.get("svg", scope)
+                result = if (svgObject is NativeObject) {
+                    NativeJSON.stringify(
+                        Context.getCurrentContext(),
+                        scope,
+                        svgObject,
+                        null,
+                        null
+                    ).toString()
+                } else {
+                    Context.toString(svgObject)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                Context.exit()
+            }
+        }
+        val t = Thread(ThreadGroup("A"), r, "thread_rhino", 8 * 1024 * 1024)
+        t.start()
+        t.join()
+        t.interrupt()
+        return result
+    }
+
+    private fun getEmbedUrl(url: String): String {
+        return url.takeIf { it.contains("/d/") || it.contains("/v/") }
+            ?.replace("/d/", "/e/")?.replace("/v/", "/e/") ?: url
+    }
+
+    data class SvgObject(
+        val stream: String,
+        val hash: String
+    )
 }
 
 // ========================================
@@ -641,7 +726,7 @@ class Archivd : ExtractorApi() {
         val res = app.get(url).document
         val json = res.select("div#app").attr("data-page")
         val video = tryParseJson<Sources>(json)?.props?.datas?.data?.link?.media
-        
+
         callback.invoke(
             newExtractorLink(
                 this.name,
@@ -727,9 +812,92 @@ class Newuservideo : ExtractorApi() {
 // VIDHIDEPRO EXTRACTOR (From ExtCloud/Animasu)
 // ========================================
 
-class Vidhidepro : StreamWishExtractor() {
-    override val name = "Vidhidepro"
+class Vidhidepro : Filesim() {
     override val mainUrl = "https://vidhidepro.com"
+    override val name = "Vidhidepro"
+}
+
+// ========================================
+// DAILYMOTION EXTRACTOR (From ExtCloud/AnichinMoe)
+// ========================================
+
+class Dailymotion : ExtractorApi() {
+    override val name = "Dailymotion"
+    override val mainUrl = "https://www.dailymotion.com"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url).text
+        val jsonData = response.substringAfter("playerConfig\\\"=").substringBefore("\\", "")
+        val json = try {
+            org.json.JSONObject(jsonData)
+        } catch (e: Exception) {
+            return
+        }
+
+        val qualityArray = json.optJSONArray("qualities")
+        val autoPlay = qualityArray?.getJSONObject(0)
+        val autoUrl = autoPlay?.optString("url")
+
+        if (autoUrl != null) {
+            callback.invoke(
+                newExtractorLink(
+                    name,
+                    name,
+                    autoUrl,
+                    ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+    }
+}
+
+// ========================================
+// ARCHIVE.ORG EXTRACTOR (From ExtCloud/Donghub)
+// ========================================
+
+class ArchiveOrgExtractor : ExtractorApi() {
+    override val name = "ArchiveOrg"
+    override val mainUrl = "https://archive.org"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url).document
+        val sources = response.select("script").find { script ->
+            script.data().contains("\"sources\"")
+        }?.data() ?: return
+
+        val regex = Regex("""\"url\":\"(.*?)\"""")
+        regex.findAll(sources).forEach { match ->
+            val videoUrl = match.groupValues[1].replace("\\/", "/")
+            if (videoUrl.contains(".mp4") || videoUrl.contains(".m3u8")) {
+                callback.invoke(
+                    newExtractorLink(
+                        name,
+                        name,
+                        videoUrl,
+                        if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else INFER_TYPE
+                    ) {
+                        this.referer = "$mainUrl/"
+                        this.quality = Qualities.Unknown.value
+                    }
+                )
+            }
+        }
+    }
 }
 
 // ========================================
@@ -741,7 +909,7 @@ class Vidhidepro : StreamWishExtractor() {
 
 object AllExtractors {
     val list = listOf(
-        // StreamWish based
+        // StreamWish based (10)
         Do7go(),
         Dhcplay(),
         Hglink(),
@@ -752,8 +920,8 @@ object AllExtractors {
         Ryderjet(),
         Bingezove(),
         Dingtezuni(),
-        
-        // VidStack based
+
+        // VidStack based (7)
         Listeamed(),
         Streamcasthub(),
         Dm21embed(),
@@ -761,24 +929,35 @@ object AllExtractors {
         Pm21p2p(),
         Dm21(),
         Meplayer(),
-        
-        // Custom extractors
+
+        // Custom extractors (3)
         Voe(),
         Veev(),
         Dintezuvio(),
-        
-        // Other extractors
+
+        // OK.RU based (3)
+        Odnoklassniki(),
+        OkRuSSL(),
+        OkRuHTTP(),
+
+        // Other extractors (11)
         Dailymotion(),
-        Okru(),
         Rumble(),
         StreamRuby(),
-        VidGuard(),
+        Svanila(),
+        Svilla(),
+        Vidguardto(),
+        Vidguardto1(),
+        Vidguardto2(),
+        Vidguardto3(),
         Archivd(),
         Newuservideo(),
-        Vidhidepro()
+        Vidhidepro(),
+        Dsvplay(),
+        ArchiveOrgExtractor(),
     )
 }
 
 // ========================================
-// TOTAL: 26 EXTRACTOR CLASSES
+// TOTAL: 38 EXTRACTOR CLASSES
 // ========================================
