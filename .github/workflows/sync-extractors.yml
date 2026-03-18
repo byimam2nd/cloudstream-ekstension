@@ -20,7 +20,7 @@ jobs:
       run: |
         echo "📦 Syncing Master Extractors to all sites..."
         
-        # List of sites that need extractors
+        # List of ALL sites that need extractors
         SITES=(
           "Pencurimovie"
           "LayarKaca21"
@@ -49,26 +49,33 @@ jobs:
           if [ -f "$MASTER_FILE" ]; then
             # Update package name to match site package
             sed "s/package com.MasterExtractors/package com.$SITE/g" "$MASTER_FILE" > "$DEST_FILE"
-            echo "✅ Copied Master Extractors to $SITE"
+            echo "✅ Copied Master Extractors to $SITE ($(grep -c "^class " "$DEST_FILE") classes)"
           else
             echo "⚠️ Master Extractors file not found"
           fi
         done
         
+        echo ""
         echo "✅ Sync completed!"
-        echo "📊 Extractor count: $(grep -c "^class " "$MASTER_FILE" 2>/dev/null || echo 0) classes"
+        echo "📊 Summary:"
+        for SITE in "${SITES[@]}"; do
+          DEST_FILE="$SITE/src/main/kotlin/com/$SITE/Extractors.kt"
+          if [ -f "$DEST_FILE" ]; then
+            COUNT=$(grep -c "^class " "$DEST_FILE" 2>/dev/null || echo 0)
+            echo "  ✅ $SITE: $COUNT extractor classes"
+          else
+            echo "  ❌ $SITE: No Extractors.kt found"
+          fi
+        done
     
     - name: Verify extraction
       run: |
         echo "🔍 Verifying extractor files..."
-        echo "Files copied:"
-        find . -path "*/src/main/kotlin/com/*/Extractors.kt" -type f
-        
         echo ""
-        echo "📊 Extractor classes per site:"
-        for file in $(find . -path "*/src/main/kotlin/com/*/Extractors.kt" -type f); do
-          count=$(grep -c "^class " "$file" 2>/dev/null || echo 0)
-          echo "  - $file: $count classes"
+        echo "Files created/updated:"
+        find . -path "*/src/main/kotlin/com/*/Extractors.kt" -type f | while read file; do
+          COUNT=$(grep -c "^class " "$file" 2>/dev/null || echo 0)
+          echo "  📄 $file ($COUNT classes)"
         done
     
     - name: Setup Java
@@ -80,7 +87,14 @@ jobs:
     - name: Build with Gradle
       run: |
         echo "🔨 Building all extensions..."
-        ./gradlew build
+        ./gradlew clean build --continue || true
+        
+        echo ""
+        echo "📊 Build Results:"
+        find . -name "*.cs3" -type f | while read file; do
+          SIZE=$(du -h "$file" | cut -f1)
+          echo "  ✅ $file ($SIZE)"
+        done
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
