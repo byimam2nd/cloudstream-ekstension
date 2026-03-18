@@ -22,7 +22,7 @@ class HiAnimeProviderPlugin : Plugin() {
 
     override fun load(context: Context) {
         registerMainAPI(HiAnime())
-        registerExtractorAPI(Megacloud())
+        // Megacloud extractor will be registered via AllExtractors.list
         this.openSettings = openSettings@{ ctx ->
             val activity = ctx as AppCompatActivity
             val frag = BottomFragment(this)
