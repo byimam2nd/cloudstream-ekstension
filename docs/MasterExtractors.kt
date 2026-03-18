@@ -20,6 +20,19 @@ import org.json.JSONObject
 import java.net.URI
 
 // ========================================
+// HELPER FUNCTIONS
+// ========================================
+
+// Base64 helper (cross-platform)
+fun base64DecodeStr(str: String): String {
+    return try {
+        String(java.util.Base64.getDecoder().decode(str))
+    } catch (e: Exception) {
+        str
+    }
+}
+
+// ========================================
 // STREAMWISH BASED EXTRACTORS (From ExtCloud/Dutamovie)
 // ========================================
 
@@ -587,7 +600,8 @@ class VidGuard : ExtractorApi() {
 
         linkMatch?.groupValues?.get(1)?.let { encodedSources ->
             try {
-                val decoded = String(android.util.Base64.decode(encodedSources, android.util.Base64.DEFAULT))
+                // Use Java Base64 decoder (cross-platform)
+                val decoded = base64DecodeStr(encodedSources)
                 val json = org.json.JSONObject(decoded)
                 val file = json.getString("file")
 
