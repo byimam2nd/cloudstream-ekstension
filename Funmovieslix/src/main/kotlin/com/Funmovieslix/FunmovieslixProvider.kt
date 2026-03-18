@@ -1,19 +1,17 @@
 package com.Funmovieslix
 
-import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.extractors.FileMoonIn
-import com.lagradost.cloudstream3.extractors.FilemoonV2
+import com.lagradost.cloudstream3.plugins.BasePlugin
 
 @CloudstreamPlugin
 class FunmovieslixProvider: BasePlugin() {
     override fun load() {
         registerMainAPI(Funmovieslix())
-        registerExtractorAPI(Ryderjet())
-        registerExtractorAPI(FilemoonV2())
-        registerExtractorAPI(Dhtpre())
-        registerExtractorAPI(FileMoonIn())
-        registerExtractorAPI(Vidhideplus())
-        registerExtractorAPI(VideyV2())
+        
+        // DYNAMIC REGISTER: Auto-register ALL extractors
+        // Tidak perlu hardcode satu-satu!
+        AllExtractors.list.forEach { extractor ->
+            registerExtractorAPI(extractor)
+        }
     }
 }

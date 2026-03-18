@@ -1,12 +1,12 @@
-package com.IdlixProvider
+package com.HiAnime
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
 
 @CloudstreamPlugin
-class IdlixProvider: BasePlugin() {
+class HiAnimeProvider: BasePlugin() {
     override fun load() {
-        registerMainAPI(IdlixProvider())
+        registerMainAPI(HiAnime())
         
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!

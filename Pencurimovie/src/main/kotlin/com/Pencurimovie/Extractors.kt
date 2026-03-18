@@ -733,27 +733,52 @@ class Vidhidepro : StreamWishExtractor() {
 }
 
 // ========================================
-// TOTAL: 40+ EXTRACTOR CLASSES
+// EXTRACTOR REGISTRY (Auto-Register)
 // ========================================
-// Note: Ini baru 40+ extractor.
-// Akan ditambahkan 35+ extractor lagi dari:
-// - ExtCloud/Fufafilm
-// - ExtCloud/Funmovieslix
-// - ExtCloud/Hidoristream
-// - ExtCloud/IdlixProvider
-// - ExtCloud/Kawanfilm
-// - ExtCloud/Kissasian
-// - ExtCloud/Klikxxi
-// - ExtCloud/LayarKacaProvider
-// - ExtCloud/Layarasia
-// - ExtCloud/Melongmovie
-// - ExtCloud/Midasxxi
-// - ExtCloud/Ngefilm
-// - ExtCloud/OploverzProvider
-// - ExtCloud/Oppadrama
-// - ExtCloud/Pmsm
-// - ExtCloud/SoraStream
-// - ExtCloud/Winbu
-// - ExtCloud/AnimeSailProvider
-// - cloudstream-ekstension (Anichin, Donghuastream, HiAnime, dll)
+// List semua extractor untuk auto-register
+// Tambahkan extractor baru di sini setelah dibuat
+// ========================================
+
+object AllExtractors {
+    val list = listOf(
+        // StreamWish based
+        Do7go(),
+        Dhcplay(),
+        Hglink(),
+        Ghbrisk(),
+        Movearnpre(),
+        Minochinos(),
+        Mivalyo(),
+        Ryderjet(),
+        Bingezove(),
+        Dingtezuni(),
+        
+        // VidStack based
+        Listeamed(),
+        Streamcasthub(),
+        Dm21embed(),
+        Dm21upns(),
+        Pm21p2p(),
+        Dm21(),
+        Meplayer(),
+        
+        // Custom extractors
+        Voe(),
+        Veev(),
+        Dintezuvio(),
+        
+        // Other extractors
+        Dailymotion(),
+        Okru(),
+        Rumble(),
+        StreamRuby(),
+        VidGuard(),
+        Archivd(),
+        Newuservideo(),
+        Vidhidepro()
+    )
+}
+
+// ========================================
+// TOTAL: 26 EXTRACTOR CLASSES
 // ========================================

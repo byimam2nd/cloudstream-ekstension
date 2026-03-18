@@ -1,22 +1,17 @@
 package com.Anichin
 
-import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.extractors.Dailymotion
-import com.lagradost.cloudstream3.extractors.Geodailymotion
+import com.lagradost.cloudstream3.plugins.BasePlugin
 
 @CloudstreamPlugin
 class AnichinProvider: BasePlugin() {
     override fun load() {
         registerMainAPI(Anichin())
-        registerExtractorAPI(Vtbe())
-        registerExtractorAPI(waaw())
-        registerExtractorAPI(wishfast())
-        registerExtractorAPI(FileMoonSx())
-        registerExtractorAPI(Dailymotion())
-        registerExtractorAPI(Geodailymotion())
-        registerExtractorAPI(Ultrahd())
-        registerExtractorAPI(Rumble())
-        registerExtractorAPI(PlayStreamplay())
+        
+        // DYNAMIC REGISTER: Auto-register ALL extractors
+        // Tidak perlu hardcode satu-satu!
+        AllExtractors.list.forEach { extractor ->
+            registerExtractorAPI(extractor)
+        }
     }
 }

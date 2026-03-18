@@ -6,7 +6,7 @@
 // Last Updated: 2026-03-17
 // ========================================
 
-package com.MasterExtractors
+package com.hexated
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
