@@ -4,13 +4,13 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
 
 @CloudstreamPlugin
-class IdlixProvider: BasePlugin() {
+class IdlixProviderPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(IdlixProvider())
+        registerMainAPI(com.hexated.IdlixProvider())
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
-        AllExtractors.list.forEach { extractor ->
+        com.IdlixProvider.AllExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
     }
