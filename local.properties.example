@@ -1,0 +1,39 @@
+# ========================================
+# Dynamic Configuration Template
+# ========================================
+# Copy this file to local.properties and customize as needed
+# DO NOT commit local.properties to git (it's in .gitignore)
+# ========================================
+
+# Repository Configuration
+REPO_URL=https://github.com/phisher98/cloudstream-extensions-phisher
+AUTHORS=Phisher98
+
+# SDK Versions
+MIN_SDK=21
+COMPILE_SDK=35
+TARGET_SDK=35
+
+# Java Version
+JAVA_VERSION=1_8
+
+# Dependency Versions
+CLOUDSTREAM_VERSION=pre-release
+KOTLIN_VERSION=stdlib
+NICEHTTP_VERSION=0.4.16
+JSOUP_VERSION=1.22.1
+ANNOTATION_VERSION=1.9.1
+JACKSON_VERSION=2.20.1
+COROUTINES_VERSION=1.10.2
+RHINO_VERSION=1.9.0
+FUZZYWUPPY_VERSION=1.4.0
+GSON_VERSION=2.13.2
+SERIALIZATION_VERSION=1.9.0
+JADB_VERSION=v1.2.1
+BC_VERSION=1.70
+
+# API Keys (for local development - CI uses GitHub Secrets)
+# TMDB_API=your_tmdb_api_key
+# DUMP_API=your_dump_api_key
+# ANICHI_API=your_anichi_api_key
+# ... (add other API keys as needed)

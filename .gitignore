@@ -15,7 +15,7 @@ local.properties
 # LOCAL CONFIGURATION
 # ========================================
 local.properties
-local.properties.example
+# NOTE: local.properties.example is tracked in git as template
 
 # ========================================
 # BUILD ARTIFACTS

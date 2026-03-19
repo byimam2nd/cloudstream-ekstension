@@ -3,6 +3,7 @@ import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import org.gradle.kotlin.dsl.register
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+import java.util.Properties
 
 buildscript {
     repositories {
@@ -30,31 +31,53 @@ fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) = extens
 
 fun Project.android(configuration: BaseExtension.() -> Unit) = extensions.getByName<BaseExtension>("android").configuration()
 
+// Load local.properties for dynamic configuration
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(localPropertiesFile.inputStream())
+    }
+}
+
 subprojects {
     apply(plugin = "com.android.library")
     apply(plugin = "kotlin-android")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
 
     cloudstream {
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/phisher98/cloudstream-extensions-phisher")
-        authors = listOf("Phisher98")
+        // Dynamic repo from env or local.properties or default
+        val repo = System.getenv("GITHUB_REPOSITORY") 
+            ?: localProperties.getProperty("REPO_URL")
+            ?: "https://github.com/phisher98/cloudstream-extensions-phisher"
+        setRepo(repo)
+        
+        // Dynamic authors from local.properties or default
+        val authorsStr = localProperties.getProperty("AUTHORS", "Phisher98")
+        authors = authorsStr.split(",").map { it.trim() }
     }
 
     android {
-        namespace = "com.phisher98"
+        // Dynamic namespace from project name
+        namespace = "com.${project.name.lowercase().replace("provider", "")}"
 
         defaultConfig {
-            minSdk = 21
-            compileSdkVersion(35)
-            targetSdk = 35
-
+            // Dynamic SDK versions from local.properties or env
+            val minSdkProp = localProperties.getProperty("MIN_SDK", "21")
+            val compileSdkProp = localProperties.getProperty("COMPILE_SDK", "35")
+            val targetSdkProp = localProperties.getProperty("TARGET_SDK", "35")
+            
+            minSdk = minSdkProp.toInt()
+            compileSdkVersion(compileSdkProp.toInt())
+            targetSdk = targetSdkProp.toInt()
         }
 
         compileOptions {
-            sourceCompatibility = JavaVersion.VERSION_1_8
-            targetCompatibility = JavaVersion.VERSION_1_8
+            // Dynamic Java version
+            val javaVersionProp = localProperties.getProperty("JAVA_VERSION", "1_8")
+            val javaVersion = JavaVersion.valueOf("VERSION_$javaVersionProp")
+            sourceCompatibility = javaVersion
+            targetCompatibility = javaVersion
         }
-
 
         tasks.withType<KotlinJvmCompile> {
             compilerOptions {
@@ -71,22 +94,38 @@ subprojects {
     dependencies {
         val implementation by configurations
         val cloudstream by configurations
-        cloudstream("com.lagradost:cloudstream3:pre-release")
+        
+        // Dynamic CloudStream version from local.properties or env
+        val cloudstreamVersion = localProperties.getProperty("CLOUDSTREAM_VERSION", "pre-release")
+        cloudstream("com.lagradost:cloudstream3:$cloudstreamVersion")
 
-        // Other dependencies
-        implementation(kotlin("stdlib"))
-        implementation("com.github.Blatzar:NiceHttp:0.4.16")
-        implementation("org.jsoup:jsoup:1.22.1")
-        implementation("androidx.annotation:annotation:1.9.1")
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.20.1")
-        implementation("com.fasterxml.jackson.core:jackson-databind:2.20.1")
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-        implementation("org.mozilla:rhino:1.9.0")
-        implementation("me.xdrop:fuzzywuzzy:1.4.0")
-        implementation("com.google.code.gson:gson:2.13.2")
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
-        implementation("com.github.vidstige:jadb:v1.2.1")
-        implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
+        // Other dependencies - versions from local.properties for easy updates
+        val kotlinVersion = localProperties.getProperty("KOTLIN_VERSION", "stdlib")
+        val niceHttpVersion = localProperties.getProperty("NICEHTTP_VERSION", "0.4.16")
+        val jsoupVersion = localProperties.getProperty("JSOUP_VERSION", "1.22.1")
+        val annotationVersion = localProperties.getProperty("ANNOTATION_VERSION", "1.9.1")
+        val jacksonVersion = localProperties.getProperty("JACKSON_VERSION", "2.20.1")
+        val coroutinesVersion = localProperties.getProperty("COROUTINES_VERSION", "1.10.2")
+        val rhinoVersion = localProperties.getProperty("RHINO_VERSION", "1.9.0")
+        val fuzzywuzzyVersion = localProperties.getProperty("FUZZYWUPPY_VERSION", "1.4.0")
+        val gsonVersion = localProperties.getProperty("GSON_VERSION", "2.13.2")
+        val serializationVersion = localProperties.getProperty("SERIALIZATION_VERSION", "1.9.0")
+        val jadbVersion = localProperties.getProperty("JADB_VERSION", "v1.2.1")
+        val bouncycastleVersion = localProperties.getProperty("BC_VERSION", "1.70")
+
+        implementation(kotlin(kotlinVersion))
+        implementation("com.github.Blatzar:NiceHttp:$niceHttpVersion")
+        implementation("org.jsoup:jsoup:$jsoupVersion")
+        implementation("androidx.annotation:annotation:$annotationVersion")
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+        implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
+        implementation("org.mozilla:rhino:$rhinoVersion")
+        implementation("me.xdrop:fuzzywuzzy:$fuzzywuzzyVersion")
+        implementation("com.google.code.gson:gson:$gsonVersion")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+        implementation("com.github.vidstige:jadb:$jadbVersion")
+        implementation("org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion")
     }
 }
 
