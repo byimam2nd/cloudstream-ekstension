@@ -1,7 +1,7 @@
-package com.IdlixProvider
+package com.Idlix
 
-import com.IdlixProvider.IdlixProvider.ResponseSource
-import com.IdlixProvider.IdlixProvider.Tracks
+import com.Idlix.IdlixProvider.ResponseSource
+import com.Idlix.IdlixProvider.Tracks
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.newSubtitleFile

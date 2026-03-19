@@ -1,4 +1,4 @@
-package com.IdlixProvider
+package com.Idlix
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
@@ -18,11 +18,11 @@ import kotlinx.coroutines.awaitAll
 // ============================================
 // OPTIMIZED: Import shared utilities
 // ============================================
-import com.IdlixProvider.CacheManager
-import com.IdlixProvider.rateLimitDelay
-import com.IdlixProvider.getRandomUserAgent
-import com.IdlixProvider.executeWithRetry
-import com.IdlixProvider.logError
+import com.Idlix.CacheManager
+import com.Idlix.rateLimitDelay
+import com.Idlix.getRandomUserAgent
+import com.Idlix.executeWithRetry
+import com.Idlix.logError
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -31,7 +31,7 @@ private val mainPageCache = CacheManager<HomePageResponse>()
 // Smart Cache Monitor untuk fingerprint-based invalidation
 private val monitor = IdlixMonitor()
 
-class IdlixProvider : MainAPI() {
+class Idlix : MainAPI() {
     override var mainUrl = "https://idlixian.com"
     private var directUrl = mainUrl
     override var name = "Idlix"

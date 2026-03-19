@@ -1,4 +1,4 @@
-package com.IdlixProvider
+package com.Idlix
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app

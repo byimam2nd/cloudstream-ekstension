@@ -1,4 +1,4 @@
-package com.IdlixProvider
+package com.Idlix
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

@@ -1,14 +1,14 @@
-package com.IdlixProvider
+package com.Idlix
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.IdlixProvider.IdlixProvider
-import com.IdlixProvider.AllExtractors
+import com.Idlix.IdlixProvider
+import com.Idlix.AllExtractors
 
 @CloudstreamPlugin
-class IdlixProviderPlugin: BasePlugin() {
+class IdlixPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(IdlixProvider())
+        registerMainAPI(Idlix())
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
