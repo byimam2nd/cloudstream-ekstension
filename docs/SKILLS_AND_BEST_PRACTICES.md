@@ -12,8 +12,12 @@ Dokumentasi ini berisi kumpulan ilmu, pola, dan best practices yang diperoleh se
 4. [Extractor Development](#extractor-development)
 5. [Error Handling](#error-handling)
 6. [Workflow Automation](#workflow-automation)
-7. [Common Issues & Solutions](#common-issues--solutions)
-8. [CloudStream Guidelines](#cloudstream-guidelines)
+7. [Git & GitHub Management](#git--github-management)
+8. [Build System](#build-system)
+9. [Common Issues & Solutions](#common-issues--solutions)
+10. [CloudStream Guidelines](#cloudstream-guidelines)
+11. [Development Checklist](#development-checklist)
+12. [Troubleshooting Flow](#troubleshooting-flow)
 
 ---
 
@@ -558,12 +562,277 @@ suspend fun <T> executeWithRetry(
 
 ---
 
+## 🔧 Git & GitHub Management
+
+### **Commit Message Convention**
+
+```
+type(scope): description
+
+[type]: fix, feat, chore, docs, refactor, test
+[scope]: Provider name or component
+[description]: Short, imperative tense
+```
+
+**Examples:**
+```bash
+fix(Anichin): fix episode parsing for 'END' episodes
+feat(LayarKaca21): add fallback for extractor failures
+chore: update sync-extractors workflow
+docs: add comprehensive skills guide
+```
+
+### **Branch Management**
+
+```bash
+# Always work on feature branch
+git checkout -b fix/episode-parsing
+
+# Commit frequently
+git commit -m "fix: initial fix for episode detection"
+
+# Rebase before push
+git pull --rebase origin master
+git push origin feature-branch
+
+# Squash commits before merge
+git rebase -i HEAD~3  # Squash last 3 commits
+```
+
+### **Rollback Strategy**
+
+```bash
+# If build fails after push
+git reset --hard HEAD~1  # Remove last commit
+git push --force-with-lease origin master
+
+# Or create fix commit
+git revert <commit-hash>
+git push origin master
+```
+
+---
+
+## 🏗️ Build System
+
+### **GitHub Actions Workflows**
+
+**1. Build Workflow (`.github/workflows/build.yml`)**
+```yaml
+on:
+  push:
+    branches: [master]
+  workflow_run:
+    workflows: ["Sync Master Extractors"]
+    types: [completed]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+      - run: ./gradlew make makePluginsJson
+```
+
+**2. Sync Extractors Workflow**
+```yaml
+on:
+  push:
+    paths:
+      - 'docs/MasterExtractors.kt'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - Copy MasterExtractors.kt to all providers
+      - Fix package names
+      - Commit and push
+```
+
+### **Build Commands**
+
+```bash
+# Local build test
+./gradlew clean
+./gradlew make
+./gradlew makePluginsJson
+
+# Check for errors
+./gradlew build --warning-mode all
+
+# Build specific module
+./gradlew :Anichin:build
+```
+
+### **Build Optimization**
+
+- ✅ Use Gradle cache
+- ✅ Parallel module builds
+- ✅ Selective builds (only changed modules)
+- ✅ Cache dependencies
+
+---
+
+## ✅ Development Checklist
+
+### **Before Commit**
+
+- [ ] Code compiles without errors
+- [ ] No unused imports
+- [ ] Package declarations consistent
+- [ ] No hardcoded values (use constants)
+- [ ] Error handling implemented
+- [ ] Logging added for debugging
+- [ ] No duplicate code
+- [ ] Follow naming conventions
+
+### **Before Push**
+
+- [ ] Git pull --rebase first
+- [ ] Run local build test
+- [ ] Check for merge conflicts
+- [ ] Commit message follows convention
+- [ ] Related docs updated
+
+### **After Push**
+
+- [ ] Monitor GitHub Actions
+- [ ] Check build status
+- [ ] Review build logs if failed
+- [ ] Fix errors immediately
+- [ ] Update troubleshooting docs
+
+---
+
+## 🔄 Troubleshooting Flow
+
+### **Build Failed?**
+
+```
+1. Check gh run list --limit 1
+2. Get run number
+3. gh run view <number> --log | grep "e: file:"
+4. Identify error type:
+   - Compilation error → Fix code
+   - Redeclaration → Check duplicate files
+   - Unresolved reference → Check imports
+   - Deprecated API → Update to new API
+5. Fix and commit
+6. Push and monitor again
+```
+
+### **Extractor Not Working?**
+
+```
+1. Check extractor URL format
+2. Verify referer headers
+3. Test with direct link
+4. Check for packed JavaScript
+5. Try multiple regex patterns
+6. Add fallback to direct URL
+7. Log all steps for debugging
+```
+
+### **Cache Not Working?**
+
+```
+1. Check CacheManager initialization
+2. Verify TTL settings
+3. Check mutex locks
+4. Test get/put separately
+5. Monitor cache size
+6. Check cleanup logic
+```
+
+### **Workflow Sync Failed?**
+
+```
+1. Check folder mapping in workflow
+2. Verify package name replacement
+3. Check file permissions
+4. Review awk script syntax
+5. Test with manual sync
+6. Check GitHub Actions logs
+```
+
+---
+
+## 🎓 Real Case Studies
+
+### **Case 1: Episode 52 END (Anichin)**
+
+**Symptom:** Episode 52 with "END" text not detected
+
+**Root Cause:** `toIntOrNull()` fails on "52 END"
+
+**Solution:**
+```kotlin
+val episodeText = info.selectFirst(".epl-num")?.text()?.trim().orEmpty()
+val episodeNumber = episodeText.replace(Regex("[^0-9]"), "").toIntOrNull()
+```
+
+**Lesson:** Always sanitize input before parsing
+
+---
+
+### **Case 2: PARSING_CONTAINER_MALFORMED (LayarKaca21)**
+
+**Symptom:** ERROR_CODE_PARSING_CONTAINER_MALFORMED (3001)
+
+**Root Cause:** Extractor fails, no fallback
+
+**Solution:**
+```kotlin
+try {
+    loadExtractor(iframeUrl, referer, subtitleCallback, callback)
+} catch (e: Exception) {
+    // Fallback to direct URL
+    if (directUrl.contains(".mp4") || directUrl.contains(".m3u8")) {
+        callback(newExtractorLink(...))
+    }
+}
+```
+
+**Lesson:** Always implement fallback mechanism
+
+---
+
+### **Case 3: Workflow Sync to Wrong Folder**
+
+**Symptom:** Redeclaration errors after sync
+
+**Root Cause:** Workflow uses site name as folder name
+
+**Solution:**
+```yaml
+declare -A SITE_FOLDERS=(
+  ["LayarKaca21"]="LayarKacaProvider"
+  ["IdlixProvider"]="hexated"
+)
+```
+
+**Lesson:** Map site names to actual folder names
+
+---
+
 ## 🔗 References
 
 - [CloudStream3 Documentation](https://recloudstream.github.io/cloudstream/)
 - [CloudStream3 GitHub](https://github.com/recloudstream/cloudstream)
 - [ExtCloud Repository](https://github.com/Phisher98/ExtCloud)
 - [CloudStream Extensions](https://github.com/recloudstream/cloudstream-extensions)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [Kotlin Coroutines Guide](https://kotlinlang.org/docs/coroutines-guide.html)
+
+---
+
+**Last Updated:** 2026-03-19  
+**Maintained By:** Development Team  
+**Version:** 1.0 (Complete)
 
 ---
 
