@@ -30,17 +30,6 @@ jobs:
       run: |
         echo "📦 Syncing Master Extractors to all sites..."
 
-        # List of ALL sites that need extractors
-        SITES=(
-          "Pencurimovie"
-          "LayarKaca21"
-          "Donghuastream"
-          "Funmovieslix"
-          "HiAnime"
-          "IdlixProvider"
-          "Anichin"
-        )
-
         # Master Extractors file location
         MASTER_FILE="docs/MasterExtractors.kt"
 
@@ -50,13 +39,25 @@ jobs:
           exit 1
         fi
 
+        # Site to folder mapping (folder name may differ from site name)
+        declare -A SITE_FOLDERS=(
+          ["Pencurimovie"]="Pencurimovie"
+          ["LayarKaca21"]="LayarKacaProvider"
+          ["Donghuastream"]="Donghuastream"
+          ["Funmovieslix"]="Funmovieslix"
+          ["HiAnime"]="HiAnime"
+          ["IdlixProvider"]="hexated"
+          ["Anichin"]="Anichin"
+        )
+
         # Copy to each site
-        for SITE in "${SITES[@]}"; do
+        for SITE in "${!SITE_FOLDERS[@]}"; do
+          FOLDER="${SITE_FOLDERS[$SITE]}"
           echo ""
-          echo "📋 Copying to $SITE..."
+          echo "📋 Copying to $SITE (folder: $FOLDER)..."
 
           # Destination directory
-          DEST_DIR="$SITE/src/main/kotlin/com/$SITE"
+          DEST_DIR="$SITE/src/main/kotlin/com/$FOLDER"
           DEST_FILE="$DEST_DIR/Extractors.kt"
 
           # Create directory if not exists
@@ -64,33 +65,22 @@ jobs:
 
           # Copy master extractors with correct package name
           # Using awk for better package replacement
-          awk -v site="$SITE" '
+          awk -v folder="$FOLDER" '
             NR==1 { print "// ========================================" }
             NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
             NR==3 { print "// Synced from docs/MasterExtractors.kt" }
             NR==4 { print "// ========================================" }
-            /^package / { print "package com." site; next }
+            /^package / { print "package com." folder; next }
             { print }
           ' "$MASTER_FILE" > "$DEST_FILE"
 
           # Count extractor classes
           CLASS_COUNT=$(grep -c "^class \|^open class " "$DEST_FILE" 2>/dev/null || echo 0)
-          echo "✅ Copied Master Extractors to $SITE ($CLASS_COUNT classes)"
+          echo "✅ Copied Master Extractors to $SITE/$FOLDER ($CLASS_COUNT classes)"
         done
 
         echo ""
         echo "✅ Sync completed!"
-        echo ""
-        echo "📊 Summary:"
-        for SITE in "${SITES[@]}"; do
-          DEST_FILE="$SITE/src/main/kotlin/com/$SITE/Extractors.kt"
-          if [ -f "$DEST_FILE" ]; then
-            COUNT=$(grep -c "^class \|^open class " "$DEST_FILE" 2>/dev/null || echo 0)
-            echo "  ✅ $SITE: $COUNT extractor classes"
-          else
-            echo "  ❌ $SITE: No Extractors.kt found"
-          fi
-        done
 
     - name: Verify extractor files
       run: |
@@ -109,7 +99,7 @@ jobs:
         echo "🔄 Checking for changes to commit..."
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        
+
         if ! git diff --quiet; then
           echo "Changes detected, committing..."
           git add -A
