@@ -87,7 +87,7 @@ class ImageCache(
             quality >= 90 -> 0.35
             quality >= 80 -> 0.30
             else -> 0.25
-        })
+        }).toLong()
     }
 
     private suspend fun getCurrentTotalSize(): Long {
