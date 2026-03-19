@@ -305,7 +305,7 @@ class LayarKaca21 : MainAPI() {
                                     type = if (directUrl.contains(".m3u8")) INFER_TYPE else ExtractorLinkType.VIDEO
                                 ) {
                                     this.referer = getBaseUrl(url)
-                                    this.quality = Qualities.Value480
+                                    this.quality = 720
                                 }
                             )
                             extractorSuccess = true
