@@ -40,21 +40,22 @@ jobs:
         fi
 
         # Site to folder mapping (folder name may differ from site name)
-        declare -A SITE_FOLDERS=(
-          ["Pencurimovie"]="Pencurimovie"
-          ["LayarKaca21"]="LayarKacaProvider"
-          ["Donghuastream"]="Donghuastream"
-          ["Funmovieslix"]="Funmovieslix"
-          ["HiAnime"]="HiAnime"
-          ["IdlixProvider"]="hexated"
-          ["Anichin"]="Anichin"
+        # Format: "SiteName"="folder:package"
+        declare -A SITE_CONFIGS=(
+          ["Pencurimovie"]="Pencurimovie:pencurimovie"
+          ["LayarKaca21"]="LayarKacaProvider:layarKacaProvider"
+          ["Donghuastream"]="Donghuastream:donghuastream"
+          ["Funmovieslix"]="Funmovieslix:funmovieslix"
+          ["HiAnime"]="HiAnime:hiAnime"
+          ["IdlixProvider"]="hexated:hexated"
+          ["Anichin"]="Anichin:anichin"
         )
 
         # Copy to each site
-        for SITE in "${!SITE_FOLDERS[@]}"; do
-          FOLDER="${SITE_FOLDERS[$SITE]}"
+        for SITE in "${!SITE_CONFIGS[@]}"; do
+          IFS=':' read -r FOLDER PACKAGE <<< "${SITE_CONFIGS[$SITE]}"
           echo ""
-          echo "📋 Copying to $SITE (folder: $FOLDER)..."
+          echo "📋 Copying to $SITE (folder: $FOLDER, package: com.$PACKAGE)..."
 
           # Destination directory
           DEST_DIR="$SITE/src/main/kotlin/com/$FOLDER"
@@ -65,12 +66,12 @@ jobs:
 
           # Copy master extractors with correct package name
           # Using awk for better package replacement
-          awk -v folder="$FOLDER" '
+          awk -v pkg="$PACKAGE" '
             NR==1 { print "// ========================================" }
             NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
             NR==3 { print "// Synced from docs/MasterExtractors.kt" }
             NR==4 { print "// ========================================" }
-            /^package / { print "package com." folder; next }
+            /^package / { print "package com." pkg; next }
             { print }
           ' "$MASTER_FILE" > "$DEST_FILE"
 
