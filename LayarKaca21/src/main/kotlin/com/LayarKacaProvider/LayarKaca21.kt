@@ -269,23 +269,53 @@ class LayarKaca21 : MainAPI() {
                 ).documentLarge
             }
 
-            document.select("ul#player-list > li").mapNotNull {
+            val playerLinks = document.select("ul#player-list > li").mapNotNull {
                 val link = it.select("a").attr("href")
                 if (link.isNotEmpty()) fixUrl(link) else null
-            }.amap { url ->
+            }
+
+            if (playerLinks.isEmpty()) {
+                logError("LayarKaca", "No player links found")
+                return false
+            }
+
+            var extractorSuccess = false
+
+            playerLinks.amap { url ->
                 try {
                     rateLimitDelay()
                     val iframeUrl = url.getIframe()
                     if (iframeUrl.isNotEmpty()) {
                         val referer = getBaseUrl(url)
-                        loadExtractor(iframeUrl, referer, subtitleCallback, callback)
+                        // Try extractor first
+                        val result = loadExtractor(iframeUrl, referer, subtitleCallback, callback)
+                        if (result) extractorSuccess = true
                     }
                 } catch (e: Exception) {
-                    logError("LayarKaca", "Failed to load extractor for: $url", e)
+                    logError("LayarKaca", "Extractor failed for: $url - ${e.message}", e)
+                    // FALLBACK: If extractor fails, try direct video URL
+                    try {
+                        val directUrl = url.getIframe()
+                        if (directUrl.isNotEmpty() && (directUrl.contains(".mp4") || directUrl.contains(".m3u8"))) {
+                            callback(
+                                ExtractorLink(
+                                    source = "LayarKaca Direct",
+                                    name = "LayarKaca Direct",
+                                    url = directUrl,
+                                    referer = getBaseUrl(url),
+                                    quality = Qualities.UNKNOWN.value,
+                                    type = if (directUrl.contains(".m3u8")) INFER_TYPE else ExtractorLinkType.VIDEO
+                                )
+                            )
+                            extractorSuccess = true
+                        }
+                    } catch (e2: Exception) {
+                        logError("LayarKaca", "Fallback also failed: ${e2.message}", e2)
+                    }
                 }
             }
 
-            return true
+            return extractorSuccess
         } catch (e: Exception) {
             logError("LayarKaca", "loadLinks failed: ${e.message}", e)
             return false
