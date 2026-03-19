@@ -1,13 +1,14 @@
-package com.Pencurimovie
+package com.layarKacaProvider
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Pencurimovie.AllExtractors
+import com.layarKacaProvider.LayarKaca21
+import com.layarKacaProvider.AllExtractors
 
 @CloudstreamPlugin
-class PencurimovieProvider: BasePlugin() {
+class LayarKaca21Plugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(Pencurimovie())
+        registerMainAPI(LayarKaca21())
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!

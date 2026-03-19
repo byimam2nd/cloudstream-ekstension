@@ -1,13 +1,13 @@
-package com.Funmovieslix
+package com.Donghuastream
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Funmovieslix.AllExtractors
+import com.Donghuastream.AllExtractors
 
 @CloudstreamPlugin
-class FunmovieslixProvider: BasePlugin() {
+class DonghuastreamPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(Funmovieslix())
+        registerMainAPI(Donghuastream())
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!

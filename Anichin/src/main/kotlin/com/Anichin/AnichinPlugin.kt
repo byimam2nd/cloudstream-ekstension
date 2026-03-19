@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.Anichin.AllExtractors
 
 @CloudstreamPlugin
-class AnichinProvider: BasePlugin() {
+class AnichinPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Anichin())
 
