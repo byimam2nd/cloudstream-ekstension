@@ -31,18 +31,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
 
-// CACHING for instant results (5 minute TTL)
-private data class CachedResult<T>(
-    val data: T,
-    val timestamp: Long,
-    val ttl: Long = 300000
-) {
-    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
-}
-
-private val searchCache = mutableMapOf<String, CachedResult<List<SearchResponse>>>()
-private val mainPageCache = mutableMapOf<String, CachedResult<HomePageResponse>>()
-private val cacheMutex = Mutex()
+// Caching using shared CacheManager from CacheManager.kt
+private val searchCache = CacheManager<List<SearchResponse>>()
+private val mainPageCache = CacheManager<HomePageResponse>()
 
 class Funmovieslix : MainAPI() {
     override var mainUrl = "https://funmovieslix.com"
@@ -66,13 +57,13 @@ class Funmovieslix : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "${request.data}${page}"
-        cacheMutex.withLock {
-            val cached = mainPageCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                return cached.data
-            }
-        }
         
+        // Check cache first
+        val cached = mainPageCache.get(cacheKey)
+        if (cached != null) {
+            return cached
+        }
+
         val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 5000L).documentLarge
         val home = document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
         val response = newHomePageResponse(
@@ -83,13 +74,10 @@ class Funmovieslix : MainAPI() {
             ),
             hasNext = true
         )
-        
+
         // Cache the result
-        cacheMutex.withLock {
-            mainPageCache[cacheKey] = CachedResult(response, System.currentTimeMillis())
-            mainPageCache.entries.removeAll { it.value.isExpired() }
-        }
-        
+        mainPageCache.put(cacheKey, response)
+
         return response
     }
 
@@ -121,13 +109,13 @@ class Funmovieslix : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "search_${query}"
-        cacheMutex.withLock {
-            val cached = searchCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                return cached.data
-            }
-        }
         
+        // Check cache first
+        val cached = searchCache.get(cacheKey)
+        if (cached != null) {
+            return cached
+        }
+
         // OPTIMIZED: Parallel search with timeout (3x faster)
         val results = coroutineScope {
             (1..3).map { page ->
@@ -141,13 +129,10 @@ class Funmovieslix : MainAPI() {
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }
-        
+
         // Cache the result
-        cacheMutex.withLock {
-            searchCache[cacheKey] = CachedResult(results, System.currentTimeMillis())
-            searchCache.entries.removeAll { it.value.isExpired() }
-        }
-        
+        searchCache.put(cacheKey, results)
+
         return results
     }
 

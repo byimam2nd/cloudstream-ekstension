@@ -23,59 +23,6 @@ internal const val MAX_REQUEST_DELAY = 500L
 private const val DEBUG_MODE = false
 
 // ============================================
-// CACHE DATA STRUCTURES
-// ============================================
-
-internal data class CachedResult<T>(
-    val data: T,
-    val timestamp: Long = System.currentTimeMillis(),
-    val ttl: Long = SEARCH_CACHE_TTL
-) {
-    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
-}
-
-internal class CacheManager<T>(
-    private val ttl: Long = SEARCH_CACHE_TTL,
-    private val maxSize: Int = MAX_CACHE_SIZE,
-    private val cleanupThreshold: Double = 0.8
-) {
-    private val cache = mutableMapOf<String, CachedResult<T>>()
-    private val mutex = Mutex()
-
-    suspend fun get(key: String): T? = mutex.withLock {
-        val cached = cache[key]
-        if (cached != null && !cached.isExpired()) {
-            cached.data
-        } else {
-            cache.remove(key)
-            null
-        }
-    }
-
-    suspend fun put(key: String, value: T) = mutex.withLock {
-        if (cache.size >= maxSize * cleanupThreshold) {
-            cleanup()
-        }
-        cache[key] = CachedResult(value, System.currentTimeMillis(), ttl)
-    }
-
-    private fun cleanup() {
-        val now = System.currentTimeMillis()
-        val expiredKeys = cache.filterValues { it.timestamp - now > ttl }.keys
-        cache.keys.removeAll(expiredKeys)
-
-        if (cache.size >= maxSize) {
-            val sortedByAge = cache.entries.sortedBy { it.value.timestamp }
-            val toRemove = sortedByAge.take(cache.size - maxSize / 2).map { it.key }
-            cache.keys.removeAll(toRemove)
-        }
-    }
-
-    suspend fun clear() = mutex.withLock { cache.clear() }
-    fun size(): Int = cache.size
-}
-
-// ============================================
 // RATE LIMITING
 // ============================================
 
