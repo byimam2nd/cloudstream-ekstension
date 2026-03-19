@@ -326,12 +326,34 @@ class LayarKaca21 : MainAPI() {
     private suspend fun String.getIframe(): String {
         return try {
             rateLimitDelay()
-            app.get(
+            val response = app.get(
                 this,
                 referer = "$seriesUrl/",
                 timeout = requestTimeout,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
-            ).documentLarge.select("div.embed-container iframe").attr("src")
+            )
+            val document = response.documentLarge
+            
+            // Try multiple selectors for iframe
+            val iframeUrl = document.selectFirst("div.embed-container iframe")?.attr("src")
+                ?: document.selectFirst("iframe[name=\"iframe\"]")?.attr("src")
+                ?: document.selectFirst("body iframe")?.attr("src")
+                ?: document.selectFirst("meta[property=og:video]")?.attr("content")
+                ?: ""
+            
+            // If still empty, try to extract from script tags
+            if (iframeUrl.isEmpty()) {
+                val scriptData = document.selectFirst("script:containsData(var player)")?.data()
+                    ?: document.selectFirst("script:containsData(player_url)")?.data()
+                
+                if (scriptData != null) {
+                    // Extract URL from JavaScript variable
+                    val urlMatch = Regex("\"(https?://[^\"]+)\"").find(scriptData)
+                    return urlMatch?.groupValues?.get(1) ?: ""
+                }
+            }
+            
+            iframeUrl
         } catch (e: Exception) {
             logError("LayarKaca", "getIframe failed: ${e.message}", e)
             ""
