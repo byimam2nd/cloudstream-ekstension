@@ -12,24 +12,14 @@ import com.layarKacaProvider.rateLimitDelay
 import com.layarKacaProvider.getRandomUserAgent
 import com.layarKacaProvider.executeWithRetry
 import com.layarKacaProvider.logError
-import com.layarKacaProvider.CacheFingerprint
 import com.layarKacaProvider.SmartCacheMonitor
-import com.layarKacaProvider.CacheValidationResult
 
-// Cache instances dengan TTL berbeda
-private val searchCache = CacheManager<List<SearchResponse>>(
-    ttl = SEARCH_CACHE_TTL,
-    maxSize = MAX_CACHE_SIZE
-)
-
-private val mainPageCache = CacheManager<HomePageResponse>(
-    ttl = MAINPAGE_CACHE_TTL,
-    maxSize = MAX_CACHE_SIZE
-)
+// Cache instances
+private val searchCache = CacheManager<List<SearchResponse>>()
+private val mainPageCache = CacheManager<HomePageResponse>()
 
 // Smart Cache Monitor untuk fingerprint-based invalidation
 private val monitor = LayarKacaMonitor()
-private val fingerprints = mutableMapOf<String, CacheFingerprint>()
 
 class LayarKaca21 : MainAPI() {
 
@@ -66,25 +56,12 @@ class LayarKaca21 : MainAPI() {
 
         // Check cache first
         val cached = mainPageCache.get(cacheKey)
-        val cachedFingerprint = fingerprints[cacheKey]
-        
         if (cached != null) {
-            // SMART CACHE: Check if content has changed
-            val checkResult = monitor.checkCacheValidity(
-                cacheKey = cacheKey,
-                url = request.data + page,
-                cachedFingerprint = cachedFingerprint
-            )
-            
-            // If cache is valid, return cached data
-            if (checkResult.isValid && checkResult.result == CacheValidationResult.CACHE_VALID) {
-                Log.d("LayarKaca", "Cache HIT for $cacheKey (fingerprint match)")
-                return cached
-            }
-            
-            // Cache invalid - will fetch new data
-            Log.d("LayarKaca", "Cache MISS for $cacheKey (fingerprint changed)")
+            Log.d("LayarKaca", "Cache HIT for $cacheKey")
+            return cached
         }
+
+        Log.d("LayarKaca", "Cache MISS for $cacheKey")
 
         // Fetch dengan retry logic dan rate limiting
         val response = executeWithRetry(maxRetries = 3) {
@@ -104,12 +81,6 @@ class LayarKaca21 : MainAPI() {
 
         // Cache the result
         mainPageCache.put(cacheKey, result)
-        
-        // Update fingerprint
-        val titles = response.select("article figure h3")
-            .mapNotNull { it.ownText()?.trim() }
-            .filter { it.isNotEmpty() }
-        fingerprints[cacheKey] = monitor.generateFingerprint(cacheKey, titles)
 
         return result
     }
