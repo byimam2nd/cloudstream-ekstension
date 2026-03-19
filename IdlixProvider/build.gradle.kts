@@ -1,22 +1,14 @@
 // use an integer for version numbers
-version = 2
+version = 10
 
 
 cloudstream {
+    description = "🎬 Idlix - Streaming film, series, anime, dan Asian drama dengan subtitle Indonesia terlengkap dan tercepat!"
     language = "id"
-    // All of these properties are optional, you can safely remove them
+    authors = listOf("Imam2nd")
 
-    // description = "Lorem Ipsum"
-     authors = listOf("Hexated,Phisher98")
-
-    /**
-     * Status int as the following:
-     * 0: Down
-     * 1: Ok
-     * 2: Slow
-     * 3: Beta only
-     * */
-    status = 1 // will be 3 if unspecified
+    status = 1
+    
     tvTypes = listOf(
         "TvSeries",
         "Movie",
