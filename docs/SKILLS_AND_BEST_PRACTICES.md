@@ -752,12 +752,93 @@ jobs:
 
 ```
 1. Check folder mapping in workflow
-2. Verify package name replacement
+2. Verify package name replacement (lowercase!)
 3. Check file permissions
 4. Review awk script syntax
 5. Test with manual sync
 6. Check GitHub Actions logs
+
+Common Issue: Package name capitalization
+- Folder: LayarKacaProvider
+- Package: com.layarKacaProvider (lowercase!)
+- NOT: com.LayarKacaProvider (WRONG!)
 ```
+
+---
+
+## 🔧 Extractor Reliability Improvements
+
+### **Problem: Single Point of Failure**
+
+Old extractor code relied on single regex pattern:
+```kotlin
+// ❌ FRAGILE: Single regex pattern
+Regex(":\\s*\"(.*?m3u8.*?)\"").findAll(script).forEach { ... }
+```
+
+If regex fails → No video → PARSING_CONTAINER_MALFORMED error
+
+### **Solution: Multiple Extraction Methods**
+
+```kotlin
+// ✅ ROBUST: Multiple extraction methods
+var script: String? = null
+
+// Method 1: Unpack packed JavaScript
+val packed = getPacked(response.text)
+if (!packed.isNullOrEmpty()) {
+    script = getAndUnpack(response.text)
+}
+
+// Method 2: Look for sources in script tags
+if (script == null) {
+    script = response.document.selectFirst("script:containsData(sources:)")?.data()
+}
+
+// Method 3: Look for direct m3u8/mp4 in meta tags
+if (script == null) {
+    val videoUrl = response.document.selectFirst("meta[property=og:video]")?.attr("content")
+    if (videoUrl.contains(".m3u8")) {
+        script = "sources:[{file:\"$videoUrl\"}]"
+    }
+}
+
+// Multiple regex patterns for extraction
+val patterns = listOf(
+    ":\\s*\"(.*?m3u8.*?)\"",
+    "file:\\s*\"(.*?m3u8.*?)\"",
+    "src:\\s*\"(.*?m3u8.*?)\"",
+    "\"(https?://[^\"]+?\\.m3u8[^\"]*?)\""
+)
+```
+
+### **Extractors Enhanced:**
+
+| Extractor | Before | After |
+|-----------|--------|-------|
+| **Dingtezuni** | 1 regex | ✅ 3 methods + 4 regex |
+| **Dintezuvio** | 1 regex | ✅ 3 methods + 4 regex |
+| **StreamRuby** | 1 regex | ✅ 3 methods + 4 regex |
+| **Vidguard** | JS only | ✅ JS + fallback direct URL |
+
+### **Workflow Sync Package Naming**
+
+**Critical:** Package name MUST be lowercase!
+
+```yaml
+# ✅ CORRECT: Explicit package mapping
+declare -A SITE_CONFIGS=(
+  ["LayarKaca21"]="LayarKacaProvider:layarKacaProvider"
+  #                        Folder      ^      ^ Package
+  ["IdlixProvider"]="hexated:hexated"
+)
+
+# ❌ WRONG: Using folder name as package
+awk -v folder="$FOLDER" '{ print "package com." folder }'
+# Results in: package com.LayarKacaProvider (WRONG!)
+```
+
+**Lesson:** Always use explicit package mapping, not derived from folder name!
 
 ---
 
@@ -798,6 +879,30 @@ try {
 ```
 
 **Lesson:** Always implement fallback mechanism
+
+---
+
+### **Case 3: Workflow Sync Package Naming**
+
+**Symptom:** Build fails with `Unresolved reference 'AllExtractors'`
+
+**Root Cause:** 
+- Workflow sync generates wrong package name
+- Folder: `LayarKacaProvider`
+- Package generated: `com.LayarKacaProvider` (uppercase L - WRONG!)
+- Should be: `com.layarKacaProvider` (lowercase l)
+
+**Solution:**
+```yaml
+# Use explicit package mapping in workflow
+declare -A SITE_CONFIGS=(
+  ["LayarKaca21"]="LayarKacaProvider:layarKacaProvider"
+)
+
+awk -v pkg="$PACKAGE" '{ print "package com." pkg }'
+```
+
+**Lesson:** Package names MUST be lowercase! Don't derive from folder name!
 
 ---
 
