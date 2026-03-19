@@ -3,8 +3,8 @@
 # ========================================
 # Sync Master Extractors to All Active Sites
 # ========================================
-# This script syncs docs/MasterExtractors.kt to all active modules
-# Active modules are folders that have build.gradle.kts
+# FULLY DYNAMIC - No hardcoded module names!
+# Auto-detects modules, folders, and packages
 # ========================================
 
 set -e
@@ -44,30 +44,79 @@ fi
 echo "✅ Found $MODULE_COUNT active module(s): ${MODULES[*]}"
 echo ""
 
-# Folder to package mapping
-# Format: "folder"="subfolder:package"
-declare -A FOLDER_CONFIGS=(
-    ["Pencurimovie"]="Pencurimovie:pencurimovie"
-    ["LayarKaca21"]="LayarKacaProvider:layarKacaProvider"
-    ["Donghuastream"]="Donghuastream:donghuastream"
-    ["Funmovieslix"]="Funmovieslix:funmovieslix"
-    ["IdlixProvider"]="hexated:hexated"
-    ["Anichin"]="Anichin:anichin"
-)
-
 SYNCED_COUNT=0
 ERRORS=0
 
-# Sync to each active module
+# Sync to each active module - FULLY DYNAMIC
 for MODULE in "${MODULES[@]}"; do
-    # Skip if module not in our config
-    if [ -z "${FOLDER_CONFIGS[$MODULE]}" ]; then
-        echo "⚠️  Warning: Module '$MODULE' not in config, skipping..."
+    echo "📋 Processing $MODULE..."
+
+    # Auto-detect: Find the actual folder structure
+    SRC_DIR="$ROOT_DIR/$MODULE/src/main/kotlin/com"
+
+    if [ ! -d "$SRC_DIR" ]; then
+        echo "   ❌ Error: Source directory not found: $SRC_DIR"
+        ERRORS=$((ERRORS + 1))
         continue
     fi
 
-    IFS=':' read -r FOLDER PACKAGE <<< "${FOLDER_CONFIGS[$MODULE]}"
-    echo "📋 Syncing to $MODULE (folder: com/$FOLDER, package: com.$PACKAGE)..."
+    # Get the actual folder name(s) in com/
+    FOLDERS=$(ls -1 "$SRC_DIR" 2>/dev/null)
+    FOLDER_COUNT=$(echo "$FOLDERS" | wc -l)
+
+    if [ "$FOLDER_COUNT" -eq 0 ]; then
+        echo "   ❌ Error: No folders found in $SRC_DIR"
+        ERRORS=$((ERRORS + 1))
+        continue
+    fi
+
+    # If multiple folders, find the one with Provider/Plugin file
+    if [ "$FOLDER_COUNT" -gt 1 ]; then
+        TARGET_FOLDER=""
+        for folder in $FOLDERS; do
+            if ls "$SRC_DIR/$folder"/*Plugin*.kt 1>/dev/null 2>&1 || \
+               ls "$SRC_DIR/$folder"/*Provider*.kt 1>/dev/null 2>&1; then
+                TARGET_FOLDER="$folder"
+                break
+            fi
+        done
+
+        if [ -z "$TARGET_FOLDER" ]; then
+            echo "   ⚠️  Warning: No folder with Provider/Plugin found, using first folder"
+            TARGET_FOLDER=$(echo "$FOLDERS" | head -1)
+        fi
+
+        FOLDER="$TARGET_FOLDER"
+    else
+        FOLDER="$FOLDERS"
+    fi
+
+    # Trim whitespace
+    FOLDER=$(echo "$FOLDER" | xargs)
+
+    echo "   Found folder: com.$FOLDER"
+
+    # Auto-detect: Extract package name from Provider/Plugin file
+    PACKAGE=""
+    for pattern in "ProviderPlugin.kt" "Plugin.kt" "Provider.kt"; do
+        provider_file=$(ls "$SRC_DIR/$FOLDER"/*$pattern 2>/dev/null | head -1)
+        if [ -n "$provider_file" ] && [ -f "$provider_file" ]; then
+            # Extract package declaration
+            pkg_line=$(head -5 "$provider_file" | grep "^package ")
+            if [ -n "$pkg_line" ]; then
+                # Extract package name (last part after com.)
+                PACKAGE=$(echo "$pkg_line" | sed 's/package com\.\?//')
+                break
+            fi
+        fi
+    done
+
+    if [ -z "$PACKAGE" ]; then
+        echo "   ⚠️  Warning: Could not detect package, using folder name (lowercase)"
+        PACKAGE=$(echo "$FOLDER" | tr '[:upper:]' '[:lower:]')
+    fi
+
+    echo "   Detected package: $PACKAGE"
 
     # Destination directory and file
     DEST_DIR="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER"
@@ -75,8 +124,7 @@ for MODULE in "${MODULES[@]}"; do
 
     # Check if source folder exists
     if [ ! -d "$DEST_DIR" ]; then
-        echo "❌ Error: Source directory not found: $DEST_DIR"
-        echo "   Make sure the folder structure is correct for module: $MODULE"
+        echo "   ❌ Error: Destination directory not found: $DEST_DIR"
         ERRORS=$((ERRORS + 1))
         continue
     fi
@@ -94,7 +142,7 @@ for MODULE in "${MODULES[@]}"; do
     # Count extractor classes
     CLASS_COUNT=$(grep -c "^class \|^open class " "$DEST_FILE" 2>/dev/null || echo 0)
 
-    echo "✅ Synced: $MODULE/$FOLDER ($CLASS_COUNT extractor classes)"
+    echo "   ✅ Synced: $MODULE/$FOLDER ($CLASS_COUNT extractor classes)"
     echo ""
 
     SYNCED_COUNT=$((SYNCED_COUNT + 1))

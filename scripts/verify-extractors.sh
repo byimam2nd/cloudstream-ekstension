@@ -35,51 +35,53 @@ fi
 echo "📋 Active modules: ${MODULES[*]}"
 echo ""
 
-# Folder mapping
-declare -A FOLDER_MAP=(
-    ["Pencurimovie"]="Pencurimovie"
-    ["LayarKaca21"]="LayarKacaProvider"
-    ["Donghuastream"]="Donghuastream"
-    ["Funmovieslix"]="Funmovieslix"
-    ["IdlixProvider"]="hexated"
-    ["Anichin"]="Anichin"
-)
-
 VALID_COUNT=0
 ERRORS=0
 TOTAL_CLASSES=0
 
 for MODULE in "${MODULES[@]}"; do
-    FOLDER="${FOLDER_MAP[$MODULE]}"
+    echo "📋 Validating $MODULE..."
 
-    if [ -z "$FOLDER" ]; then
-        echo "⚠️  Warning: Module '$MODULE' not in folder map, skipping..."
+    # Auto-detect folder structure - FULLY DYNAMIC
+    SRC_DIR="$ROOT_DIR/$MODULE/src/main/kotlin/com"
+
+    if [ ! -d "$SRC_DIR" ]; then
+        echo "   ❌ ERROR: Source directory not found: $SRC_DIR"
+        ERRORS=$((ERRORS + 1))
         continue
     fi
 
+    # Get folder name
+    FOLDERS=$(ls -1 "$SRC_DIR" 2>/dev/null)
+    FOLDER_COUNT=$(echo "$FOLDERS" | wc -l)
+
+    if [ "$FOLDER_COUNT" -gt 1 ]; then
+        # Find folder with Provider/Plugin
+        TARGET_FOLDER=""
+        for folder in $FOLDERS; do
+            if ls "$SRC_DIR/$folder"/*Plugin*.kt 1>/dev/null 2>&1 || \
+               ls "$SRC_DIR/$folder"/*Provider*.kt 1>/dev/null 2>&1; then
+                TARGET_FOLDER="$folder"
+                break
+            fi
+        done
+        FOLDER="${TARGET_FOLDER:-$(echo "$FOLDERS" | head -1)}"
+    else
+        FOLDER="$FOLDERS"
+    fi
+
+    FOLDER=$(echo "$FOLDER" | xargs)
+    echo "   Found folder: com.$FOLDER"
+
     EXTRACTORS_FILE="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER/Extractors.kt"
 
-    # Find Provider file - prioritize Plugin files over Provider files
-    # First try: *ProviderPlugin.kt or *Plugin.kt
+    # Find Provider file - prioritize Plugin files
     PROVIDER_FILE=$(find "$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER" -maxdepth 1 -name "*Plugin.kt" 2>/dev/null | head -1)
-
-    # Fallback: *Provider.kt (but not MainAPI)
     if [ -z "$PROVIDER_FILE" ]; then
         PROVIDER_FILE=$(find "$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER" -maxdepth 1 -name "*Provider.kt" 2>/dev/null | grep -v "MainAPI" | head -1)
     fi
 
-    # Final fallback: try specific patterns
-    if [ -z "$PROVIDER_FILE" ]; then
-        for pattern in "ProviderPlugin.kt" "Plugin.kt" "Provider.kt"; do
-            test_file="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER/$pattern"
-            if [ -f "$test_file" ]; then
-                PROVIDER_FILE="$test_file"
-                break
-            fi
-        done
-    fi
-
-    echo "📋 Validating $MODULE (Provider: $(basename "$PROVIDER_FILE" 2>/dev/null || echo 'NOT FOUND'))..."
+    echo "   Provider: $(basename "$PROVIDER_FILE" 2>/dev/null || echo 'NOT FOUND')"
 
     # Check 1: Extractors.kt exists
     if [ ! -f "$EXTRACTORS_FILE" ]; then
