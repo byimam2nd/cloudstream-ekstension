@@ -40,12 +40,18 @@ class LayarKaca21 : MainAPI() {
     private val requestTimeout = 10000L
 
     override val mainPage = mainPageOf(
-        "$mainUrl/populer/page/" to "🔥 Film Terplopuler",
-        "$mainUrl/rating/page/" to "⭐ Film Berdasarkan IMDb Rating",
-        "$mainUrl/most-commented/page/" to "💬 Film Dengan Komentar Terbanyak",
-        "$seriesUrl/latest-series/page/" to "🆕 Series Terbaru",
-        "$seriesUrl/series/asian/page/" to "🎌 Film Asian Terbaru",
-        "$mainUrl/latest/page/" to "📥 Film Upload Terbaru",
+        "$mainUrl/latest/page/" to "Film Upload Terbaru",
+        "$mainUrl/populer/page/" to "Film Terplopuler",
+        "$mainUrl/rekomendasi-film-pintar/page/" to "Film Rekomendasi",
+        "$mainUrl/nonton-bareng-keluarga/page/" to "Nonton Bareng Keluarga",
+        "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
+        "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
+        "$seriesUrl/latest-series/page/" to "Series Terbaru",
+        "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
+        "$seriesUrl/genre/horror/page/" to "Film Horor Terbaru",
+        "$seriesUrl/genre/comedy/page/" to "Film Comedy Terbaru",
+        "$seriesUrl/country/thailand/page/" to "Film Thailand Terbaru",
+        "$seriesUrl/country/china/page/" to "Film China Terbaru",
     )
 
     override suspend fun getMainPage(
