@@ -39,14 +39,46 @@ class LayarKaca21 : MainAPI() {
     // Standard timeout untuk semua request (10 detik)
     private val requestTimeout = 10000L
 
-    override val mainPage = mainPageOf(
-        "$mainUrl/populer/page/" to "Film Terplopuler",
-        "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
-        "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
-        "$seriesUrl/latest-series/page/" to "Series Terbaru",
-        "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
-        "$mainUrl/latest/page/" to "Film Upload Terbaru",
+    // CUSTOM CATEGORIES (User-defined - Hardcoded)
+    // Kategori custom pilihan user yang sering digunakan
+    private val customCategories = mainPageOf(
+        "$mainUrl/populer/page/" to "🔥 Film Terplopuler",
+        "$mainUrl/rating/page/" to "⭐ Film Berdasarkan IMDb Rating",
+        "$mainUrl/most-commented/page/" to "💬 Film Dengan Komentar Terbanyak",
+        "$seriesUrl/latest-series/page/" to "🆕 Series Terbaru",
+        "$seriesUrl/series/asian/page/" to "🎌 Film Asian Terbaru",
+        "$mainUrl/latest/page/" to "📥 Film Upload Terbaru",
     )
+
+    // WEBSITE CATEGORIES (From lk21.de homepage)
+    // Kategori lengkap sesuai yang ada di website LayarKaca21
+    private val websiteCategories = mainPageOf(
+        // GENRE SECTIONS (Featured on homepage)
+        "$mainUrl/genre/action/page/" to "🎬 Action",
+        "$mainUrl/genre/anime/page/" to "🎌 Anime",
+        "$mainUrl/genre/horror/page/" to "👻 Horror",
+        "$mainUrl/genre/comedy/page/" to "😄 Komedi",
+        "$mainUrl/genre/scifi/page/" to "🚀 Sci-Fi",
+        "$mainUrl/genre/romance/page/" to "💕 Romance",
+        
+        // COUNTRY SECTIONS (Featured on homepage)
+        "$mainUrl/country/china/page/" to "🇨🇳 Cina",
+        "$mainUrl/country/india/page/" to "🇮🇳 India",
+        "$mainUrl/country/japan/page/" to "🇯🇵 Jepang",
+        "$mainUrl/country/korea/page/" to "🇰🇷 Korea",
+        "$mainUrl/country/thailand/page/" to "🇹🇭 Thailand",
+        
+        // YEAR SECTIONS (Recent years)
+        "$mainUrl/year/2026/page/" to "📅 Film 2026",
+        "$mainUrl/year/2025/page/" to "📅 Film 2025",
+        
+        // SERIES SECTIONS
+        "$seriesUrl/series/ongoing/page/" to "📺 Series Ongoing",
+        "$seriesUrl/series/complete/page/" to "✅ Series Complete",
+    )
+
+    // COMBINE: Custom categories (top) + Website categories (bottom)
+    override val mainPage = customCategories + websiteCategories
 
     override suspend fun getMainPage(
         page: Int,
