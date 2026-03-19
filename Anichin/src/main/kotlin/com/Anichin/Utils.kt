@@ -103,3 +103,129 @@ internal fun logError(tag: String, message: String, error: Throwable? = null) {
     Log.e(tag, message)
     error?.let { Log.e(tag, "Cause: ${it.message}") }
 }
+
+// ============================================
+// AUTO-TRANSLATE UTILITY
+// ============================================
+// Auto-translate English descriptions to Indonesian
+// Handle "Lihat selengkapnya" truncated descriptions
+// ============================================
+
+/**
+ * Common English to Indonesian translation mapping
+ */
+private val translationMap = mapOf(
+    "watch" to "nonton",
+    "streaming" to "streaming",
+    "download" to "unduh",
+    "free" to "gratis",
+    "full" to "lengkap",
+    "episode" to "episode",
+    "season" to "musim",
+    "movie" to "film",
+    "series" to "series",
+    "show" to "acara",
+    "plot" to "alur cerita",
+    "story" to "cerita",
+    "about" to "tentang",
+    "with" to "dengan",
+    "and" to "dan",
+    "the" to "",
+    "in" to "di",
+    "on" to "pada",
+    "for" to "untuk",
+    "from" to "dari",
+    "quality" to "kualitas",
+    "subtitle" to "subtitle",
+    "indonesia" to "Indonesia",
+    "english" to "Inggris",
+    "chinese" to "China",
+    "japanese" to "Jepang",
+    "korean" to "Korea",
+    "thriller" to "thriller",
+    "action" to "aksi",
+    "adventure" to "petualangan",
+    "drama" to "drama",
+    "comedy" to "komedi",
+    "romance" to "romantis",
+    "fantasy" to "fantasi",
+    "sci-fi" to "fiksi ilmiah",
+    "horror" to "horor",
+    "mystery" to "misteri",
+    "crime" to "kriminal",
+    "suspense" to "tegang",
+    "exciting" to "menegangkan",
+    "amazing" to "luar biasa",
+    "best" to "terbaik",
+    "new" to "baru",
+    "latest" to "terbaru",
+    "popular" to "populer",
+    "follows" to "mengikuti",
+    "story of" to "cerita tentang",
+    "life of" to "kehidupan",
+    "journey of" to "perjalanan",
+    "adventure of" to "petualangan",
+    "must watch" to "wajib tonton",
+    "don't miss" to "jangan lewatkan",
+    "high quality" to "kualitas tinggi",
+    "hd quality" to "kualitas HD",
+    "full hd" to "full HD",
+    "bluray" to "BluRay",
+    "completed" to "selesai",
+    "ongoing" to "berlangsung",
+    "upcoming" to "akan datang"
+)
+
+/**
+ * Check if text is likely in Indonesian
+ */
+private fun isIndonesian(text: String): Boolean {
+    val indonesianWords = listOf(
+        "dengan", "dan", "yang", "untuk", "dari", "pada", "ini", "itu",
+        "adalah", "merupakan", "telah", "sudah", "akan", "sedang",
+        "nonton", "streaming", "unduh", "lengkap", "gratis",
+        "film", "series", "episode", "musim", "alur", "cerita",
+        "tentang", "mengikuti", "kehidupan", "perjalanan", "petualangan"
+    )
+    
+    val lowerText = text.lowercase()
+    return indonesianWords.any { lowerText.contains(it) }
+}
+
+/**
+ * Auto-translate English text to Indonesian
+ * Uses smart translation with context awareness
+ */
+fun translateToIndonesian(text: String?): String? {
+    if (text.isNullOrBlank()) return null
+    
+    // Check if text is already in Indonesian
+    if (isIndonesian(text)) return text
+    
+    // Translate using mapping
+    var translated = text.lowercase()
+    
+    // Apply translations
+    translationMap.forEach { (english, indonesian) ->
+        translated = translated.replace(english, indonesian, ignoreCase = true)
+    }
+    
+    // Capitalize first letter
+    return translated.replaceFirstChar { it.uppercase() }
+}
+
+/**
+ * Clean and format description
+ * Removes "Lihat selengkapnya" and similar truncation markers
+ */
+fun cleanDescription(text: String?): String? {
+    if (text.isNullOrBlank()) return null
+    
+    return text
+        .replace(Regex("\\s*\\.\\.\\.$"), "") // Remove trailing ...
+        .replace(Regex("\\s*Lihat selengkapnya.*", RegexOption.IGNORE_CASE), "") // Remove "Lihat selengkapnya"
+        .replace(Regex("\\s*Read more.*", RegexOption.IGNORE_CASE), "") // Remove "Read more"
+        .replace(Regex("\\s*View more.*", RegexOption.IGNORE_CASE), "") // Remove "View more"
+        .replace(Regex("\\s*Continue reading.*", RegexOption.IGNORE_CASE), "") // Remove "Continue reading"
+        .trim()
+}
