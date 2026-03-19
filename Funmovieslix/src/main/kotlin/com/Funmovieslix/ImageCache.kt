@@ -48,7 +48,7 @@ class ImageCache(
                         return@withLock bitmap
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to decode cached bitmap", e)
+                    Log.e(TAG, "Failed to decode cached bitmap: ${e.message}")
                 }
             }
             null
@@ -76,7 +76,7 @@ class ImageCache(
                 compressedBitmap.recycle()
                 file.length() / 1024
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to cache image", e)
+                Log.e(TAG, "Failed to cache image: ${e.message}")
                 -1
             }
         }
@@ -111,7 +111,7 @@ class ImageCache(
                 Log.d(TAG, "🗑️ Deleted old: ${file.name}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to cleanup old files", e)
+            Log.e(TAG, "Failed to cleanup old files: ${e.message}")
         }
     }
 
@@ -135,7 +135,7 @@ class ImageCache(
             }
             return null
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to fetch image", e)
+            Log.e(TAG, "Failed to fetch image: ${e.message}")
             return null
         }
     }
@@ -178,7 +178,7 @@ class ImageCache(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to cleanup site cache", e)
+            Log.e(TAG, "Failed to cleanup site cache: ${e.message}")
         }
     }
 
