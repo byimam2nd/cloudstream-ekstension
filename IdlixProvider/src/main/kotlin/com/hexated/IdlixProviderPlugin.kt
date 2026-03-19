@@ -1,4 +1,4 @@
-package com.IdlixProvider
+package com.hexated
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
@@ -10,7 +10,7 @@ class IdlixProviderPlugin: BasePlugin() {
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
-        com.IdlixProvider.AllExtractors.list.forEach { extractor ->
+        com.hexated.AllExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
     }
