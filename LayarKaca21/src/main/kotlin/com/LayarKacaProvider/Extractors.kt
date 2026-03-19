@@ -11,7 +11,7 @@
 // Maintainer: Phisher98
 // ========================================
 
-package com.LayarKaca21
+package com.LayarKacaProvider
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
@@ -92,24 +92,72 @@ open class Dingtezuni : ExtractorApi() {
             "User-Agent" to USER_AGENT,
         )
 
-        val response = app.get(getEmbedUrl(url), referer = referer)
-        val script = if (!getPacked(response.text).isNullOrEmpty()) {
-            var result = getAndUnpack(response.text)
-            if (result.contains("var links")) {
-                result = result.substringAfter("var links")
+        try {
+            val response = app.get(getEmbedUrl(url), referer = referer)
+            
+            // Try multiple methods to extract video URL
+            var script: String? = null
+            
+            // Method 1: Unpack packed JavaScript
+            val packed = getPacked(response.text)
+            if (!packed.isNullOrEmpty()) {
+                var result = getAndUnpack(response.text)
+                if (result.contains("var links")) {
+                    result = result.substringAfter("var links")
+                }
+                script = result
             }
-            result
-        } else {
-            response.document.selectFirst("script:containsData(sources:)")?.data()
-        } ?: return
+            
+            // Method 2: Look for sources in script tags
+            if (script == null) {
+                script = response.document.selectFirst("script:containsData(sources:)")?.data()
+            }
+            
+            // Method 3: Look for direct m3u8/mp4 in data attributes
+            if (script == null) {
+                val videoUrl = response.document.selectFirst("meta[property=og:video]")?.attr("content")
+                if (!videoUrl.isNullOrEmpty() && (videoUrl.contains(".m3u8") || videoUrl.contains(".mp4"))) {
+                    script = "sources:[{file:\"$videoUrl\"}]"
+                }
+            }
+            
+            script ?: return
 
-        Regex(":\\s*\"(.*?m3u8.*?)\"").findAll(script).forEach { m3u8Match ->
-            generateM3u8(
-                name,
-                fixUrl(m3u8Match.groupValues[1]),
-                referer = "$mainUrl/",
-                headers = headers
-            ).forEach(callback)
+            // Extract m3u8 links with multiple regex patterns for robustness
+            val patterns = listOf(
+                ":\\s*\"(.*?m3u8.*?)\"",
+                "file:\\s*\"(.*?m3u8.*?)\"",
+                "src:\\s*\"(.*?m3u8.*?)\"",
+                "\"(https?://[^\"]+?\\.m3u8[^\"]*?)\""
+            )
+            
+            val extractedUrls = mutableSetOf<String>()
+            
+            for (pattern in patterns) {
+                Regex(pattern).findAll(script).forEach { match ->
+                    val videoUrl = match.groupValues[1].trim()
+                    if (videoUrl.isNotEmpty() && videoUrl.contains("m3u8")) {
+                        extractedUrls.add(fixUrl(videoUrl))
+                    }
+                }
+            }
+            
+            // Generate extractor links for all unique URLs found
+            extractedUrls.forEach { videoUrl ->
+                try {
+                    generateM3u8(
+                        name,
+                        videoUrl,
+                        referer = "$mainUrl/",
+                        headers = headers
+                    ).forEach(callback)
+                } catch (e: Exception) {
+                    // Skip invalid URLs but continue processing others
+                }
+            }
+        } catch (e: Exception) {
+            // Log error but don't crash
+            throw Exception("Failed to extract video from $url: ${e.message}")
         }
     }
 
