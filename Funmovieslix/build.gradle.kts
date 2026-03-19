@@ -24,5 +24,5 @@ cloudstream {
     tvTypes = listOf("Movie","TvSeries")
     iconUrl = "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/Icons/Funmovieslix.png"
 
-    isCrossPlatform = true
+    isCrossPlatform = false
 }
