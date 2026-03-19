@@ -1,4 +1,4 @@
-package com.hexated
+package com.IdlixProvider
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
@@ -18,11 +18,11 @@ import kotlinx.coroutines.awaitAll
 // ============================================
 // OPTIMIZED: Import shared utilities
 // ============================================
-import com.hexated.CacheManager
-import com.hexated.rateLimitDelay
-import com.hexated.getRandomUserAgent
-import com.hexated.executeWithRetry
-import com.hexated.logError
+import com.IdlixProvider.CacheManager
+import com.IdlixProvider.rateLimitDelay
+import com.IdlixProvider.getRandomUserAgent
+import com.IdlixProvider.executeWithRetry
+import com.IdlixProvider.logError
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()

@@ -1,4 +1,4 @@
-package com.layarKacaProvider
+package com.IdlixProvider
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

@@ -1,22 +1,24 @@
-package com.hexated
+package com.LayarKaca21
 
-import com.hexated.SmartCacheMonitor
+import com.LayarKaca21.SmartCacheMonitor
 import com.lagradost.api.Log
-import kotlinx.coroutines.withTimeout
 import com.lagradost.cloudstream3.app
+import kotlinx.coroutines.withTimeout
 
 /**
- * IdlixProvider-specific cache monitor
+ * LayarKaca21-specific cache monitor
+ * 
+ * Mengambil judul-judul dari LayarKaca21 untuk fingerprint comparison
  */
-class IdlixMonitor : SmartCacheMonitor() {
+class LayarKacaMonitor : SmartCacheMonitor() {
     
     companion object {
-        private const val TAG = "IdlixMonitor"
+        private const val TAG = "LayarKacaMonitor"
     }
     
     /**
-     * Fetch titles dari Idlix homepage
-     * Selector: "div.items.full article h3 > a" atau "div.items.featured article h3 > a"
+     * Fetch titles dari LayarKaca21 homepage
+     * Selector: "article figure h3" - sama dengan yang digunakan di toSearchResult()
      */
     override suspend fun fetchTitles(url: String): List<String> {
         return try {
@@ -26,11 +28,9 @@ class IdlixMonitor : SmartCacheMonitor() {
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
             
-            // Selector untuk title - remove year from title
-            document.select("div.items article h3 > a")
-                .mapNotNull { 
-                    it.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
-                }
+            // Selector yang sama dengan mainPage scraping
+            document.select("article figure h3")
+                .mapNotNull { it.ownText()?.trim() }
                 .filter { it.isNotEmpty() }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch titles from $url")
@@ -38,6 +38,9 @@ class IdlixMonitor : SmartCacheMonitor() {
         }
     }
     
+    /**
+     * Get random user-agent (copy dari Utils.kt untuk standalone usage)
+     */
     private fun getRandomUserAgent(): String {
         val userAgents = listOf(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

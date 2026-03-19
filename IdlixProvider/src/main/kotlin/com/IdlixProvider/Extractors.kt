@@ -11,7 +11,7 @@
 // Maintainer: Phisher98
 // ========================================
 
-package com.hexated
+package com.IdlixProvider
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors

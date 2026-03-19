@@ -1,7 +1,7 @@
-package com.hexated
+package com.IdlixProvider
 
-import com.hexated.IdlixProvider.ResponseSource
-import com.hexated.IdlixProvider.Tracks
+import com.IdlixProvider.IdlixProvider.ResponseSource
+import com.IdlixProvider.IdlixProvider.Tracks
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.newSubtitleFile

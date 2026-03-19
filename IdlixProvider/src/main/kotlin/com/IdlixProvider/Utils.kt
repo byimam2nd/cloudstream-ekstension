@@ -1,4 +1,4 @@
-package com.hexated
+package com.IdlixProvider
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.HomePageResponse

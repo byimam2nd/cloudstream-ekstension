@@ -1,4 +1,4 @@
-package com.layarKacaProvider
+package com.LayarKaca21
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
@@ -7,12 +7,12 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import com.layarKacaProvider.CacheManager
-import com.layarKacaProvider.rateLimitDelay
-import com.layarKacaProvider.getRandomUserAgent
-import com.layarKacaProvider.executeWithRetry
-import com.layarKacaProvider.logError
-import com.layarKacaProvider.SmartCacheMonitor
+import com.LayarKaca21.CacheManager
+import com.LayarKaca21.rateLimitDelay
+import com.LayarKaca21.getRandomUserAgent
+import com.LayarKaca21.executeWithRetry
+import com.LayarKaca21.logError
+import com.LayarKaca21.SmartCacheMonitor
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()

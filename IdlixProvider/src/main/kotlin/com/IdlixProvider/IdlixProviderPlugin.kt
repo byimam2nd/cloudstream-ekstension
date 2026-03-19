@@ -1,14 +1,14 @@
-package com.layarKacaProvider
+package com.IdlixProvider
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.layarKacaProvider.LayarKaca21
-import com.layarKacaProvider.AllExtractors
+import com.IdlixProvider.IdlixProvider
+import com.IdlixProvider.AllExtractors
 
 @CloudstreamPlugin
-class LayarKaca21Plugin: BasePlugin() {
+class IdlixProviderPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(LayarKaca21())
+        registerMainAPI(IdlixProvider())
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!

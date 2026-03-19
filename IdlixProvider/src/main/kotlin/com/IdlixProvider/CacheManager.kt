@@ -1,4 +1,4 @@
-package com.hexated
+package com.IdlixProvider
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

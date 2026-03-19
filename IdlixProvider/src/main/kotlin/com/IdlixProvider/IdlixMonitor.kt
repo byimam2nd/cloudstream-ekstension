@@ -1,24 +1,22 @@
-package com.layarKacaProvider
+package com.IdlixProvider
 
-import com.layarKacaProvider.SmartCacheMonitor
+import com.IdlixProvider.SmartCacheMonitor
 import com.lagradost.api.Log
-import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.withTimeout
+import com.lagradost.cloudstream3.app
 
 /**
- * LayarKaca21-specific cache monitor
- * 
- * Mengambil judul-judul dari LayarKaca21 untuk fingerprint comparison
+ * IdlixProvider-specific cache monitor
  */
-class LayarKacaMonitor : SmartCacheMonitor() {
+class IdlixMonitor : SmartCacheMonitor() {
     
     companion object {
-        private const val TAG = "LayarKacaMonitor"
+        private const val TAG = "IdlixMonitor"
     }
     
     /**
-     * Fetch titles dari LayarKaca21 homepage
-     * Selector: "article figure h3" - sama dengan yang digunakan di toSearchResult()
+     * Fetch titles dari Idlix homepage
+     * Selector: "div.items.full article h3 > a" atau "div.items.featured article h3 > a"
      */
     override suspend fun fetchTitles(url: String): List<String> {
         return try {
@@ -28,9 +26,11 @@ class LayarKacaMonitor : SmartCacheMonitor() {
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
             
-            // Selector yang sama dengan mainPage scraping
-            document.select("article figure h3")
-                .mapNotNull { it.ownText()?.trim() }
+            // Selector untuk title - remove year from title
+            document.select("div.items article h3 > a")
+                .mapNotNull { 
+                    it.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
+                }
                 .filter { it.isNotEmpty() }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch titles from $url")
@@ -38,9 +38,6 @@ class LayarKacaMonitor : SmartCacheMonitor() {
         }
     }
     
-    /**
-     * Get random user-agent (copy dari Utils.kt untuk standalone usage)
-     */
     private fun getRandomUserAgent(): String {
         val userAgents = listOf(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
