@@ -298,14 +298,15 @@ class LayarKaca21 : MainAPI() {
                         val directUrl = url.getIframe()
                         if (directUrl.isNotEmpty() && (directUrl.contains(".mp4") || directUrl.contains(".m3u8"))) {
                             callback(
-                                ExtractorLink(
+                                newExtractorLink(
                                     source = "LayarKaca Direct",
                                     name = "LayarKaca Direct",
                                     url = directUrl,
-                                    referer = getBaseUrl(url),
-                                    quality = Qualities.UNKNOWN.value,
                                     type = if (directUrl.contains(".m3u8")) INFER_TYPE else ExtractorLinkType.VIDEO
-                                )
+                                ) {
+                                    this.referer = getBaseUrl(url)
+                                    this.quality = Qualities.Value480
+                                }
                             )
                             extractorSuccess = true
                         }
