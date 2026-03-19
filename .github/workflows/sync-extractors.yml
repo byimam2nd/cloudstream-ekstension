@@ -62,35 +62,82 @@ jobs:
           exit 1
         fi
 
-        # Dynamic folder to package mapping
-        # Only for modules that exist (have build.gradle.kts)
-        # Format: "folder"="subfolder:package"
-        declare -A FOLDER_CONFIGS=(
-          ["Pencurimovie"]="Pencurimovie:pencurimovie"
-          ["LayarKaca21"]="LayarKacaProvider:layarKacaProvider"
-          ["Donghuastream"]="Donghuastream:donghuastream"
-          ["Funmovieslix"]="Funmovieslix:funmovieslix"
-          ["IdlixProvider"]="hexated:hexated"
-          ["Anichin"]="Anichin:anichin"
-        )
-
         # Get active modules from previous step
         MODULES="${{ steps.detect-modules.outputs.modules }}"
-        
+
         echo "📋 Active modules: $MODULES"
         echo ""
 
-        # Copy to each active module only
+        # Copy to each active module
         for MODULE in $MODULES; do
-          # Skip if module not in our config (shouldn't happen, but safety check)
-          if [ -z "${FOLDER_CONFIGS[$MODULE]}" ]; then
-            echo "⚠️  Warning: Module '$MODULE' not in config, skipping..."
-            continue
-          fi
-          
-          IFS=':' read -r FOLDER PACKAGE <<< "${FOLDER_CONFIGS[$MODULE]}"
           echo ""
-          echo "📋 Syncing to $MODULE (folder: com/$FOLDER, package: com.$PACKAGE)..."
+          echo "📋 Processing $MODULE..."
+
+          # Auto-detect: Find the actual folder structure
+          # Look for folders in src/main/kotlin/com/
+          SRC_DIR="$MODULE/src/main/kotlin/com"
+
+          if [ ! -d "$SRC_DIR" ]; then
+            echo "❌ Error: Source directory not found: $SRC_DIR"
+            exit 1
+          fi
+
+          # Get the actual folder name(s) in com/
+          FOLDERS=$(ls -1 "$SRC_DIR" 2>/dev/null)
+          FOLDER_COUNT=$(echo "$FOLDERS" | wc -l)
+
+          if [ "$FOLDER_COUNT" -eq 0 ]; then
+            echo "❌ Error: No folders found in $SRC_DIR"
+            exit 1
+          fi
+
+          # If multiple folders, find the one with Provider/Plugin file
+          if [ "$FOLDER_COUNT" -gt 1 ]; then
+            TARGET_FOLDER=""
+            for folder in $FOLDERS; do
+              if ls "$SRC_DIR/$folder"/*Plugin*.kt 1>/dev/null 2>&1 || \
+                 ls "$SRC_DIR/$folder"/*Provider*.kt 1>/dev/null 2>&1; then
+                TARGET_FOLDER="$folder"
+                break
+              fi
+            done
+
+            if [ -z "$TARGET_FOLDER" ]; then
+              echo "⚠️  Warning: No folder with Provider/Plugin found, using first folder"
+              TARGET_FOLDER=$(echo "$FOLDERS" | head -1)
+            fi
+
+            FOLDER="$TARGET_FOLDER"
+          else
+            FOLDER="$FOLDERS"
+          fi
+
+          # Trim whitespace
+          FOLDER=$(echo "$FOLDER" | xargs)
+
+          echo "   Found folder: com.$FOLDER"
+
+          # Auto-detect: Extract package name from Provider/Plugin file
+          PACKAGE=""
+          for pattern in "*Plugin.kt" "*ProviderPlugin.kt" "*Provider.kt"; do
+            provider_file=$(ls "$SRC_DIR/$FOLDER"/$pattern 2>/dev/null | head -1)
+            if [ -n "$provider_file" ] && [ -f "$provider_file" ]; then
+              # Extract package declaration
+              pkg_line=$(head -5 "$provider_file" | grep "^package ")
+              if [ -n "$pkg_line" ]; then
+                # Extract package name (last part after com.)
+                PACKAGE=$(echo "$pkg_line" | sed 's/package com\.\?//')
+                break
+              fi
+            fi
+          done
+
+          if [ -z "$PACKAGE" ]; then
+            echo "⚠️  Warning: Could not detect package, using folder name (lowercase)"
+            PACKAGE=$(echo "$FOLDER" | tr '[:upper:]' '[:lower:]')
+          fi
+
+          echo "   Detected package: $PACKAGE"
 
           # Destination directory and file
           DEST_DIR="$MODULE/src/main/kotlin/com/$FOLDER"
@@ -99,12 +146,10 @@ jobs:
           # Check if source folder exists
           if [ ! -d "$DEST_DIR" ]; then
             echo "❌ Error: Source directory not found: $DEST_DIR"
-            echo "   Make sure the folder structure is correct for module: $MODULE"
             exit 1
           fi
 
           # Copy master extractors with correct package name
-          # Using awk for better package replacement
           awk -v pkg="$PACKAGE" '
             NR==1 { print "// ========================================" }
             NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
@@ -116,7 +161,7 @@ jobs:
 
           # Count extractor classes
           CLASS_COUNT=$(grep -c "^class \|^open class " "$DEST_FILE" 2>/dev/null || echo 0)
-          echo "✅ Synced: $MODULE/$FOLDER ($CLASS_COUNT extractor classes)"
+          echo "   ✅ Synced: $MODULE/$FOLDER ($CLASS_COUNT extractor classes)"
         done
 
         echo ""
@@ -134,46 +179,49 @@ jobs:
         VALID_COUNT=0
         ERRORS=0
 
-        # Folder to package mapping for validation
-        declare -A FOLDER_MAP=(
-          ["Pencurimovie"]="Pencurimovie"
-          ["LayarKaca21"]="LayarKacaProvider"
-          ["Donghuastream"]="Donghuastream"
-          ["Funmovieslix"]="Funmovieslix"
-          ["IdlixProvider"]="hexated"
-          ["Anichin"]="Anichin"
-        )
-
         for MODULE in $MODULES; do
-          FOLDER="${FOLDER_MAP[$MODULE]}"
-          if [ -z "$FOLDER" ]; then
-            echo "⚠️  Warning: Module '$MODULE' not in folder map, skipping validation..."
+          echo "📋 Validating $MODULE..."
+
+          # Auto-detect folder structure
+          SRC_DIR="$MODULE/src/main/kotlin/com"
+
+          if [ ! -d "$SRC_DIR" ]; then
+            echo "   ❌ ERROR: Source directory not found: $SRC_DIR"
+            ERRORS=$((ERRORS + 1))
             continue
           fi
 
+          # Get folder name
+          FOLDERS=$(ls -1 "$SRC_DIR" 2>/dev/null)
+          FOLDER_COUNT=$(echo "$FOLDERS" | wc -l)
+
+          if [ "$FOLDER_COUNT" -gt 1 ]; then
+            # Find folder with Provider/Plugin
+            TARGET_FOLDER=""
+            for folder in $FOLDERS; do
+              if ls "$SRC_DIR/$folder"/*Plugin*.kt 1>/dev/null 2>&1 || \
+                 ls "$SRC_DIR/$folder"/*Provider*.kt 1>/dev/null 2>&1; then
+                TARGET_FOLDER="$folder"
+                break
+              fi
+            done
+            FOLDER="${TARGET_FOLDER:-$(echo "$FOLDERS" | head -1)}"
+          else
+            FOLDER="$FOLDERS"
+          fi
+
+          FOLDER=$(echo "$FOLDER" | xargs)
+          echo "   Found folder: com.$FOLDER"
+
           EXTRACTORS_FILE="$MODULE/src/main/kotlin/com/$FOLDER/Extractors.kt"
 
-          # Find Provider file - prioritize Plugin files over Provider files
-          # First try: *ProviderPlugin.kt or *Plugin.kt
+          # Find Provider file - prioritize Plugin files
           PROVIDER_FILE=$(find "$MODULE/src/main/kotlin/com/$FOLDER" -maxdepth 1 -name "*Plugin.kt" 2>/dev/null | head -1)
-
-          # Fallback: *Provider.kt (but not MainAPI)
           if [ -z "$PROVIDER_FILE" ]; then
             PROVIDER_FILE=$(find "$MODULE/src/main/kotlin/com/$FOLDER" -maxdepth 1 -name "*Provider.kt" 2>/dev/null | grep -v "MainAPI" | head -1)
           fi
 
-          # Final fallback: try specific patterns
-          if [ -z "$PROVIDER_FILE" ]; then
-            for pattern in "ProviderPlugin.kt" "Plugin.kt" "Provider.kt"; do
-              test_file="$MODULE/src/main/kotlin/com/$FOLDER/$pattern"
-              if [ -f "$test_file" ]; then
-                PROVIDER_FILE="$test_file"
-                break
-              fi
-            done
-          fi
-
-          echo "📋 Validating $MODULE (Provider: $(basename "$PROVIDER_FILE" 2>/dev/null || echo 'NOT FOUND'))..."
+          echo "   Provider: $(basename "$PROVIDER_FILE" 2>/dev/null || echo 'NOT FOUND')"
 
           # Check 1: Extractors.kt exists
           if [ ! -f "$EXTRACTORS_FILE" ]; then
@@ -200,16 +248,16 @@ jobs:
           echo "   ✅ Registered extractors: $REGISTERED_COUNT"
 
           # Check 5: Provider file exists
-          if ! ls $PROVIDER_FILE 1>/dev/null 2>&1; then
-            echo "   ❌ ERROR: Provider file not found: $PROVIDER_FILE"
+          if [ -z "$PROVIDER_FILE" ] || [ ! -f "$PROVIDER_FILE" ]; then
+            echo "   ❌ ERROR: Provider file not found"
             ERRORS=$((ERRORS + 1))
             continue
           fi
           echo "   ✅ Provider file exists"
 
           # Check 6: Provider imports AllExtractors OR uses fully qualified name
-          if ! grep -q "import.*AllExtractors" $PROVIDER_FILE 2>/dev/null && \
-             ! grep -q "com\..*\.AllExtractors" $PROVIDER_FILE 2>/dev/null; then
+          if ! grep -q "import.*AllExtractors" "$PROVIDER_FILE" 2>/dev/null && \
+             ! grep -q "com\..*\.AllExtractors" "$PROVIDER_FILE" 2>/dev/null; then
             echo "   ❌ ERROR: Provider does not import AllExtractors"
             ERRORS=$((ERRORS + 1))
             continue
@@ -217,8 +265,8 @@ jobs:
           echo "   ✅ Provider imports AllExtractors (or uses fully qualified name)"
 
           # Check 7: Provider uses AllExtractors.list.forEach (direct or fully qualified)
-          if ! grep -q "AllExtractors\.list\.forEach" $PROVIDER_FILE 2>/dev/null && \
-             ! grep -q "com\..*\.AllExtractors\.list\.forEach" $PROVIDER_FILE 2>/dev/null; then
+          if ! grep -q "AllExtractors\.list\.forEach" "$PROVIDER_FILE" 2>/dev/null && \
+             ! grep -q "com\..*\.AllExtractors\.list\.forEach" "$PROVIDER_FILE" 2>/dev/null; then
             echo "   ❌ ERROR: Provider does not use AllExtractors.list.forEach"
             ERRORS=$((ERRORS + 1))
             continue
