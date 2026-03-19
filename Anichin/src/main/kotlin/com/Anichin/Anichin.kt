@@ -231,11 +231,18 @@ open class Anichin : MainAPI() {
         }
 
         return if (tvType == TvType.Anime) {
-            val allEpisodes = document.select(".eplister li[data-index]")
+            // FIXED: Use more general selector to catch all episodes including "END" episodes
+            val allEpisodes = document.select(".eplister li")
 
-            val episodes = allEpisodes.map { info ->
+            val episodes = allEpisodes.mapNotNull { info ->
                 val href1 = info.select("a").attr("href")
-                val episodeNumber = info.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
+                if (href1.isEmpty()) return@mapNotNull null
+
+                // FIXED: Extract episode number more robustly
+                val episodeText = info.selectFirst(".epl-num")?.text()?.trim().orEmpty()
+                // Try to extract number from text like "52", "52 END", "END", etc.
+                val episodeNumber = episodeText.replace(Regex("[^0-9]"), "").toIntOrNull()
+                
                 val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
                 val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()
                 var posterr = info.selectFirst("a img")?.attr("data-src") ?: ""
