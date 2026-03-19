@@ -11,7 +11,7 @@
 // Maintainer: Phisher98
 // ========================================
 
-package com.layarKacaProvider
+package com.LayarKacaProvider
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
@@ -249,24 +249,72 @@ open class Dintezuvio : ExtractorApi() {
             "User-Agent" to USER_AGENT,
         )
 
-        val response = app.get(getEmbedUrl(url), referer = referer)
-        val script = if (!getPacked(response.text).isNullOrEmpty()) {
-            var result = getAndUnpack(response.text)
-            if (result.contains("var links")) {
-                result = result.substringAfter("var links")
+        try {
+            val response = app.get(getEmbedUrl(url), referer = referer)
+            
+            // Try multiple methods to extract video URL
+            var script: String? = null
+            
+            // Method 1: Unpack packed JavaScript
+            val packed = getPacked(response.text)
+            if (!packed.isNullOrEmpty()) {
+                var result = getAndUnpack(response.text)
+                if (result.contains("var links")) {
+                    result = result.substringAfter("var links")
+                }
+                script = result
             }
-            result
-        } else {
-            response.document.selectFirst("script:containsData(sources:)")?.data()
-        } ?: return
+            
+            // Method 2: Look for sources in script tags
+            if (script == null) {
+                script = response.document.selectFirst("script:containsData(sources:)")?.data()
+            }
+            
+            // Method 3: Look for direct m3u8/mp4 in meta tags
+            if (script == null) {
+                val videoUrl = response.document.selectFirst("meta[property=og:video]")?.attr("content")
+                if (!videoUrl.isNullOrEmpty() && (videoUrl.contains(".m3u8") || videoUrl.contains(".mp4"))) {
+                    script = "sources:[{file:\"$videoUrl\"}]"
+                }
+            }
+            
+            script ?: return
 
-        Regex(":\\s*\"(.*?m3u8.*?)\"").findAll(script).forEach { m3u8Match ->
-            generateM3u8(
-                name,
-                fixUrl(m3u8Match.groupValues[1]),
-                referer = "$mainUrl/",
-                headers = headers
-            ).forEach(callback)
+            // Extract m3u8 links with multiple regex patterns for robustness
+            val patterns = listOf(
+                ":\\s*\"(.*?m3u8.*?)\"",
+                "file:\\s*\"(.*?m3u8.*?)\"",
+                "src:\\s*\"(.*?m3u8.*?)\"",
+                "\"(https?://[^\"]+?\\.m3u8[^\"]*?)\""
+            )
+            
+            val extractedUrls = mutableSetOf<String>()
+            
+            for (pattern in patterns) {
+                Regex(pattern).findAll(script).forEach { match ->
+                    val videoUrl = match.groupValues[1].trim()
+                    if (videoUrl.isNotEmpty() && videoUrl.contains("m3u8")) {
+                        extractedUrls.add(fixUrl(videoUrl))
+                    }
+                }
+            }
+            
+            // Generate extractor links for all unique URLs found
+            extractedUrls.forEach { videoUrl ->
+                try {
+                    generateM3u8(
+                        name,
+                        videoUrl,
+                        referer = "$mainUrl/",
+                        headers = headers
+                    ).forEach(callback)
+                } catch (e: Exception) {
+                    // Skip invalid URLs but continue processing others
+                }
+            }
+        } catch (e: Exception) {
+            // Log error but don't crash
+            throw Exception("Dintezuvio: Failed to extract video from $url: ${e.message}")
         }
     }
 
@@ -597,33 +645,74 @@ open class StreamRuby : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val id = "embed-([a-zA-Z0-9]+)\\.html".toRegex().find(url)?.groupValues?.get(1) ?: return
-        val response = app.post(
-            "$mainUrl/dl", data = mapOf(
-                "op" to "embed",
-                "file_code" to id,
-                "auto" to "1",
-                "referer" to "",
-            ), referer = referer
-        )
-        val script = if (!getPacked(response.text).isNullOrEmpty()) {
-            getAndUnpack(response.text)
-        } else {
-            response.document.selectFirst("script:containsData(sources:)")?.data()
-        }
-        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
-
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = m3u8.toString(),
-                type = ExtractorLinkType.M3U8,
-            ) {
-                quality = Qualities.Unknown.value
-                this.referer = mainUrl
+        try {
+            val id = "embed-([a-zA-Z0-9]+)\\.html".toRegex().find(url)?.groupValues?.get(1) ?: return
+            
+            val response = app.post(
+                "$mainUrl/dl", data = mapOf(
+                    "op" to "embed",
+                    "file_code" to id,
+                    "auto" to "1",
+                    "referer" to "",
+                ), referer = referer
+            )
+            
+            // Try multiple extraction methods
+            var script: String? = null
+            
+            // Method 1: Unpack packed JavaScript
+            val packed = getPacked(response.text)
+            if (!packed.isNullOrEmpty()) {
+                script = getAndUnpack(response.text)
             }
-        )
+            
+            // Method 2: Look for sources in script tags
+            if (script == null) {
+                script = response.document.selectFirst("script:containsData(sources:)")?.data()
+            }
+            
+            // Method 3: Look for direct m3u8 in meta tags
+            if (script == null) {
+                val videoUrl = response.document.selectFirst("meta[property=og:video]")?.attr("content")
+                if (!videoUrl.isNullOrEmpty() && videoUrl.contains(".m3u8")) {
+                    script = "file:\"$videoUrl\""
+                }
+            }
+            
+            script ?: return
+
+            // Extract m3u8 with multiple regex patterns for robustness
+            val patterns = listOf(
+                "file:\\s*\"(.*?m3u8.*?)\"",
+                ":\\s*\"(.*?m3u8.*?)\"",
+                "src:\\s*\"(.*?m3u8.*?)\"",
+                "\"(https?://[^\"]+?\\.m3u8[^\"]*?)\""
+            )
+            
+            var m3u8: String? = null
+            
+            for (pattern in patterns) {
+                m3u8 = Regex(pattern).find(script)?.groupValues?.getOrNull(1)
+                if (!m3u8.isNullOrEmpty()) break
+            }
+            
+            if (!m3u8.isNullOrEmpty()) {
+                callback.invoke(
+                    newExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = m3u8,
+                        type = ExtractorLinkType.M3U8,
+                    ) {
+                        quality = Qualities.Unknown.value
+                        this.referer = mainUrl
+                    }
+                )
+            }
+        } catch (e: Exception) {
+            // Log error but don't crash
+            throw Exception("StreamRuby: Failed to extract video from $url: ${e.message}")
+        }
     }
 }
 
@@ -664,21 +753,44 @@ open class Vidguardto : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get(getEmbedUrl(url))
-        val resc = res.document.select("script:containsData(eval)").firstOrNull()?.data()
-        resc?.let {
-            val jsonStr2 = AppUtils.tryParseJson<SvgObject>(runJS2(it)) ?: return
-            val watchlink = sigDecode(jsonStr2.stream)
+        try {
+            val res = app.get(getEmbedUrl(url), referer = referer)
+            val resc = res.document.select("script:containsData(eval)").firstOrNull()?.data()
+            
+            resc?.let { script ->
+                try {
+                    val jsonStr2 = AppUtils.tryParseJson<SvgObject>(runJS2(script)) ?: return
+                    val watchlink = sigDecode(jsonStr2.stream)
 
-            callback.invoke(
-                newExtractorLink(
-                    this.name,
-                    name,
-                    watchlink,
-                ) {
-                    this.referer = mainUrl
+                    callback.invoke(
+                        newExtractorLink(
+                            this.name,
+                            name,
+                            watchlink,
+                        ) {
+                            this.referer = mainUrl
+                        }
+                    )
+                } catch (e: Exception) {
+                    // Fallback: Try to extract m3u8 directly from page
+                    val directM3u8 = res.document.selectFirst("meta[property=og:video]")?.attr("content")
+                    if (!directM3u8.isNullOrEmpty() && directM3u8.contains(".m3u8")) {
+                        callback.invoke(
+                            newExtractorLink(
+                                "${this.name} Direct",
+                                "${this.name} Direct",
+                                directM3u8,
+                                type = ExtractorLinkType.M3U8
+                            ) {
+                                this.referer = mainUrl
+                            }
+                        )
+                    }
                 }
-            )
+            }
+        } catch (e: Exception) {
+            // Log error but don't crash
+            throw Exception("Vidguard: Failed to extract video from $url: ${e.message}")
         }
     }
 
