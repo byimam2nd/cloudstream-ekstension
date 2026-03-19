@@ -26,9 +26,32 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Sync Master Extractors to all sites
+    - name: Detect active modules dynamically
+      id: detect-modules
       run: |
-        echo "📦 Syncing Master Extractors to all sites..."
+        echo "🔍 Detecting active modules (folders with build.gradle.kts)..."
+
+        # Find all folders with build.gradle.kts (excluding root)
+        MODULES=""
+        for build_file in $(find . -maxdepth 2 -name "build.gradle.kts" | grep -v "^./build.gradle.kts"); do
+          module_dir=$(dirname "$build_file" | sed 's|^\./||')
+          MODULES="$MODULES $module_dir"
+        done
+
+        # Trim leading space
+        MODULES=$(echo $MODULES | xargs)
+
+        echo "MODULES=$MODULES"
+        echo "modules=$MODULES" >> $GITHUB_OUTPUT
+
+        MODULE_COUNT=$(echo $MODULES | wc -w)
+        echo "module_count=$MODULE_COUNT" >> $GITHUB_OUTPUT
+
+        echo "✅ Found $MODULE_COUNT active module(s): $MODULES"
+
+    - name: Sync Master Extractors to all active sites
+      run: |
+        echo "📦 Syncing Master Extractors to all active sites..."
 
         # Master Extractors file location
         MASTER_FILE="docs/MasterExtractors.kt"
@@ -39,30 +62,46 @@ jobs:
           exit 1
         fi
 
-        # Site to folder mapping (folder name may differ from site name)
-        # Format: "SiteName"="folder:package"
-        declare -A SITE_CONFIGS=(
+        # Dynamic folder to package mapping
+        # Only for modules that exist (have build.gradle.kts)
+        # Format: "folder"="subfolder:package"
+        declare -A FOLDER_CONFIGS=(
           ["Pencurimovie"]="Pencurimovie:pencurimovie"
           ["LayarKaca21"]="LayarKacaProvider:layarKacaProvider"
           ["Donghuastream"]="Donghuastream:donghuastream"
           ["Funmovieslix"]="Funmovieslix:funmovieslix"
-          ["HiAnime"]="HiAnime:hiAnime"
           ["IdlixProvider"]="hexated:hexated"
           ["Anichin"]="Anichin:anichin"
         )
 
-        # Copy to each site
-        for SITE in "${!SITE_CONFIGS[@]}"; do
-          IFS=':' read -r FOLDER PACKAGE <<< "${SITE_CONFIGS[$SITE]}"
-          echo ""
-          echo "📋 Copying to $SITE (folder: $FOLDER, package: com.$PACKAGE)..."
+        # Get active modules from previous step
+        MODULES="${{ steps.detect-modules.outputs.modules }}"
+        
+        echo "📋 Active modules: $MODULES"
+        echo ""
 
-          # Destination directory
-          DEST_DIR="$SITE/src/main/kotlin/com/$FOLDER"
+        # Copy to each active module only
+        for MODULE in $MODULES; do
+          # Skip if module not in our config (shouldn't happen, but safety check)
+          if [ -z "${FOLDER_CONFIGS[$MODULE]}" ]; then
+            echo "⚠️  Warning: Module '$MODULE' not in config, skipping..."
+            continue
+          fi
+          
+          IFS=':' read -r FOLDER PACKAGE <<< "${FOLDER_CONFIGS[$MODULE]}"
+          echo ""
+          echo "📋 Syncing to $MODULE (folder: com/$FOLDER, package: com.$PACKAGE)..."
+
+          # Destination directory and file
+          DEST_DIR="$MODULE/src/main/kotlin/com/$FOLDER"
           DEST_FILE="$DEST_DIR/Extractors.kt"
 
-          # Create directory if not exists
-          mkdir -p "$DEST_DIR"
+          # Check if source folder exists
+          if [ ! -d "$DEST_DIR" ]; then
+            echo "❌ Error: Source directory not found: $DEST_DIR"
+            echo "   Make sure the folder structure is correct for module: $MODULE"
+            exit 1
+          fi
 
           # Copy master extractors with correct package name
           # Using awk for better package replacement
@@ -77,22 +116,82 @@ jobs:
 
           # Count extractor classes
           CLASS_COUNT=$(grep -c "^class \|^open class " "$DEST_FILE" 2>/dev/null || echo 0)
-          echo "✅ Copied Master Extractors to $SITE/$FOLDER ($CLASS_COUNT classes)"
+          echo "✅ Synced: $MODULE/$FOLDER ($CLASS_COUNT extractor classes)"
         done
 
         echo ""
         echo "✅ Sync completed!"
+        echo "📊 Summary: Synced Master Extractors to $(echo $MODULES | wc -w) active module(s)"
 
     - name: Verify extractor files
       run: |
         echo ""
         echo "🔍 Verifying extractor files..."
         echo ""
-        echo "Files created/updated:"
-        find . -path "*/src/main/kotlin/com/*/Extractors.kt" -type f | while read file; do
-          COUNT=$(grep -c "^class \|^open class " "$file" 2>/dev/null || echo 0)
-          echo "  📄 $file ($COUNT classes)"
+
+        MODULES="${{ steps.detect-modules.outputs.modules }}"
+        MODULE_COUNT=$(echo $MODULES | wc -w)
+        VALID_COUNT=0
+        ERRORS=0
+
+        # Folder to package mapping for validation
+        declare -A FOLDER_MAP=(
+          ["Pencurimovie"]="Pencurimovie"
+          ["LayarKaca21"]="LayarKacaProvider"
+          ["Donghuastream"]="Donghuastream"
+          ["Funmovieslix"]="Funmovieslix"
+          ["IdlixProvider"]="hexated"
+          ["Anichin"]="Anichin"
+        )
+
+        for MODULE in $MODULES; do
+          FOLDER="${FOLDER_MAP[$MODULE]}"
+          if [ -z "$FOLDER" ]; then
+            echo "⚠️  Warning: Module '$MODULE' not in folder map, skipping validation..."
+            continue
+          fi
+
+          EXTRACTORS_FILE="$MODULE/src/main/kotlin/com/$FOLDER/Extractors.kt"
+
+          if [ ! -f "$EXTRACTORS_FILE" ]; then
+            echo "❌ ERROR: Extractors.kt not found: $EXTRACTORS_FILE"
+            ERRORS=$((ERRORS + 1))
+            continue
+          fi
+
+          # Count extractor classes
+          CLASS_COUNT=$(grep -c "^class \|^open class " "$EXTRACTORS_FILE" 2>/dev/null || echo 0)
+
+          # Count registered extractors in AllExtractors object
+          REGISTERED_COUNT=$(grep -A 100 "object AllExtractors" "$EXTRACTORS_FILE" | grep -c "()" 2>/dev/null || echo 0)
+
+          echo "✅ $MODULE: $CLASS_COUNT classes, $REGISTERED_COUNT registered"
+
+          if [ "$CLASS_COUNT" -gt 0 ]; then
+            VALID_COUNT=$((VALID_COUNT + 1))
+          fi
         done
+
+        echo ""
+        echo "📊 Validation Summary:"
+        echo "   Total modules: $MODULE_COUNT"
+        echo "   Valid extractors: $VALID_COUNT"
+        echo "   Errors: $ERRORS"
+
+        if [ "$ERRORS" -gt 0 ]; then
+          echo ""
+          echo "❌ Validation FAILED: $ERRORS module(s) missing Extractors.kt"
+          exit 1
+        fi
+
+        if [ "$VALID_COUNT" -eq 0 ]; then
+          echo ""
+          echo "❌ Validation FAILED: No valid extractor files found"
+          exit 1
+        fi
+
+        echo ""
+        echo "✅ Validation PASSED: All $VALID_COUNT module(s) have valid Extractors.kt"
 
     - name: Commit and push if changes exist
       run: |
