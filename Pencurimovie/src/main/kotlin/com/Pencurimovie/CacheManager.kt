@@ -10,7 +10,7 @@
 // ALL-IN-ONE FILE for easy maintenance
 // ========================================
 
-package com.SITE_PLACEHOLDER
+package com.Pencurimovie
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
