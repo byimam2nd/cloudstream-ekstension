@@ -75,11 +75,11 @@ class ImageCache {
             }
             
             Log.d(TAG, "Cache MISS for image: $imageUrl")
-            
+
             // Fetch image dari URL
             val response = app.get(imageUrl)
-            val bytes = response.bytes()
-            
+            val bytes = response.body.bytes()
+
             if (bytes.isEmpty()) {
                 Log.e(TAG, "Empty response for image: $imageUrl")
                 return@withContext null

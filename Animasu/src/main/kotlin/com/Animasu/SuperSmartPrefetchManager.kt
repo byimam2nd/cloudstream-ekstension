@@ -74,36 +74,36 @@ class SuperSmartPrefetchManager {
             trackWatchEvent(currentEpisode)
             
             // Find next episode
-            val currentIndex = allEpisodes.indexOfFirst { it.url == currentEpisode.url }
-            
+            val currentIndex = allEpisodes.indexOfFirst { it.data == currentEpisode.data }
+
             if (currentIndex == -1 || currentIndex >= allEpisodes.size - 1) {
                 Log.d(TAG, "No next episode to prefetch")
                 return@withLock
             }
-            
+
             val nextEpisode = allEpisodes[currentIndex + 1]
-            
+
             // Add to prefetch queue dengan high priority
-            addToQueue(nextEpisode.url, priority = 10)
-            
+            addToQueue(nextEpisode.data, priority = 10)
+
             Log.d(TAG, "Prefetching next episode: ${nextEpisode.name}")
-            
+
             // Prefetch immediately untuk next episode
             prefetchScope.launch {
                 try {
                     withTimeout(PREFETCH_TIMEOUT) {
-                        app.get(nextEpisode.url).document
+                        app.get(nextEpisode.data).document
                         Log.d(TAG, "Successfully prefetched: ${nextEpisode.name}")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to prefetch: ${e.message}")
                 }
             }
-            
+
             // Predict dan prefetch episode setelahnya (priority lebih rendah)
             if (currentIndex + 2 < allEpisodes.size) {
                 val afterNextEpisode = allEpisodes[currentIndex + 2]
-                addToQueue(afterNextEpisode.url, priority = 5)
+                addToQueue(afterNextEpisode.data, priority = 5)
                 
                 Log.d(TAG, "Queueing for prefetch: ${afterNextEpisode.name}")
             }
