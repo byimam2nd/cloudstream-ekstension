@@ -40,6 +40,7 @@ If you find this project helpful, consider supporting its development!
 |-----------|----------|--------|-------------|
 | **Anichin** | 🇮🇩 ID | ✅ Active | Streaming Anime China Subtitle Indonesia |
 | **Animasu** 🆕 | 🇮🇩 ID | ✅ Active | Streaming Anime Subtitle Indonesia dengan kualitas tinggi |
+| **Samehadaku** 🆕 | 🇮🇩 ID | ✅ Active | Streaming Anime Subtitle Indonesia dengan update tercepat |
 | **Donghuastream** | 🇮🇩 ID | ✅ Active | Donghua (Chinese Anime) Subtitle Indonesia |
 
 ### 🎬 Movie & TV Extensions
