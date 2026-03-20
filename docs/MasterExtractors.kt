@@ -1361,27 +1361,27 @@ class Dhtpre : Dingtezuni() {
 
 // VidStack Variants (Indonesian sites)
 class Fufaupns : VidStack() {
-    override val name = "Fufaupns"
-    override val mainUrl = "https://fufafilm.upns.pro"
-    override val requiresReferer = true
+    override var name = "Fufaupns"
+    override var mainUrl = "https://fufafilm.upns.pro"
+    override var requiresReferer = true
 }
 
 class P2pplay : VidStack() {
-    override val name = "P2pplay"
-    override val mainUrl = "https://nf21.p2pplay.pro"
-    override val requiresReferer = true
+    override var name = "P2pplay"
+    override var mainUrl = "https://nf21.p2pplay.pro"
+    override var requiresReferer = true
 }
 
 class Playerngefilm21 : VidStack() {
-    override val name = "Playerngefilm21"
-    override val mainUrl = "https://player.ngefilm21.com"
-    override val requiresReferer = true
+    override var name = "Playerngefilm21"
+    override var mainUrl = "https://player.ngefilm21.com"
+    override var requiresReferer = true
 }
 
 class Rpmvid : VidStack() {
-    override val name = "Rpmvid"
-    override val mainUrl = "https://rpmvid.com"
-    override val requiresReferer = true
+    override var name = "Rpmvid"
+    override var mainUrl = "https://rpmvid.com"
+    override var requiresReferer = true
 }
 
 // Hxfile Variant (Anime sites)
