@@ -1356,6 +1356,67 @@ class Dhtpre : Dingtezuni() {
 }
 
 // ========================================
+// PHASE 2: MEDIUM PRIORITY EXTRACTORS
+// ========================================
+
+// VidStack Variants (Indonesian sites)
+class Fufaupns : VidStack() {
+    override val name = "Fufaupns"
+    override val mainUrl = "https://fufafilm.upns.pro"
+    override val requiresReferer = true
+}
+
+class P2pplay : VidStack() {
+    override val name = "P2pplay"
+    override val mainUrl = "https://nf21.p2pplay.pro"
+    override val requiresReferer = true
+}
+
+class Playerngefilm21 : VidStack() {
+    override val name = "Playerngefilm21"
+    override val mainUrl = "https://player.ngefilm21.com"
+    override val requiresReferer = true
+}
+
+class Rpmvid : VidStack() {
+    override val name = "Rpmvid"
+    override val mainUrl = "https://rpmvid.com"
+    override val requiresReferer = true
+}
+
+// Hxfile Variant (Anime sites)
+open class Hxfile : ExtractorApi() {
+    override val name = "Hxfile"
+    override val mainUrl = "https://hxfile.co"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer=referer)
+        val document = response.document
+        
+        val videoUrl = document.selectFirst("video source")?.attr("src")
+            ?: Regex("""file:\s*['"]([^'"]+)['"]""").find(response.text)?.groupValues?.get(1)
+            ?: return
+        
+        callback.invoke(
+            newExtractorLink(name, name, videoUrl, INFER_TYPE) {
+                this.referer = "$mainUrl/"
+            }
+        )
+    }
+}
+
+class Xshotcok : Hxfile() {
+    override val name = "Xshotcok"
+    override val mainUrl = "https://xshotcok.com"
+}
+
+// ========================================
 // EXTRACTOR REGISTRY (Auto-Register)
 // ========================================
 // List semua extractor untuk auto-register
@@ -1377,7 +1438,7 @@ object AllExtractors {
         Dingtezuni(),
         Dhtpre(),
 
-        // VidStack based (7)
+        // VidStack based (11)
         Listeamed(),
         Streamcasthub(),
         Dm21embed(),
@@ -1385,18 +1446,23 @@ object AllExtractors {
         Pm21p2p(),
         Dm21(),
         Meplayer(),
+        Fufaupns(),
+        P2pplay(),
+        Playerngefilm21(),
+        Rpmvid(),
 
-        // Custom extractors (3)
+        // Custom extractors (4)
         Voe(),
         Veev(),
         Dintezuvio(),
+        Hxfile(),
 
         // OK.RU based (3)
         Odnoklassniki(),
         OkRuSSL(),
         OkRuHTTP(),
 
-        // Other extractors (19)
+        // Other extractors (21)
         Dailymotion(),
         Rumble(),
         StreamRuby(),
@@ -1418,10 +1484,11 @@ object AllExtractors {
         BloggerExtractor(),
         PixelDrainDev(),
         Upload18com(),
+        Xshotcok(),
     )
 }
 
 // ========================================
-// TOTAL: 45 EXTRACTOR CLASSES
+// TOTAL: 50 EXTRACTOR CLASSES
 // ========================================
 // Build fix test
