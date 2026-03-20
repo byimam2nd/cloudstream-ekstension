@@ -240,7 +240,6 @@ class LayarKaca21 : MainAPI() {
                 this.posterHeaders = posterHeaders
                 this.year = year
                 this.plot = description
-                this.addDubStatus(dubExist = false, subExist = true)
                 this.tags = tags
                 this.score = Score.from10(rating)
                 this.recommendations = recommendations
@@ -252,7 +251,6 @@ class LayarKaca21 : MainAPI() {
                 this.posterHeaders = posterHeaders
                 this.year = year
                 this.plot = description
-                this.addDubStatus(dubExist = false, subExist = true)
                 this.tags = tags
                 this.score = Score.from10(rating)
                 this.recommendations = recommendations
