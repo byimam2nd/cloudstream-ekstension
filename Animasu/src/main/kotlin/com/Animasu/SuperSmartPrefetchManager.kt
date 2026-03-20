@@ -122,7 +122,7 @@ class SuperSmartPrefetchManager {
     private fun trackWatchEvent(episode: Episode) {
         watchHistory.add(
             WatchEvent(
-                episodeUrl = episode.url,
+                episodeUrl = episode.data,
                 episodeNumber = episode.episode
             )
         )
