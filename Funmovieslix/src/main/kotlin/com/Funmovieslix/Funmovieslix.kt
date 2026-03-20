@@ -188,7 +188,6 @@ class Funmovieslix : MainAPI() {
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.plot = description
-                this.addDubStatus(dubExist = false, subExist = true)
                 this.tags = genre
                 this.year = year
                 addTrailer(trailer)
@@ -199,7 +198,6 @@ class Funmovieslix : MainAPI() {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
                 this.plot = description
-                this.addDubStatus(dubExist = false, subExist = true)
                 this.tags = genre
                 this.year = year
                 addTrailer(trailer)
