@@ -129,9 +129,9 @@ class Samehadaku : MainAPI() {
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         val a = selectFirst("a") ?: return null
 
-        val title = selectFirst("a")?.attr("title").ifBlank {
+        val title = (selectFirst("a")?.attr("title").orEmpty().ifBlank {
             selectFirst("div.title, h2.entry-title a, div.lftinfo h2")?.text()
-        } ?: return null
+        }) ?: return null
 
         val href = fixUrl(a.attr("href"))
         val poster = fixUrlNull(selectFirst("img")?.attr("src"))
@@ -232,7 +232,7 @@ class Samehadaku : MainAPI() {
             ?.removeBloat()
             ?: throw Exception("Title not found")
         
-        val posterUrl = loadResult.selectFirst("div.thumb img")?.attr("src")
+        val posterUrlValue = loadResult.selectFirst("div.thumb img")?.attr("src")
         val description = loadResult.select("div.desc p").text()
         val tags = loadResult.select("div.genre-info a").map { it.text() }
 
@@ -271,7 +271,7 @@ class Samehadaku : MainAPI() {
         }.getOrNull()
         
         return newAnimeLoadResponse(animeTitle, url, type) {
-            posterUrl = tracker?.image ?: posterUrl
+            posterUrl = tracker?.image ?: posterUrlValue
             backgroundPosterUrl = tracker?.cover
             plot = description
             this.tags = tags
