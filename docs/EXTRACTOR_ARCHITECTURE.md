@@ -54,6 +54,7 @@ Setiap file `Extractors.kt` menggunakan package name yang sesuai dengan nama sit
 | IdlixProvider | `package com.IdlixProvider` | ✅ |
 | Anichin | `package com.Anichin` | ✅ |
 | Animasu | `package com.Animasu` | ✅ 🆕 |
+| Samehadaku | `package com.Samehadaku` | ✅ 🆕 |
 
 ---
 
@@ -436,4 +437,5 @@ bash scripts/sync-extractors.sh
 
 **Last Updated:** 2026-03-20
 **Maintainer:** Phisher98 / Imam2nd
-**Status:** ✅ VERIFIED & PRODUCTION READY (8 modules)
+**Status:** ✅ VERIFIED & PRODUCTION READY (9 modules)
+**Total Extractors:** 50 classes × 9 modules = 450 instances

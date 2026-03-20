@@ -10,6 +10,16 @@
 ### Source Code
 - **[MasterExtractors.kt](MasterExtractors.kt)** - Central extractor repository (50 extractor classes)
 
+### Modules (9 Total)
+- **Anichin** - Anime China Indonesia
+- **Animasu** - Anime Indonesia
+- **Samehadaku** 🆕 - Anime Indonesia (Popular)
+- **Donghuastream** - Donghua Indonesia
+- **Pencurimovie** - Movies & TV Indonesia
+- **LayarKaca21** - Movies & TV Indonesia
+- **Funmovieslix** - Movies & TV Indonesia
+- **Idlix** - Movies & TV Indonesia
+
 ### User Guides
 - **[README-StremioAddon.md](README-StremioAddon.md)** - How to use Stremio addons
 - **[README-StremioX.md](README-StremioX.md)** - StremioX setup guide

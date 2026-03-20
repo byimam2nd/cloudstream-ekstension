@@ -105,7 +105,8 @@ cloudstream-ekstension/
 ├── 📂 HiAnime/                         # 🎬 Site Plugin 5
 ├── 📂 Anichin/                         # 🎬 Site Plugin 6
 ├── 📂 Animasu/                         # 🎬 Site Plugin 7 (NEW! 🆕)
-└── 📂 IdlixProvider/                   # 🎬 Site Plugin 8
+├── 📂 Samehadaku/                      # 🎬 Site Plugin 8 (NEW! 🆕)
+└── 📂 IdlixProvider/                   # 🎬 Site Plugin 9
 ```
 
 ---

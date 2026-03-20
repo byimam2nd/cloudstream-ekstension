@@ -72,6 +72,7 @@ ProviderName/
 | Donghuastream | `com.donghuastream` | `com/Donghuastream/` | ✅ |
 | Funmovieslix | `com.funmovieslix` | `com/Funmovieslix/` | ✅ |
 | Animasu | `com.animasu` | `com/Animasu/` | ✅ 🆕 |
+| Samehadaku | `com.samehadaku` | `com/Samehadaku/` | ✅ 🆕 |
 
 **⚠️ PENTING:** Package name HARUS konsisten di semua file dalam satu provider!
 
