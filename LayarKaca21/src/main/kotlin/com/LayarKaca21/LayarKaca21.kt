@@ -45,12 +45,12 @@ class LayarKaca21 : MainAPI() {
         "$mainUrl/nonton-bareng-keluarga/page/" to "Nonton Bareng Keluarga",
         "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
         "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
-        "$seriesUrl/latest-series/page/" to "Series Terbaru",
-        "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
-        "$seriesUrl/genre/horror/page/" to "Film Horor Terbaru",
-        "$seriesUrl/genre/comedy/page/" to "Film Comedy Terbaru",
+        "$mainUrl/genre/horror/page/" to "Film Horor Terbaru",
+        "$mainUrl/genre/comedy/page/" to "Film Comedy Terbaru",
         "$mainUrl/country/thailand/page/" to "Film Thailand Terbaru",
         "$mainUrl/country/china/page/" to "Film China Terbaru",
+        "$seriesUrl/latest-series/page/" to "Series Terbaru",
+        "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
     )
 
     override suspend fun getMainPage(
