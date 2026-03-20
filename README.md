@@ -32,6 +32,27 @@ If you find this project helpful, consider supporting its development!
 
 ---
 
+## 📺 Available Extensions
+
+### 🎬 Anime Extensions
+
+| Extension | Language | Status | Description |
+|-----------|----------|--------|-------------|
+| **Anichin** | 🇮🇩 ID | ✅ Active | Streaming Anime China Subtitle Indonesia |
+| **Animasu** 🆕 | 🇮🇩 ID | ✅ Active | Streaming Anime Subtitle Indonesia dengan kualitas tinggi |
+| **Donghuastream** | 🇮🇩 ID | ✅ Active | Donghua (Chinese Anime) Subtitle Indonesia |
+
+### 🎬 Movie & TV Extensions
+
+| Extension | Language | Status | Description |
+|-----------|----------|--------|-------------|
+| **Pencurimovie** | 🇮🇩 ID | ✅ Active | Film & TV Series Subtitle Indonesia |
+| **LayarKaca21** | 🇮🇩 ID | ✅ Active | Film & TV Series Subtitle Indonesia |
+| **Funmovieslix** | 🇮🇩 ID | ✅ Active | Film & TV Series Subtitle Indonesia |
+| **Idlix** | 🇮🇩 ID | ✅ Active | Film & TV Series Subtitle Indonesia |
+
+---
+
 ## 🔄 Ultima Sync Setup
 
 Want to sync your devices using **Ultima’s Cross Device Watch Sync**?
