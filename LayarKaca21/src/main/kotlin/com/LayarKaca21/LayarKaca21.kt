@@ -42,7 +42,7 @@ class LayarKaca21 : MainAPI() {
     override val mainPage = mainPageOf(
         "$mainUrl/latest/page/" to "Film Upload Terbaru",
         "$mainUrl/populer/page/" to "Film Terplopuler",
-        "$mainUrl/rekomendasi-film-pintar/page/" to "Film Rekomendasi",
+        "$mainUrl/rekomendasi/" to "Film Rekomendasi",
         "$mainUrl/nonton-bareng-keluarga/page/" to "Nonton Bareng Keluarga",
         "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
         "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
