@@ -263,7 +263,7 @@ class Idlix : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
-                addDubStatus(dubExist = false, subExist = true)
+                this.addDubStatus(dubExist = false, subExist = true)
                 this.tags = tags
                 this.score = Score.from100(rating)
                 addActors(actors)
@@ -275,7 +275,7 @@ class Idlix : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
-                addDubStatus(dubExist = false, subExist = true)
+                this.addDubStatus(dubExist = false, subExist = true)
                 this.tags = tags
                 this.score = Score.from100(rating)
                 addActors(actors)

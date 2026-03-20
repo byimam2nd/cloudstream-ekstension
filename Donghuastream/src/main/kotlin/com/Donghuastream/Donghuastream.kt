@@ -176,7 +176,7 @@ open class Donghuastream : MainAPI() {
             newTvSeriesLoadResponse(title, url, TvType.Anime, episodes) {
                 this.posterUrl = poster
                 this.plot = description
-                addDubStatus(dubExist = false, subExist = true)
+                this.addDubStatus(dubExist = false, subExist = true)
             }
         } else {
             if (poster.isEmpty()) {
