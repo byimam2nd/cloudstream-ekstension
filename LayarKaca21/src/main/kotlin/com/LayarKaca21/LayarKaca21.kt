@@ -285,21 +285,31 @@ class LayarKaca21 : MainAPI() {
                 }
             )
             
-            // Pattern 2: New structure - iframe.sbs links in option/anchor tags
+            // Pattern 2: New structure - option tags with playeriframe.sbs (most common)
             if (playerLinks.isEmpty()) {
                 playerLinks.addAll(
-                    document.select("option[value*=iframe.sbs], a[href*=iframe.sbs]").mapNotNull {
-                        val link = it.attr("value").ifEmpty { it.attr("href") }
+                    document.select("option[value*=playeriframe.sbs], option[value*=iframe.sbs]").mapNotNull {
+                        val link = it.attr("value")
                         if (link.isNotEmpty() && link.contains("iframe.sbs")) link else null
                     }
                 )
             }
             
-            // Pattern 3: Extract from script data
+            // Pattern 3: Anchor tags with iframe.sbs links
             if (playerLinks.isEmpty()) {
-                val scriptData = document.selectFirst("script:containsData(iframe.sbs)")?.data()
+                playerLinks.addAll(
+                    document.select("a[href*=playeriframe.sbs], a[href*=iframe.sbs]").mapNotNull {
+                        val link = it.attr("href")
+                        if (link.isNotEmpty() && link.contains("iframe.sbs")) fixUrl(link) else null
+                    }
+                )
+            }
+            
+            // Pattern 4: Extract from script data
+            if (playerLinks.isEmpty()) {
+                val scriptData = document.selectFirst("script:containsData(playeriframe.sbs), script:containsData(iframe.sbs)")?.data()
                 if (scriptData != null) {
-                    val iframeRegex = Regex("""iframe\.sbs/iframe/[^"']+""")
+                    val iframeRegex = Regex("""(player)?iframe\.sbs/iframe/[^"']+""")
                     playerLinks.addAll(
                         iframeRegex.findAll(scriptData).map { "https://${it.value}" }
                     )
@@ -317,7 +327,7 @@ class LayarKaca21 : MainAPI() {
                 try {
                     rateLimitDelay()
                     
-                    // If URL is already an iframe.sbs link, use it directly
+                    // If URL is already an iframe.sbs or playeriframe.sbs link, use it directly
                     val iframeUrl = if (url.contains("iframe.sbs")) {
                         url
                     } else {
