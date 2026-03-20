@@ -12,6 +12,7 @@
 package com.Animasu
 
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.fixUrlNull
 import org.jsoup.nodes.Element
 import kotlin.random.Random
@@ -109,7 +110,7 @@ fun fixUrlSafe(url: String, baseUrl: String = "https://v1.animasu.top"): String 
 
     // Fix relative URL
     return try {
-        fixUrlNull(url, baseUrl) ?: url
+        fixUrl(url, baseUrl)
     } catch (e: Exception) {
         url
     }
