@@ -21,6 +21,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
 
+// Import cache classes
+import com.Samehadaku.CacheManager
+
 // ========================================
 // CACHE INSTANCES
 // ========================================
@@ -167,7 +170,7 @@ class Samehadaku : MainAPI() {
         Log.d("Samehadaku", "Cache MISS for mainPage: $cacheKey")
         
         // Fetch dengan retry logic dan rate limiting
-        val response = executeWithRetry {
+        val httpResponse = executeWithRetry {
             rateLimitDelay()
             app.get(
                 "${request.data}$page",
@@ -177,7 +180,7 @@ class Samehadaku : MainAPI() {
         }
         
         val home = if (request.name == "Episode Terbaru") {
-            val document = response.document
+            val document = httpResponse.document
             document.select("div.post-show ul li").mapNotNull { li ->
                 runCatching {
                     val a = li.selectFirst("a") ?: return@mapNotNull null
@@ -204,7 +207,7 @@ class Samehadaku : MainAPI() {
                 }.getOrElse { null }
             }
         } else {
-            val document = response.document
+            val document = httpResponse.document
             document.select("div.animposx").mapNotNull {
                 runCatching { it.toSearchResult() }.getOrElse { null }
             }
