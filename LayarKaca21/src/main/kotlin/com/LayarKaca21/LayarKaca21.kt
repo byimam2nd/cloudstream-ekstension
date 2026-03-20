@@ -274,18 +274,37 @@ class LayarKaca21 : MainAPI() {
                 ).documentLarge
             }
 
-            // Support both old and new player structure
-            // Old: ul#player-list > li > a
-            // New: button.ganti-player or anchors with player URLs
-            val playerLinks = document.select("ul#player-list > li > a")
-                .ifEmpty { 
-                    // Fallback: Try new structure - buttons or links with player URLs
-                    document.select("a[href*=/player/], button[data-player], div.player-option a") 
-                }
-                .mapNotNull {
+            // Support multiple player URL patterns
+            val playerLinks = mutableListOf<String>()
+            
+            // Pattern 1: Old structure - ul#player-list > li > a
+            playerLinks.addAll(
+                document.select("ul#player-list > li > a").mapNotNull {
                     val link = it.attr("href")
                     if (link.isNotEmpty()) fixUrl(link) else null
                 }
+            )
+            
+            // Pattern 2: New structure - iframe.sbs links in option/anchor tags
+            if (playerLinks.isEmpty()) {
+                playerLinks.addAll(
+                    document.select("option[value*=iframe.sbs], a[href*=iframe.sbs]").mapNotNull {
+                        val link = it.attr("value").ifEmpty { it.attr("href") }
+                        if (link.isNotEmpty() && link.contains("iframe.sbs")) link else null
+                    }
+                )
+            }
+            
+            // Pattern 3: Extract from script data
+            if (playerLinks.isEmpty()) {
+                val scriptData = document.selectFirst("script:containsData(iframe.sbs)")?.data()
+                if (scriptData != null) {
+                    val iframeRegex = Regex("""iframe\.sbs/iframe/[^"']+""")
+                    playerLinks.addAll(
+                        iframeRegex.findAll(scriptData).map { "https://${it.value}" }
+                    )
+                }
+            }
 
             if (playerLinks.isEmpty()) {
                 logError("LayarKaca", "No player links found")
@@ -297,7 +316,14 @@ class LayarKaca21 : MainAPI() {
             playerLinks.amap { url ->
                 try {
                     rateLimitDelay()
-                    val iframeUrl = url.getIframe()
+                    
+                    // If URL is already an iframe.sbs link, use it directly
+                    val iframeUrl = if (url.contains("iframe.sbs")) {
+                        url
+                    } else {
+                        url.getIframe()
+                    }
+                    
                     if (iframeUrl.isNotEmpty()) {
                         val referer = getBaseUrl(url)
                         // Try extractor first
@@ -308,7 +334,11 @@ class LayarKaca21 : MainAPI() {
                     logError("LayarKaca", "Extractor failed for: $url - ${e.message}", e)
                     // FALLBACK: If extractor fails, try direct video URL
                     try {
-                        val directUrl = url.getIframe()
+                        val directUrl = if (url.contains("iframe.sbs")) {
+                            url
+                        } else {
+                            url.getIframe()
+                        }
                         if (directUrl.isNotEmpty() && (directUrl.contains(".mp4") || directUrl.contains(".m3u8"))) {
                             callback(
                                 newExtractorLink(
