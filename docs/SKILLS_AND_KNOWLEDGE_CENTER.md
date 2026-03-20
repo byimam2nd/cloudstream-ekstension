@@ -160,6 +160,275 @@ class Sitename : MainAPI() {
 
 ---
 
+## ⚠️ DO's and DON'Ts (YANG BOLEH & TIDAK BOLEH)
+
+### 🟢 DO's (YANG BOLEH DILAKUKAN)
+
+#### 1. Technical DO's ✅
+
+```kotlin
+// ✅ BOLEH: Gunakan rate limiting untuk mengurangi load server
+suspend fun rateLimitDelay() {
+    delay(100 + Random.nextLong(400))  // 100-500ms delay
+}
+
+// ✅ BOLEH: Cache results untuk mengurangi requests
+private val searchCache = mutableMapOf<String, List<SearchResponse>>()
+override suspend fun search(query: String): List<SearchResponse> {
+    return searchCache.getOrPut(query) { performSearch(query) }
+}
+
+// ✅ BOLEH: Gunakan user-agent rotation
+private val USER_AGENTS = listOf(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15"
+)
+fun getRandomUserAgent(): String = USER_AGENTS.random()
+
+// ✅ BOLEH: Handle error dengan baik
+try {
+    val doc = app.get(url, timeout=10000).document
+    // Process
+} catch (e: Exception) {
+    Log.e("Sitename", "Error: ${e.message}")
+    return emptyList()
+}
+
+// ✅ BOLEH: Gunakan retry logic untuk failed requests
+suspend fun <T> executeWithRetry(
+    maxRetries: Int = 3,
+    block: suspend () -> T
+): T {
+    var lastException: Exception? = null
+    repeat(maxRetries) { attempt ->
+        try { return block() }
+        catch (e: Exception) {
+            lastException = e
+            if (attempt < maxRetries - 1) delay(1000 * (attempt + 1))
+        }
+    }
+    throw lastException ?: Exception("Unknown error")
+}
+```
+
+#### 2. Legal DO's ✅
+
+```kotlin
+// ✅ BOLEH: Extension untuk personal use
+// ✅ BOLEH: Extension untuk belajar development
+// ✅ BOLEH: Extension untuk testing purposes
+// ✅ BOLEH: Share extension sebagai open source
+// ✅ BOLEH: Fork dan modify dari repository lain (dengan credit)
+```
+
+#### 3. Ethical DO's ✅
+
+```kotlin
+// ✅ BOLEH: Berikan credit ke original developer
+@CloudstreamPlugin
+class SitenamePlugin: BasePlugin() {
+    // Original concept by: @username
+}
+
+// ✅ BOLEH: Gunakan referensi dari repository lain
+// ✅ BOLEH: Contribute ke open source projects
+// ✅ BOLEH: Report bugs dan issues
+// ✅ BOLEH: Request features yang reasonable
+```
+
+---
+
+### 🔴 DON'Ts (YANG TIDAK BOLEH DILAKUKAN)
+
+#### 1. Technical DON'Ts ❌
+
+```kotlin
+// ❌ JANGAN: Spam requests tanpa delay
+// BAD: No rate limiting
+override suspend fun search(query: String): List<SearchResponse> {
+    return app.get("$mainUrl/search/$query").document.select("article").mapNotNull {
+        it.toSearchResult()
+    }
+}
+
+// ❌ JANGAN: Skip error handling
+// BAD: No try-catch
+val doc = app.get(url).document  // Can crash!
+
+// ❌ JANGAN: Hardcode credentials
+// BAD: API keys in code
+val apiKey = "sk-1234567890abcdef"  // NEVER DO THIS!
+
+// ❌ JANGAN: Ignore timeout
+// BAD: No timeout specified
+val doc = app.get(url).document  // Can hang forever!
+
+// ❌ JANGAN: Skip null checks
+// BAD: Force unwrap
+val title = document.selectFirst("h1")!!.text()  // CRASH if null!
+```
+
+#### 2. Legal DON'Ts ❌
+
+```kotlin
+// ❌ JANGAN: Monetize extension (jual extension)
+// ❌ JANGAN: Claim sebagai karya sendiri (plagiarism)
+// ❌ JANGAN: Gunakan nama brand tanpa permission
+// ❌ JANGAN: Host konten ilegal di repository
+// ❌ JANGAN: Bypass paywalls untuk commercial gain
+// ❌ JANGAN: Distribusikan konten berbayar secara gratis
+```
+
+#### 3. Ethical DON'Ts ❌
+
+```kotlin
+// ❌ JANGAN: Spam server dengan requests berlebihan
+// BAD: No delay between requests
+repeat(100) { app.get(url) }  // Can DDoS server!
+
+// ❌ JANGAN: Scraping dengan interval terlalu cepat
+// BAD: No rate limiting
+suspend fun scrape() {
+    while(true) {
+        app.get(url)
+        delay(10)  // 10ms = TOO FAST!
+    }
+}
+
+// ❌ JANGAN: Bypass security measures
+// BAD: Bypass Cloudflare protection
+val headers = mapOf(
+    "X-Forwarded-For" to "1.2.3.4",  // Fake IP
+    "CF-Connecting-IP" to "5.6.7.8"   // Bypass Cloudflare
+)
+
+// ❌ JANGAN: Collect user data tanpa permission
+// BAD: Send user data to external server
+app.post("https://analytics.com/track", data=mapOf(
+    "user_id" to getUserId(),
+    "watch_history" to getHistory()
+))
+
+// ❌ JANGAN: Include malware atau virus
+// ❌ JANGAN: Backdoor atau spyware
+// ❌ JANGAN: Cryptominer
+// ❌ JANGAN: Adware yang mengganggu
+```
+
+#### 4. Performance DON'Ts ❌
+
+```kotlin
+// ❌ JANGAN: Load semua data sekaligus
+// BAD: No pagination
+override suspend fun search(query: String): List<SearchResponse> {
+    return (1..1000).map { page ->  // Load 1000 pages at once!
+        app.get("$mainUrl/search/$query?page=$page").document
+    }.flatMap { it.select("article").mapNotNull { it.toSearchResult() } }
+}
+
+// ❌ JANGAN: Fetch semua gambar di homepage
+// BAD: Load all posters
+val posters = document.select("img").map { app.get(it.attr("src")).bytes }
+
+// ❌ JANGAN: Skip caching
+// BAD: Fetch same data repeatedly
+override suspend fun search(query: String): List<SearchResponse> {
+    return app.get("$mainUrl/search/$query").document.select("article").mapNotNull {
+        it.toSearchResult()
+    }
+    // Same query = new request every time!
+}
+```
+
+---
+
+### 📊 Comparison Table
+
+| Aspek | ✅ DO (Boleh) | ❌ DON'T (Tidak Boleh) |
+|-------|--------------|------------------------|
+| **Rate Limiting** | 100-500ms delay | < 50ms delay (spam) |
+| **Timeout** | 10-30 seconds | No timeout (hang) |
+| **Error Handling** | Try-catch, logging | Ignore errors |
+| **Caching** | Cache search results | Fetch same data repeatedly |
+| **User Agent** | Rotate real UAs | Fake/spoof UAs |
+| **Credentials** | Env variables, secrets | Hardcoded in code |
+| **Data Collection** | Minimal, with consent | Track everything |
+| **Server Load** | Respectful, limited | Aggressive scraping |
+| **Credit** | Give proper attribution | Claim as own work |
+| **Distribution** | Open source, free | Sell for profit |
+
+---
+
+### ⚖️ Legal Disclaimer
+
+**PENTING:** Extension ini dibuat untuk:
+- ✅ Personal use
+- ✅ Educational purposes
+- ✅ Testing dan development
+
+**BUKAN untuk:**
+- ❌ Commercial use
+- ❌ Distribution of copyrighted content
+- ❌ Bypassing paid services
+- ❌ Any illegal activities
+
+**Pengguna bertanggung jawab atas:**
+- Kepatuhan terhadap hukum lokal
+- Terms of Service website
+- Copyright laws di negara masing-masing
+
+---
+
+### 🛡️ Security Best Practices
+
+```kotlin
+// ✅ DO: Validate input
+fun validateUrl(url: String): Boolean {
+    return url.startsWith("https://") && 
+           url.contains(".") && 
+           url.length < 200
+}
+
+// ✅ DO: Sanitize user input
+fun sanitizeQuery(query: String): String {
+    return query.replace(Regex("[^a-zA-Z0-9 ]"), "").take(100)
+}
+
+// ✅ DO: Use HTTPS
+val url = "https://api.example.com"  // NOT http://
+
+// ✅ DO: Verify SSL certificates
+val doc = app.get(url, verifySsl = true).document
+
+// ❌ DON'T: Trust user input blindly
+val maliciousUrl = userInput  // Can be javascript:alert(1)!
+
+// ❌ DON'T: Log sensitive data
+Log.d("Auth", "Password: $password")  // NEVER!
+
+// ❌ DON'T: Store credentials in plain text
+val apiKey = preferences.getString("api_key", "plain_text_key")
+```
+
+---
+
+### 📝 Code Review Checklist
+
+Sebelum commit, pastikan:
+
+- [ ] ✅ Null safety (?. !!)
+- [ ] ✅ Error handling (try-catch)
+- [ ] ✅ Rate limiting (delay)
+- [ ] ✅ Timeout specified
+- [ ] ✅ No hardcoded credentials
+- [ ] ✅ Proper headers (referer, user-agent)
+- [ ] ✅ No sensitive data in logs
+- [ ] ✅ Credit given to original authors
+- [ ] ✅ No copyright violations
+- [ ] ✅ Code is clean and readable
+
+---
+
 ## 🎯 SELECTOR & SCRAPING
 
 ### CSS Selectors yang Sering Digunakan
