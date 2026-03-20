@@ -1,18 +1,23 @@
 # 📚 PUSAT SKILLS & PENGETAHUAN CLOUDSTREAM
 ## Panduan Lengkap Development Extension Profesional
 
+**Updated:** 2026-03-20  
+**Standard:** 10 Files Structure (Anichin, Donghuastream, Funmovieslix, Idlix, LayarKaca21, Pencurimovie)
+
 ---
 
 ## 🎯 DAFTAR ISI
 
 1. [Introduction](#introduction)
-2. [Struktur Dasar Extension](#struktur-dasar-extension)
-3. [Selector & Scraping](#selector--scraping)
-4. [Extractor Development](#extractor-development)
-5. [Best Practices](#best-practices)
-6. [Common Patterns](#common-patterns)
-7. [Troubleshooting](#troubleshooting)
-8. [References](#references)
+2. [STANDAR STRUKTUR SITE - 10 FILES WAJIB](#standar-struktur-site---10-files-wajib)
+3. [IMPLEMENTASI DETAIL SETIAP FILE](#implementasi-detail-setiap-file)
+4. [CODE QUALITY STANDARDS](#code-quality-standards)
+5. [Selector & Scraping](#selector--scraping)
+6. [Extractor Development](#extractor-development)
+7. [Best Practices](#best-practices)
+8. [Common Patterns](#common-patterns)
+9. [Troubleshooting](#troubleshooting)
+10. [References](#references)
 
 ---
 
@@ -24,19 +29,550 @@ CloudStream Extension adalah plugin yang menambahkan sumber streaming baru ke ap
 
 ### Arsitektur Extension
 
+**STANDAR REPOSITORY INI (10 FILES WAJIB):**
+
 ```
-Extension/
-├── src/main/kotlin/com/Sitename/
-│   ├── Sitename.kt          ← Main API (scraping logic)
-│   ├── SitenamePlugin.kt    ← Plugin entry point
-│   ├── Extractors.kt        ← Video extractors
-│   └── Utils.kt             ← Helper functions
-└── build.gradle.kts         ← Build configuration
+Sitename/
+├── build.gradle.kts
+└── src/main/kotlin/com/Sitename/
+    ├── Sitename.kt                      ← Main API (scraping logic)
+    ├── SitenamePlugin.kt                ← Plugin entry point
+    ├── Utils.kt                         ← Rate limiting, user agent, retry
+    ├── CacheManager.kt                  ← Caching system (LruCache + TTL)
+    ├── ImageCache.kt                    ← Image optimization
+    ├── SmartCacheMonitor.kt             ← Cache invalidation
+    ├── SuperSmartPrefetchManager.kt     ← Prefetching logic
+    ├── SitenameMonitor.kt               ← Monitor for updates
+    ├── Extractors.kt                    ← Re-export Master Extractors
+    └── Sitenameparser.kt                ← Parser helpers
 ```
+
+**TIDAK BOLEH ADA:**
+- ❌ StarPopupHelper.kt (tidak ada di site manapun)
+- ❌ Hardcoded extractor registration
+- ❌ Duplicate Master Extractors
+
+**TOTAL: 10 FILES** (WAJIB SEMUA! Tidak boleh kurang!)
 
 ---
 
-## 🏗️ STRUKTUR DASAR EXTENSION
+## 📁 STANDAR STRUKTUR SITE - 10 FILES WAJIB
+
+### File Structure Checklist
+
+- [ ] 1. build.gradle.kts
+- [ ] 2. SitenamePlugin.kt
+- [ ] 3. Sitename.kt
+- [ ] 4. Utils.kt
+- [ ] 5. CacheManager.kt
+- [ ] 6. ImageCache.kt
+- [ ] 7. SmartCacheMonitor.kt
+- [ ] 8. SuperSmartPrefetchManager.kt
+- [ ] 9. SitenameMonitor.kt
+- [ ] 10. Extractors.kt
+- [ ] 11. Sitenameparser.kt (optional tapi recommended)
+
+**TOTAL: 10-11 FILES** (WAJIB SEMUA!)
+
+---
+
+## 💻 IMPLEMENTASI DETAIL SETIAP FILE
+
+### 1. build.gradle.kts
+
+**STANDAR ANDA:**
+```kotlin
+version = 10
+
+cloudstream {
+    description = "🎬 Sitename - Deskripsi yang menarik dan jelas"
+    language    = "id"
+    authors = listOf("Imam2nd")
+    status = 1
+    tvTypes = listOf("Anime")  // Atau "Movie", "TvSeries"
+    iconUrl = "https://sitename.com/logo.png"
+    isCrossPlatform = false
+}
+```
+
+**WAJIB ADA:**
+- ✅ `version = 10` (integer, bukan string)
+- ✅ `description` dengan emoji
+- ✅ `language = "id"` (Indonesian)
+- ✅ `authors = listOf("Imam2nd")`
+- ✅ `status = 1` (1 = Ok, 0 = Down, 2 = Slow, 3 = Beta)
+- ✅ `tvTypes` sesuai konten
+- ✅ `iconUrl` dengan URL valid
+- ✅ `isCrossPlatform = false`
+
+---
+
+### 2. SitenamePlugin.kt
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
+import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.Sitename.AllExtractors
+
+@CloudstreamPlugin
+class SitenamePlugin: BasePlugin() {
+    override fun load() {
+        registerMainAPI(Sitename())
+        
+        // DYNAMIC REGISTER: Auto-register ALL extractors
+        // Tidak perlu hardcode satu-satu!
+        AllExtractors.list.forEach { extractor ->
+            registerExtractorAPI(extractor)
+        }
+    }
+}
+```
+
+**WAJIB ADA:**
+- ✅ `@CloudstreamPlugin` annotation
+- ✅ Extend `BasePlugin`
+- ✅ `registerMainAPI(Sitename())`
+- ✅ Dynamic extractor registration (forEach, bukan hardcode)
+- ✅ Import `AllExtractors` dari package lokal
+
+---
+
+### 3. Sitename.kt (Main Logic)
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+import com.lagradost.api.Log
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.amap
+import com.lagradost.cloudstream3.utils.*
+import org.jsoup.nodes.Element
+
+// Cache instances (WAJIB!)
+private val searchCache = CacheManager<List<SearchResponse>>()
+private val mainPageCache = CacheManager<HomePageResponse>()
+
+// Smart Cache Monitor (WAJIB!)
+private val monitor = SitenameMonitor()
+
+class Sitename : MainAPI() {
+    override var mainUrl = "https://sitename.com"
+    override var name = "Sitename"
+    override val hasMainPage = true
+    override var lang = "id"
+    override val hasDownloadSupport = true
+    
+    // WAJIB: Supported types
+    override val supportedTypes = setOf(
+        TvType.Movie,
+        TvType.TvSeries,
+        TvType.Anime
+    )
+    
+    // WAJIB: Companion object untuk helper functions
+    companion object {
+        fun getType(t: String?): TvType { ... }
+        fun getStatus(t: String?): ShowStatus { ... }
+    }
+    
+    // WAJIB: Main page categories
+    override val mainPage = mainPageOf(
+        "$mainUrl/populer/page/" to "Film Terplopuler",
+        "$mainUrl/latest/page/" to "Film Terbaru"
+    )
+    
+    // WAJIB: Override semua functions
+    override suspend fun getMainPage(...) { ... }
+    override suspend fun search(query: String) { ... }
+    override suspend fun load(url: String) { ... }
+    override suspend fun loadLinks(...) { ... }
+    
+    // WAJIB: Helper functions
+    private fun Element.toSearchResult(): SearchResponse? { ... }
+}
+```
+
+**WAJIB ADA:**
+- ✅ Import lengkap (termasuk `addAniListId`, `addMalId`, `addTrailer`)
+- ✅ Cache instances (`searchCache`, `mainPageCache`)
+- ✅ Smart Cache Monitor instance
+- ✅ Companion object untuk helper
+- ✅ Main page categories (minimal 2)
+- ✅ Override semua functions
+- ✅ Helper functions (`toSearchResult()`, dll)
+
+---
+
+### 4. Utils.kt
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+import com.lagradost.api.Log
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.random.Random
+
+// Rate limiting configuration (WAJIB!)
+internal const val MIN_REQUEST_DELAY = 100L
+internal const val MAX_REQUEST_DELAY = 500L
+
+private val rateLimitMutex = Mutex()
+private var lastRequestTime = 0L
+
+// WAJIB: Rate limiting function
+internal suspend fun rateLimitDelay() = rateLimitMutex.withLock {
+    val now = System.currentTimeMillis()
+    val elapsed = now - lastRequestTime
+
+    if (elapsed < MIN_REQUEST_DELAY) {
+        val delayNeeded = MIN_REQUEST_DELAY - elapsed + Random.nextLong(0, MAX_REQUEST_DELAY - MIN_REQUEST_DELAY)
+        delay(delayNeeded)
+    }
+
+    lastRequestTime = System.currentTimeMillis()
+}
+
+// WAJIB: User agent rotation
+private val USER_AGENTS = listOf(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+)
+
+private val userAgentIndex = Random.nextInt(USER_AGENTS.size)
+
+internal fun getRandomUserAgent(): String {
+    return USER_AGENTS[(userAgentIndex + Random.nextInt(USER_AGENTS.size)) % USER_AGENTS.size]
+}
+
+// WAJIB: Retry logic dengan exponential backoff
+internal suspend fun <T> executeWithRetry(
+    maxRetries: Int = 3,
+    initialDelay: Long = 1000L,
+    maxDelay: Long = 10000L,
+    backoffMultiplier: Double = 2.0,
+    block: suspend () -> T
+): T {
+    var lastException: Exception? = null
+    var delayTime = initialDelay
+
+    repeat(maxRetries) { attempt ->
+        try {
+            return block()
+        } catch (e: Exception) {
+            lastException = e
+            Log.w("Sitename", "Attempt ${attempt + 1}/$maxRetries failed: ${e.message}")
+
+            if (attempt < maxRetries - 1) {
+                delay(delayTime)
+                delayTime = (delayTime * backoffMultiplier).toLong().coerceAtMost(maxDelay)
+            }
+        }
+    }
+
+    throw lastException ?: Exception("Unknown error")
+}
+
+// WAJIB: Debug mode
+private const val DEBUG_MODE = false
+
+internal fun logDebug(tag: String, message: String) {
+    if (DEBUG_MODE) Log.d(tag, message)
+}
+
+internal fun logError(tag: String, message: String, error: Throwable? = null) {
+    Log.e(tag, message)
+    error?.let { Log.e(tag, "Cause: ${it.message}") }
+}
+```
+
+**WAJIB ADA:**
+- ✅ Rate limiting dengan Mutex
+- ✅ User agent rotation (minimal 3 user agents)
+- ✅ Retry logic dengan exponential backoff
+- ✅ Debug mode constant
+- ✅ logDebug dan logError functions
+
+---
+
+### 5. CacheManager.kt
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+import android.util.LruCache
+
+class CacheManager<T>(private val maxSize: Int = 100, private val ttl: Long = 5 * 60 * 1000L) {
+    private val cache = LruCache<String, CacheEntry<T>>(maxSize)
+    
+    data class CacheEntry<T>(val value: T, val timestamp: Long)
+    
+    // WAJIB: Get dengan TTL check
+    fun get(key: String): T? {
+        val entry = cache.get(key) ?: return null
+        
+        if (System.currentTimeMillis() - entry.timestamp > ttl) {
+            cache.remove(key)
+            return null
+        }
+        
+        return entry.value
+    }
+    
+    // WAJIB: Put dengan timestamp
+    fun put(key: String, value: T) {
+        cache.put(key, CacheEntry(value, System.currentTimeMillis()))
+    }
+    
+    // WAJIB: Remove, clear, size
+    fun remove(key: String) { cache.remove(key) }
+    fun clear() { cache.evictAll() }
+    fun size(): Int = cache.size()
+    
+    // WAJIB: Invalidate older than timestamp
+    fun invalidateOlderThan(timestamp: Long) {
+        val keysToRemove = mutableListOf<String>()
+        for (i in 0 until cache.size()) {
+            val key = cache.snapshot().keys.elementAt(i)
+            val entry = cache.get(key)
+            if (entry != null && entry.timestamp < timestamp) {
+                keysToRemove.add(key)
+            }
+        }
+        keysToRemove.forEach { cache.remove(it) }
+    }
+}
+```
+
+**WAJIB ADA:**
+- ✅ LruCache implementation
+- ✅ TTL (Time To Live) support
+- ✅ Timestamp tracking
+- ✅ invalidateOlderThan function
+- ✅ Generic type support
+
+---
+
+### 6. ImageCache.kt
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+import android.graphics.Bitmap
+import android.util.LruCache
+
+class ImageCache {
+    private val cache = LruCache<String, Bitmap>(50)
+    
+    fun get(url: String): Bitmap? {
+        return cache.get(url)
+    }
+    
+    fun put(url: String, bitmap: Bitmap) {
+        cache.put(url, bitmap)
+    }
+    
+    fun clear() {
+        cache.evictAll()
+    }
+}
+```
+
+**WAJIB ADA:**
+- ✅ LruCache untuk Bitmap
+- ✅ Get/put/clear functions
+- ✅ Max size 50 (untuk hemat memory)
+
+---
+
+### 7. SmartCacheMonitor.kt
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+class SmartCacheMonitor(private val fingerprintKey: String = "last_update") {
+    private var lastFingerprint: String? = null
+    
+    // WAJIB: Check if cache should be invalidated
+    fun shouldInvalidateCache(newFingerprint: String): Boolean {
+        val shouldInvalidate = lastFingerprint != newFingerprint
+        if (shouldInvalidate) {
+            lastFingerprint = newFingerprint
+        }
+        return shouldInvalidate
+    }
+    
+    // WAJIB: Reset function
+    fun reset() {
+        lastFingerprint = null
+    }
+}
+```
+
+**WAJIB ADA:**
+- ✅ Fingerprint tracking
+- ✅ shouldInvalidateCache function
+- ✅ Reset function
+
+---
+
+### 8. SuperSmartPrefetchManager.kt
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+import kotlinx.coroutines.*
+
+class SuperSmartPrefetchManager(
+    private val maxConcurrent: Int = 3,
+    private val prefetchTimeout: Long = 5000L
+) {
+    private val prefetchScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val semaphore = java.util.concurrent.Semaphore(maxConcurrent)
+    
+    // WAJIB: Prefetch dengan concurrency limit
+    suspend fun prefetch(urls: List<String>, fetcher: suspend (String) -> Unit) {
+        coroutineScope {
+            urls.map { url ->
+                async {
+                    semaphore.acquire()
+                    try {
+                        withTimeout(prefetchTimeout) {
+                            fetcher(url)
+                        }
+                    } catch (e: Exception) {
+                        // Ignore prefetch errors
+                    } finally {
+                        semaphore.release()
+                    }
+                }
+            }.awaitAll()
+        }
+    }
+    
+    // WAJIB: Cancel all function
+    fun cancelAll() {
+        prefetchScope.coroutineContext.cancelChildren()
+    }
+}
+```
+
+**WAJIB ADA:**
+- ✅ CoroutineScope dengan SupervisorJob
+- ✅ Semaphore untuk concurrency limit
+- ✅ Timeout support
+- ✅ Error handling (ignore prefetch errors)
+- ✅ Cancel all function
+
+---
+
+### 9. SitenameMonitor.kt
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+class SitenameMonitor {
+    private var lastUpdateCheck: Long = 0
+    private val updateInterval = 5 * 60 * 1000L // 5 minutes
+    
+    // WAJIB: Check if should check for updates
+    fun shouldCheckForUpdates(): Boolean {
+        val now = System.currentTimeMillis()
+        return now - lastUpdateCheck > updateInterval
+    }
+    
+    // WAJIB: Mark as checked
+    fun markChecked() {
+        lastUpdateCheck = System.currentTimeMillis()
+    }
+    
+    // WAJIB: Get cache invalidation timestamp
+    fun getCacheInvalidationTimestamp(): Long {
+        return lastUpdateCheck
+    }
+}
+```
+
+**WAJIB ADA:**
+- ✅ Update interval tracking
+- ✅ shouldCheckForUpdates function
+- ✅ markChecked function
+- ✅ getCacheInvalidationTimestamp function
+
+---
+
+### 10. Extractors.kt
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+// Re-export from Master Extractors (50 extractors)
+// TIDAK BOLEH DUPLICATE! Gunakan Master Extractors
+object AllExtractors {
+    val list = com.MasterExtractors.AllExtractors.list
+}
+```
+
+**WAJIB ADA:**
+- ✅ Re-export dari Master Extractors
+- ✅ TIDAK BOLEH DUPLICATE extractor classes
+- ✅ Object AllExtractors dengan list property
+
+---
+
+### 11. Sitenameparser.kt (Optional tapi Recommended)
+
+**STANDAR ANDA:**
+```kotlin
+package com.Sitename
+
+import org.jsoup.nodes.Element
+
+// WAJIB: Image attribute helper
+fun Element.getImageAttr(): String {
+    return when {
+        this.hasAttr("src") -> this.attr("src")
+        this.hasAttr("data-src") -> this.attr("data-src")
+        this.hasAttr("data-lazy-src") -> this.attr("data-lazy-src")
+        else -> this.attr("src")
+    }
+}
+
+// WAJIB: URL fixer
+fun fixUrlNull(url: String?, baseUrl: String = "https://sitename.com"): String? {
+    if (url.isNullOrBlank()) return null
+    return when {
+        url.startsWith("http") -> url
+        url.startsWith("//") -> "https:$url"
+        url.startsWith("/") -> "$baseUrl$url"
+        else -> url
+    }
+}
+```
+
+**WAJIB ADA:**
+- ✅ getImageAttr helper
+- ✅ fixUrlNull helper
+
+---
+
+## 🎯 CODE QUALITY STANDARDS
 
 ### 1. Plugin File (SitenamePlugin.kt)
 
