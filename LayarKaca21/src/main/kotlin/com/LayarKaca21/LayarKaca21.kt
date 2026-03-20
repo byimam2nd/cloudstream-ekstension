@@ -274,10 +274,18 @@ class LayarKaca21 : MainAPI() {
                 ).documentLarge
             }
 
-            val playerLinks = document.select("ul#player-list > li").mapNotNull {
-                val link = it.select("a").attr("href")
-                if (link.isNotEmpty()) fixUrl(link) else null
-            }
+            // Support both old and new player structure
+            // Old: ul#player-list > li > a
+            // New: button.ganti-player or anchors with player URLs
+            val playerLinks = document.select("ul#player-list > li > a")
+                .ifEmpty { 
+                    // Fallback: Try new structure - buttons or links with player URLs
+                    document.select("a[href*=/player/], button[data-player], div.player-option a") 
+                }
+                .mapNotNull {
+                    val link = it.attr("href")
+                    if (link.isNotEmpty()) fixUrl(link) else null
+                }
 
             if (playerLinks.isEmpty()) {
                 logError("LayarKaca", "No player links found")
