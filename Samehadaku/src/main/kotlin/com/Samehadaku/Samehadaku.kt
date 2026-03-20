@@ -21,24 +21,14 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
 
-// Import cache classes
-import com.Samehadaku.CacheManager
-
-// ========================================
-// CACHE INSTANCES
-// ========================================
-private val searchCache = CacheManager<List<SearchResponse>>(ttl = 5 * 60 * 1000L)
-private val loadCache = CacheManager<LoadResponse>(ttl = 10 * 60 * 1000L)
-private val mainPageCache = CacheManager<HomePageResponse>(ttl = 3 * 60 * 1000L)
-
 // ========================================
 // RATE LIMITING
 // ========================================
-private val mutex = Mutex()
+private val rateLimitMutex = Mutex()
 private var lastRequestTime = 0L
-private const val MIN_REQUEST_DELAY = 500L // 500ms between requests
+private const val MIN_REQUEST_DELAY = 500L
 
-internal suspend fun rateLimitDelay() = mutex.withLock {
+internal suspend fun rateLimitDelay() = rateLimitMutex.withLock {
     val now = System.currentTimeMillis()
     val elapsed = now - lastRequestTime
     if (elapsed < MIN_REQUEST_DELAY) {
@@ -88,7 +78,6 @@ class Samehadaku : MainAPI() {
     override var lang = "id"
     override val hasDownloadSupport = true
     
-    // Standard timeout (10 detik)
     private val requestTimeout = 10000L
 
     override val supportedTypes = setOf(
@@ -158,19 +147,7 @@ class Samehadaku : MainAPI() {
     // GET MAIN PAGE
     // ========================================
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val cacheKey = "${request.data}${page}"
-        
-        // Check cache first
-        val cached = mainPageCache.get(cacheKey)
-        if (cached != null) {
-            Log.d("Samehadaku", "Cache HIT for mainPage: $cacheKey")
-            return cached
-        }
-        
-        Log.d("Samehadaku", "Cache MISS for mainPage: $cacheKey")
-        
-        // Fetch dengan retry logic dan rate limiting
-        val httpResponse = executeWithRetry {
+        val httpResult = executeWithRetry {
             rateLimitDelay()
             app.get(
                 "${request.data}$page",
@@ -179,66 +156,51 @@ class Samehadaku : MainAPI() {
             )
         }
         
-        val home = if (request.name == "Episode Terbaru") {
-            val document = httpResponse.document
-            document.select("div.post-show ul li").mapNotNull { li ->
+        val homeList = if (request.name == "Episode Terbaru") {
+            val doc = httpResult.document
+            doc.select("div.post-show ul li").mapNotNull { li ->
                 runCatching {
-                    val a = li.selectFirst("a") ?: return@mapNotNull null
+                    val anchor = li.selectFirst("a") ?: return@mapNotNull null
 
-                    val rawTitle = a.attr("title").ifBlank { a.text() }
-                    val title = rawTitle
+                    val rawTitle = anchor.attr("title").ifBlank { anchor.text() }
+                    val cleanTitle = rawTitle
                         .replace(Regex("(Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
                         .removeBloat()
                         .trim()
 
-                    val href = fixUrl(a.attr("href"))
-                    val poster = fixUrlNull(li.selectFirst("img")?.attr("src"))
+                    val episodeHref = fixUrl(anchor.attr("href"))
+                    val posterUrl = fixUrlNull(li.selectFirst("img")?.attr("src"))
 
-                    val ep = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                    val epNum = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
                         .find(li.text())
                         ?.groupValues
                         ?.getOrNull(2)
                         ?.toIntOrNull()
 
-                    newAnimeSearchResponse(title, href, TvType.Anime) {
-                        this.posterUrl = poster
-                        addSub(ep)
+                    newAnimeSearchResponse(cleanTitle, episodeHref, TvType.Anime) {
+                        this.posterUrl = posterUrl
+                        addSub(epNum)
                     }
                 }.getOrElse { null }
             }
         } else {
-            val document = httpResponse.document
-            document.select("div.animposx").mapNotNull {
+            val doc = httpResult.document
+            doc.select("div.animposx").mapNotNull {
                 runCatching { it.toSearchResult() }.getOrElse { null }
             }
         }
         
-        val responseObj = newHomePageResponse(
-            HomePageList(request.name, home, request.name == "Episode Terbaru"),
-            hasNext = home.isNotEmpty()
+        return newHomePageResponse(
+            HomePageList(request.name, homeList, request.name == "Episode Terbaru"),
+            hasNext = homeList.isNotEmpty()
         )
-        
-        // Save to cache
-        mainPageCache.put(cacheKey, responseObj)
-        
-        return responseObj
     }
 
     // ========================================
     // SEARCH
     // ========================================
     override suspend fun search(query: String): List<SearchResponse> {
-        // Check cache first
-        val cached = searchCache.get(query)
-        if (cached != null) {
-            Log.d("Samehadaku", "Cache HIT for search: $query")
-            return cached
-        }
-        
-        Log.d("Samehadaku", "Cache MISS for search: $query")
-        
-        // Fetch dengan retry logic
-        val document = executeWithRetry {
+        val searchResult = executeWithRetry {
             rateLimitDelay()
             app.get(
                 "$mainUrl/?s=$query",
@@ -247,31 +209,16 @@ class Samehadaku : MainAPI() {
             ).document
         }
         
-        val results = document.select("div.animposx").mapNotNull {
+        return searchResult.select("div.animposx").mapNotNull {
             runCatching { it.toSearchResult() }.getOrElse { null }
         }
-        
-        // Save to cache
-        searchCache.put(query, results)
-        
-        return results
     }
 
     // ========================================
     // LOAD
     // ========================================
     override suspend fun load(url: String): LoadResponse {
-        // Check cache first
-        val cached = loadCache.get(url)
-        if (cached != null) {
-            Log.d("Samehadaku", "Cache HIT for load: $url")
-            return cached
-        }
-        
-        Log.d("Samehadaku", "Cache MISS for load: $url")
-        
-        // Fetch dengan retry logic
-        val document = executeWithRetry {
+        val loadResult = executeWithRetry {
             rateLimitDelay()
             app.get(
                 url,
@@ -280,66 +227,61 @@ class Samehadaku : MainAPI() {
             ).document
         }
         
-        val title = document.selectFirst("h1.entry-title")
+        val animeTitle = loadResult.selectFirst("h1.entry-title")
             ?.text()
             ?.removeBloat()
             ?: throw Exception("Title not found")
         
-        val poster = document.selectFirst("div.thumb img")?.attr("src")
-        val description = document.select("div.desc p").text()
-        val tags = document.select("div.genre-info a").map { it.text() }
+        val posterUrl = loadResult.selectFirst("div.thumb img")?.attr("src")
+        val description = loadResult.select("div.desc p").text()
+        val tags = loadResult.select("div.genre-info a").map { it.text() }
 
-        val year = document.selectFirst("div.spe span:contains(Rilis)")
+        val year = loadResult.selectFirst("div.spe span:contains(Rilis)")
             ?.ownText()
             ?.let { Regex("\\d{4}").find(it)?.value?.toIntOrNull() }
 
-        val statusText = document.selectFirst("div.spe span:contains(Status)")?.ownText()
+        val statusText = loadResult.selectFirst("div.spe span:contains(Status)")?.ownText()
         val status = getStatus(statusText)
 
         val type = getType(url)
 
-        val trailer = document
+        val trailerUrl = loadResult
             .selectFirst("iframe[src*=\"youtube\"]")
             ?.attr("src")
 
-        val episodes = document.select("div.lstepsiode ul li")
+        val episodes = loadResult.select("div.lstepsiode ul li")
             .mapNotNull {
                 val a = it.selectFirst("a") ?: return@mapNotNull null
 
-                val ep = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                val epNum = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
                     .find(a.text())
                     ?.groupValues
                     ?.getOrNull(2)
                     ?.toIntOrNull()
 
                 newEpisode(fixUrl(a.attr("href"))) {
-                    episode = ep
+                    episode = epNum
                 }
             }
             .reversed()
 
         // Tracker integration (MAL/AniList)
         val tracker = runCatching {
-            APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
+            APIHolder.getTracker(listOf(animeTitle), TrackerType.getTypes(type), year, true)
         }.getOrNull()
         
-        val loadResponse = newAnimeLoadResponse(title, url, type) {
-            posterUrl = tracker?.image ?: poster
+        return newAnimeLoadResponse(animeTitle, url, type) {
+            posterUrl = tracker?.image ?: posterUrl
             backgroundPosterUrl = tracker?.cover
             plot = description
             this.tags = tags
             this.year = year
             showStatus = status
             addEpisodes(DubStatus.Subbed, episodes)
-            addTrailer(trailer)
+            addTrailer(trailerUrl)
             addMalId(tracker?.malId)
             addAniListId(tracker?.aniId?.toIntOrNull())
         }
-        
-        // Save to cache
-        loadCache.put(url, loadResponse)
-        
-        return loadResponse
     }
 
     // ========================================
@@ -351,7 +293,7 @@ class Samehadaku : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = executeWithRetry {
+        val downloadDoc = executeWithRetry {
             rateLimitDelay()
             app.get(
                 data,
@@ -361,15 +303,15 @@ class Samehadaku : MainAPI() {
         }
         
         // Extract download links
-        document.select("div#downloadb ul li")
+        downloadDoc.select("div#downloadb ul li")
             .amap { li ->
                 try {
-                    val quality = li.selectFirst("strong")?.text() ?: "Unknown"
-                    li.select("a").amap { a ->
+                    val qualityText = li.selectFirst("strong")?.text() ?: "Unknown"
+                    li.select("a").amap { anchor ->
                         try {
                             loadFixedExtractor(
-                                fixUrl(a.attr("href")),
-                                quality,
+                                fixUrl(anchor.attr("href")),
+                                qualityText,
                                 subtitleCallback,
                                 callback
                             )
