@@ -1241,6 +1241,121 @@ class Megacloud : ExtractorApi() {
 }
 
 // ========================================
+// GDRIVEPLAYER EXTRACTOR (From ExtCloud)
+// ========================================
+
+open class Gdriveplayer : ExtractorApi() {
+    override val name = "Gdriveplayer"
+    override val mainUrl = "https://gdriveplayer.to"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer=referer)
+        val document = response.document
+        
+        val videoUrl = document.selectFirst("meta[property=og:video]")?.attr("content")
+            ?: document.selectFirst("iframe")?.attr("src")
+            ?: return
+        
+        callback.invoke(
+            newExtractorLink(name, name, videoUrl, INFER_TYPE) {
+                this.referer = "$mainUrl/"
+            }
+        )
+    }
+}
+
+class Gdriveplayerto : Gdriveplayer() {
+    override val name = "Gdriveplayer.to"
+    override val mainUrl = "https://gdriveplayer.to"
+}
+
+class GDFlix : Gdriveplayer() {
+    override val name = "GDFlix"
+    override val mainUrl = "https://gdflix.co"
+}
+
+// ========================================
+// FILE HOSTING EXTRACTORS (From ExtCloud)
+// ========================================
+
+class BloggerExtractor : ExtractorApi() {
+    override val name = "Blogger"
+    override val mainUrl = "https://www.blogger.com"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer=referer)
+        val videoUrl = response.document.selectFirst("video source")?.attr("src") ?: return
+        
+        callback.invoke(
+            newExtractorLink(name, name, videoUrl, INFER_TYPE) {
+                this.referer = "$mainUrl/"
+            }
+        )
+    }
+}
+
+class PixelDrainDev : ExtractorApi() {
+    override val name = "PixelDrain"
+    override val mainUrl = "https://pixeldrain.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fileId = url.split("/").last()
+        val videoUrl = "$mainUrl/api/file/$fileId?download"
+        
+        callback.invoke(
+            newExtractorLink(name, name, videoUrl, INFER_TYPE) {
+                this.referer = "$mainUrl/"
+            }
+        )
+    }
+}
+
+class Upload18com : ExtractorApi() {
+    override val name = "Upload18"
+    override val mainUrl = "https://www.upload18.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer=referer)
+        val videoUrl = response.document.selectFirst("video source")?.attr("src") ?: return
+        
+        callback.invoke(
+            newExtractorLink(name, name, videoUrl, INFER_TYPE) {
+                this.referer = "$mainUrl/"
+            }
+        )
+    }
+}
+
+class Dhtpre : Dingtezuni() {
+    override val name = "Dhtpre"
+    override val mainUrl = "https://dhtpre.com"
+}
+
+// ========================================
 // EXTRACTOR REGISTRY (Auto-Register)
 // ========================================
 // List semua extractor untuk auto-register
@@ -1249,7 +1364,7 @@ class Megacloud : ExtractorApi() {
 
 object AllExtractors {
     val list = listOf(
-        // StreamWish based (10)
+        // StreamWish based (11)
         Do7go(),
         Dhcplay(),
         Hglink(),
@@ -1260,6 +1375,7 @@ object AllExtractors {
         Ryderjet(),
         Bingezove(),
         Dingtezuni(),
+        Dhtpre(),
 
         // VidStack based (7)
         Listeamed(),
@@ -1280,7 +1396,7 @@ object AllExtractors {
         OkRuSSL(),
         OkRuHTTP(),
 
-        // Other extractors (13)
+        // Other extractors (19)
         Dailymotion(),
         Rumble(),
         StreamRuby(),
@@ -1297,10 +1413,15 @@ object AllExtractors {
         ArchiveOrgExtractor(),
         Megacloud(),
         Jeniusplay(),
+        Gdriveplayerto(),
+        GDFlix(),
+        BloggerExtractor(),
+        PixelDrainDev(),
+        Upload18com(),
     )
 }
 
 // ========================================
-// TOTAL: 40 EXTRACTOR CLASSES
+// TOTAL: 45 EXTRACTOR CLASSES
 // ========================================
 // Build fix test
