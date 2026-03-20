@@ -107,12 +107,12 @@ fun fixUrlSafe(url: String, baseUrl: String = "https://v1.animasu.top"): String 
     if (url.startsWith("http://") || url.startsWith("https://")) {
         return url
     }
-
-    // Fix relative URL
-    return try {
-        fixUrl(url, baseUrl)
-    } catch (e: Exception) {
-        url
+    
+    // Fix relative URL dengan menambahkan baseUrl
+    return if (url.startsWith("/")) {
+        "$baseUrl$url"
+    } else {
+        "$baseUrl/$url"
     }
 }
 
