@@ -38,7 +38,7 @@ class LayarKaca21 : MainAPI() {
 
     // Standard timeout untuk semua request (10 detik)
     private val requestTimeout = 10000L
-
+ 
     override val mainPage = mainPageOf(
         "$mainUrl/latest/page/" to "Film Upload Terbaru",
         "$mainUrl/populer/page/" to "Film Terplopuler",
