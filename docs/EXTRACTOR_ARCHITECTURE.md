@@ -6,7 +6,7 @@ Dokumentasi ini menjelaskan arsitektur extractor yang digunakan di cloudstream-e
 
 ---
 
-## ✅ VERIFIKASI ARSITEKTUR (Last Updated: 2026-03-18)
+## ✅ VERIFIKASI ARSITEKTUR (Last Updated: 2026-03-20)
 
 ### 1️⃣ SATU SITE = SATU FILE EKSTRAKTOR
 
@@ -17,13 +17,18 @@ Setiap site hanya memiliki **SATU** file `Extractors.kt` yang berisi semua extra
 ```
 Pencurimovie/
 └── src/main/kotlin/com/Pencurimovie/
-    ├── Extractors.kt          ✅ (37 extractor classes)
+    ├── Extractors.kt          ✅ (50 extractor classes)
     └── PencurimovieProvider.kt
 
 Anichin/
 └── src/main/kotlin/com/Anichin/
-    ├── Extractors.kt          ✅ (37 extractor classes)
+    ├── Extractors.kt          ✅ (50 extractor classes)
     └── AnichinProvider.kt
+
+Animasu/
+└── src/main/kotlin/com/Animasu/
+    ├── Extractors.kt          ✅ (50 extractor classes) 🆕
+    └── AnimasuPlugin.kt
 ```
 
 **Benefit:**
@@ -48,6 +53,7 @@ Setiap file `Extractors.kt` menggunakan package name yang sesuai dengan nama sit
 | HiAnime | `package com.HiAnime` | ✅ |
 | IdlixProvider | `package com.IdlixProvider` | ✅ |
 | Anichin | `package com.Anichin` | ✅ |
+| Animasu | `package com.Animasu` | ✅ 🆕 |
 
 ---
 
@@ -428,6 +434,6 @@ bash scripts/sync-extractors.sh
 
 ---
 
-**Last Updated:** 2026-03-18  
-**Maintainer:** Phisher98  
-**Status:** ✅ VERIFIED & PRODUCTION READY
+**Last Updated:** 2026-03-20
+**Maintainer:** Phisher98 / Imam2nd
+**Status:** ✅ VERIFIED & PRODUCTION READY (8 modules)

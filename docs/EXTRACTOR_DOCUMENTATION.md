@@ -29,7 +29,7 @@ Sistem extractor menggunakan **Opsi B: Distributed Extractors dengan Centralized
 ┌─────────────────────────────────────────────────────────┐
 │              MASTER SOURCE (Single Source of Truth)     │
 │              docs/MasterExtractors.kt                   │
-│              (39 extractor classes)                     │
+│              (50 extractor classes)                     │
 └────────────────────┬────────────────────────────────────┘
                      │
                      │ GitHub Action (sync-extractors.yml)
@@ -41,7 +41,7 @@ Sistem extractor menggunakan **Opsi B: Distributed Extractors dengan Centralized
 ┌───────────────┬───────────────┬───────────────┐
 │ Pencurimovie  │ LayarKaca21   │ Donghuastream │
 │ Extractors.kt │ Extractors.kt │ Extractors.kt │
-│ (39 classes)  │ (39 classes)  │ (39 classes)  │
+│ (50 classes)  │ (50 classes)  │ (50 classes)  │
 └───────┬───────┴───────┬───────┴───────┬───────┘
         │               │               │
         ▼               ▼               ▼
@@ -72,7 +72,7 @@ cloudstream-ekstension/
 ├── 📄 settings.gradle.kts              # Project settings
 │
 ├── 📂 docs/                            # 📚 Documentation
-│   ├── MasterExtractors.kt             # ⭐ PUSAT EXTRACTOR (39 classes)
+│   ├── MasterExtractors.kt             # ⭐ PUSAT EXTRACTOR (50 classes)
 │   ├── EXTRACTOR_ARCHITECTURE.md       # Architecture docs
 │   ├── BUGFIX_EXTRACTOR_2026-03-18.md  # Bug fix history
 │   └── ... (other docs)
@@ -104,7 +104,8 @@ cloudstream-ekstension/
 ├── 📂 Funmovieslix/                    # 🎬 Site Plugin 4
 ├── 📂 HiAnime/                         # 🎬 Site Plugin 5
 ├── 📂 Anichin/                         # 🎬 Site Plugin 6
-└── 📂 IdlixProvider/                   # 🎬 Site Plugin 7
+├── 📂 Animasu/                         # 🎬 Site Plugin 7 (NEW! 🆕)
+└── 📂 IdlixProvider/                   # 🎬 Site Plugin 8
 ```
 
 ---

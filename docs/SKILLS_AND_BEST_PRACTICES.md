@@ -63,14 +63,15 @@ ProviderName/
 
 ### **Package Naming Convention**
 
-| Provider | Package Name | Folder |
-|----------|-------------|--------|
-| Anichin | `com.anichin` | `com/Anichin/` |
-| LayarKaca21 | `com.layarKacaProvider` | `com/LayarKacaProvider/` |
-| IdlixProvider | `com.hexated` | `com/hexated/` |
-| Pencurimovie | `com.pencurimovie` | `com/Pencurimovie/` |
-| Donghuastream | `com.donghuastream` | `com/Donghuastream/` |
-| Funmovieslix | `com.funmovieslix` | `com/Funmovieslix/` |
+| Provider | Package Name | Folder | Status |
+|----------|-------------|--------|--------|
+| Anichin | `com.anichin` | `com/Anichin/` | ✅ |
+| LayarKaca21 | `com.layarKacaProvider` | `com/LayarKacaProvider/` | ✅ |
+| IdlixProvider | `com.hexated` | `com/hexated/` | ✅ |
+| Pencurimovie | `com.pencurimovie` | `com/Pencurimovie/` | ✅ |
+| Donghuastream | `com.donghuastream` | `com/Donghuastream/` | ✅ |
+| Funmovieslix | `com.funmovieslix` | `com/Funmovieslix/` | ✅ |
+| Animasu | `com.animasu` | `com/Animasu/` | ✅ 🆕 |
 
 **⚠️ PENTING:** Package name HARUS konsisten di semua file dalam satu provider!
 
@@ -935,11 +936,12 @@ declare -A SITE_FOLDERS=(
 
 ---
 
-**Last Updated:** 2026-03-19  
-**Maintained By:** Development Team  
+**Last Updated:** 2026-03-20
+**Maintained By:** Development Team
 **Version:** 1.0 (Complete)
+**Modules:** 8 total (Anichin, Donghuastream, Funmovieslix, Idlix, LayarKaca21, Pencurimovie, Animasu)
 
 ---
 
-**Last Updated:** 2026-03-19  
+**Last Updated:** 2026-03-20 - Added Animasu module documentation
 **Maintained By:** Development Team

@@ -8,7 +8,7 @@
 - **[BUGFIX_EXTRACTOR_2026-03-18.md](BUGFIX_EXTRACTOR_2026-03-18.md)** - Bug fix history and lessons learned
 
 ### Source Code
-- **[MasterExtractors.kt](MasterExtractors.kt)** - Central extractor repository (39 extractor classes)
+- **[MasterExtractors.kt](MasterExtractors.kt)** - Central extractor repository (50 extractor classes)
 
 ### User Guides
 - **[README-StremioAddon.md](README-StremioAddon.md)** - How to use Stremio addons
