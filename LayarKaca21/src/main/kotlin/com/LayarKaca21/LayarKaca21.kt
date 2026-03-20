@@ -49,8 +49,8 @@ class LayarKaca21 : MainAPI() {
         "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
         "$seriesUrl/genre/horror/page/" to "Film Horor Terbaru",
         "$seriesUrl/genre/comedy/page/" to "Film Comedy Terbaru",
-        "$seriesUrl/country/thailand/page/" to "Film Thailand Terbaru",
-        "$seriesUrl/country/china/page/" to "Film China Terbaru",
+        "$mainUrl/country/thailand/page/" to "Film Thailand Terbaru",
+        "$mainUrl/country/china/page/" to "Film China Terbaru",
     )
 
     override suspend fun getMainPage(
