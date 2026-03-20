@@ -21,9 +21,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
 
-// Import cache classes
-import com.Samehadaku.CacheManager
-
 // ========================================
 // CACHE INSTANCES
 // ========================================

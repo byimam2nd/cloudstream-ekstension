@@ -9,7 +9,7 @@
 // - WEBP compression
 // ========================================
 
-package com.Animasu
+package com.Samehadaku
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

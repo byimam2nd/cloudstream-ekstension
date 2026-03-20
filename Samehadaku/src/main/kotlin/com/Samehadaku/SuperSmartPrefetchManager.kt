@@ -9,7 +9,7 @@
 // - Memory-efficient
 // ========================================
 
-package com.Animasu
+package com.Samehadaku
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.Episode

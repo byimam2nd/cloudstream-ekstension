@@ -9,7 +9,7 @@
 // - Max size limiting
 // ========================================
 
-package com.Animasu
+package com.Samehadaku
 
 import com.lagradost.api.Log
 import kotlinx.coroutines.sync.Mutex
