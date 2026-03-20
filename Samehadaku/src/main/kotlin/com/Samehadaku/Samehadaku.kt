@@ -21,6 +21,16 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
 
+// Import cache classes
+import com.Samehadaku.CacheManager
+
+// ========================================
+// CACHE INSTANCES
+// ========================================
+private val searchCache = CacheManager<List<SearchResponse>>(ttl = 5 * 60 * 1000L)
+private val loadCache = CacheManager<LoadResponse>(ttl = 10 * 60 * 1000L)
+private val mainPageCache = CacheManager<HomePageResponse>(ttl = 3 * 60 * 1000L)
+
 // ========================================
 // RATE LIMITING
 // ========================================
@@ -147,6 +157,17 @@ class Samehadaku : MainAPI() {
     // GET MAIN PAGE
     // ========================================
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val cacheKey = "${request.data}${page}"
+        
+        // Check cache first
+        val cached = mainPageCache.get(cacheKey)
+        if (cached != null) {
+            Log.d("Samehadaku", "Cache HIT for mainPage: $cacheKey")
+            return cached
+        }
+        
+        Log.d("Samehadaku", "Cache MISS for mainPage: $cacheKey")
+        
         val httpResult = executeWithRetry {
             rateLimitDelay()
             app.get(
@@ -190,16 +211,30 @@ class Samehadaku : MainAPI() {
             }
         }
         
-        return newHomePageResponse(
+        val responseObj = newHomePageResponse(
             HomePageList(request.name, homeList, request.name == "Episode Terbaru"),
             hasNext = homeList.isNotEmpty()
         )
+        
+        // Save to cache
+        mainPageCache.put(cacheKey, responseObj)
+        
+        return responseObj
     }
 
     // ========================================
     // SEARCH
     // ========================================
     override suspend fun search(query: String): List<SearchResponse> {
+        // Check cache first
+        val cached = searchCache.get(query)
+        if (cached != null) {
+            Log.d("Samehadaku", "Cache HIT for search: $query")
+            return cached
+        }
+        
+        Log.d("Samehadaku", "Cache MISS for search: $query")
+        
         val searchResult = executeWithRetry {
             rateLimitDelay()
             app.get(
@@ -209,15 +244,29 @@ class Samehadaku : MainAPI() {
             ).document
         }
         
-        return searchResult.select("div.animposx").mapNotNull {
+        val results = searchResult.select("div.animposx").mapNotNull {
             runCatching { it.toSearchResult() }.getOrElse { null }
         }
+        
+        // Save to cache
+        searchCache.put(query, results)
+        
+        return results
     }
 
     // ========================================
     // LOAD
     // ========================================
     override suspend fun load(url: String): LoadResponse {
+        // Check cache first
+        val cached = loadCache.get(url)
+        if (cached != null) {
+            Log.d("Samehadaku", "Cache HIT for load: $url")
+            return cached
+        }
+        
+        Log.d("Samehadaku", "Cache MISS for load: $url")
+        
         val loadResult = executeWithRetry {
             rateLimitDelay()
             app.get(
@@ -270,7 +319,7 @@ class Samehadaku : MainAPI() {
             APIHolder.getTracker(listOf(animeTitle), TrackerType.getTypes(type), year, true)
         }.getOrNull()
         
-        return newAnimeLoadResponse(animeTitle, url, type) {
+        val loadResponse = newAnimeLoadResponse(animeTitle, url, type) {
             posterUrl = tracker?.image ?: posterUrlValue
             backgroundPosterUrl = tracker?.cover
             plot = description
@@ -282,6 +331,11 @@ class Samehadaku : MainAPI() {
             addMalId(tracker?.malId)
             addAniListId(tracker?.aniId?.toIntOrNull())
         }
+        
+        // Save to cache
+        loadCache.put(url, loadResponse)
+        
+        return loadResponse
     }
 
     // ========================================
