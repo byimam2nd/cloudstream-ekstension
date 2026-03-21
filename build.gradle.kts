@@ -48,11 +48,11 @@ subprojects {
         // Dynamic repo from env or local.properties or default
         val repo = System.getenv("GITHUB_REPOSITORY") 
             ?: localProperties.getProperty("REPO_URL")
-            ?: "https://github.com/phisher98/cloudstream-extensions-phisher"
+            ?: "https://github.com/imam2nd/cloudstream-extensions-phisher"
         setRepo(repo)
         
         // Dynamic authors from local.properties or default
-        val authorsStr = localProperties.getProperty("AUTHORS", "Phisher98")
+        val authorsStr = localProperties.getProperty("AUTHORS", "Imam2nd")
         authors = authorsStr.split(",").map { it.trim() }
     }
 

@@ -1,110 +1,145 @@
-# 🎯 Phisher Cloudstream Plugin Server
+# ☁️ CloudStream Extensions by imam2nd
 
-**Shortcode**: `phisherrepo`
-
----
-
-### ❤️ Support
-
-If you find this project helpful, consider supporting its development!
-
-<a href="https://buymeacoffee.com/phisher98" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
-
-[![Support me on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Me-red?logo=ko-fi)](https://ko-fi.com/phisher98)
-
-## 🌐 Plugin Servers
-
-### 🔹 Phisher Cloudstream Plugin Server
-[![Discord](https://invidget.switchblade.xyz/3VmSzGeCTz)](https://discord.com/invite/3VmSzGeCTz)
-
-### 🔸 Cloudstream Plugin Server
-[![Discord](https://invidget.switchblade.xyz/JrGk2MjX7S)](https://discord.com/invite/JrGk2MjX7S)
+**Shortcode:** `imam2ndrepo`
 
 ---
 
-## 🧰 Tools & Technologies
+## 📥 Install
 
-<p align="left">
-  <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=kotlin,androidstudio,gradle,github,githubactions&theme=light&perline=5" />
-  </a>
-</p>
+### **Method 1: CloudStream App (Recommended)**
+
+1. Buka **CloudStream** app
+2. Pergi ke **Settings** → **Extensions**
+3. Klik **Add Repository**
+4. Masukkan URL: `https://raw.githubusercontent.com/byimam2nd/cloudstream-ekstension/main/repo.json`
+5. Install extensions yang diinginkan
+
+### **Method 2: Manual Download**
+
+1. Download `.cs3` file dari [GitHub Releases](https://github.com/byimam2nd/cloudstream-ekstension/releases)
+2. Buka **CloudStream** → **Extensions**
+3. Klik **Install .cs3 file**
+4. Pilih file yang sudah di-download
 
 ---
 
 ## 📺 Available Extensions
 
-### 🎬 Anime Extensions
+### **Anime**
 
-| Extension | Language | Status | Description |
-|-----------|----------|--------|-------------|
-| **Anichin** | 🇮🇩 ID | ✅ Active | Streaming Anime China Subtitle Indonesia |
-| **Animasu** 🆕 | 🇮🇩 ID | ✅ Active | Streaming Anime Subtitle Indonesia dengan kualitas tinggi |
-| **Samehadaku** 🆕 | 🇮🇩 ID | ✅ Active | Streaming Anime Subtitle Indonesia dengan update tercepat |
-| **Donghuastream** | 🇮🇩 ID | ✅ Active | Donghua (Chinese Anime) Subtitle Indonesia |
+| Extension | Language | Status |
+|-----------|----------|--------|
+| **Anichin** | 🇮🇩 ID | ✅ Active |
+| **Animasu** | 🇮🇩 ID | ✅ Active |
+| **Samehadaku** | 🇮🇩 ID | ✅ Active |
+| **Donghuastream** | 🇮🇩 ID | ✅ Active |
 
-### 🎬 Movie & TV Extensions
+### **Movies & TV**
 
-| Extension | Language | Status | Description |
-|-----------|----------|--------|-------------|
-| **Pencurimovie** | 🇮🇩 ID | ✅ Active | Film & TV Series Subtitle Indonesia |
-| **LayarKaca21** | 🇮🇩 ID | ✅ Active | Film & TV Series Subtitle Indonesia |
-| **Funmovieslix** | 🇮🇩 ID | ✅ Active | Film & TV Series Subtitle Indonesia |
-| **Idlix** | 🇮🇩 ID | ✅ Active | Film & TV Series Subtitle Indonesia |
-
----
-
-## 🔄 Ultima Sync Setup
-
-Want to sync your devices using **Ultima’s Cross Device Watch Sync**?
-
-📘 [View the full setup guide →](docs/ULTIMA_SYNC_SETUP.md)
-
-📘 [View YouTube guide →](https://cloudstream.miraheze.org/wiki/Ultima)
-
-This guide will show you how to use a **private GitHub project** and a **personal access token** to sync playback history across devices.
+| Extension | Language | Status |
+|-----------|----------|--------|
+| **Pencurimovie** | 🇮🇩 ID | ✅ Active |
+| **LayarKaca21** | 🇮🇩 ID | ✅ Active |
+| **Funmovieslix** | 🇮🇩 ID | ✅ Active |
+| **Idlix** | 🇮🇩 ID | ✅ Active |
 
 ---
 
-## STREMIO ADDON SETUPS
+## 🔧 Development
 
-Want to learn how to add and manage Stremio addons more effectively?
+### **Quick Start**
 
-📘 **StremioX / StremioC – Written Guide**  
-Detailed explanation of StremioX (stream addons) and StremioC (catalogue addons), including usage and limitations.  
-✨ **StremioC: Wrap stream & catalogue in [AIOStreams](https://github.com/Viren070/AIOStreams) addon for dual support.**  
-[Open guide →](https://github.com/phisher98/cloudstream-extensions-phisher/blob/master/docs/README-StremioX.md)
+```kotlin
+// build.gradle.kts
+version = 1
 
-📘 **Stremio Addon – Written Guide**  
-Step-by-step instructions for adding, managing, and using Stremio addon links in Cloudstream.  
-[Open guide →](https://github.com/phisher98/cloudstream-extensions-phisher/blob/master/docs/README-StremioAddon.md)
+cloudstream {
+    description = "My Extension"
+    language = "id"
+    authors = listOf("imam2nd")
+    status = 1
+    tvTypes = listOf("Anime")
+    iconUrl = "https://example.com/icon.png"
+}
+```
+
+```kotlin
+// Main API
+class MySite : MainAPI() {
+    override var mainUrl = "https://mysite.com"
+    override var name = "MySite"
+    override val hasMainPage = true
+    override var lang = "id"
+    
+    override val supportedTypes = setOf(TvType.Anime)
+    
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val document = app.get("${request.data}$page").document
+        val items = document.select("div.anime").map { it.toSearchResult() }
+        return newHomePageResponse(request.name, items)
+    }
+    
+    private fun Element.toSearchResult(): AnimeSearchResponse {
+        val title = selectFirst("a[title]")?.attr("title").orEmpty()
+        val href = fixUrl(selectFirst("a")?.attr("href").orEmpty())
+        val poster = selectFirst("img")?.attr("src").orEmpty()
+        
+        return newAnimeSearchResponse(title, href, TvType.Anime) {
+            this.posterUrl = poster
+        }
+    }
+}
+```
+
+### **Build**
+
+```bash
+# Build all extensions
+./gradlew make
+
+# Build specific module
+./gradlew :Anichin:make
+
+# Output: build/libs/Anichin-v1.cs3
+```
 
 ---
 
-## 📄 License
+## 📚 Documentation
 
-[![GNU GPLv3 Image](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)
-
-These extensions are **free software**: you can use, study, share, and modify them as you wish.
-
-They are distributed under the terms of the [GNU General Public License](https://www.gnu.org/licenses/gpl.html) version 3 or later, published by the Free Software Foundation.
-
----
-
-## ⚖️ DMCA Disclaimer
-
-We hereby issue this notice to clarify that these extensions function similarly to a standard web browser by fetching video files from the internet.
-
-- **No content is hosted by this repository or the Cloudstream 3 application.**
-- Any content accessed is hosted by third-party websites.
-- Users are solely responsible for their usage and must comply with their local laws.
-
-If you believe content is violating copyright laws, please contact the **actual file hosts**, **not** the developers of this repository or the Cloudstream 3 app.
+- **Quick Start:** This file (README.md)
+- **Extended Guide:** [docs/EXTENDED_GUIDE.md](docs/EXTENDED_GUIDE.md)
+- **Stremio Addons:** [docs/README-StremioAddon.md](docs/README-StremioAddon.md)
+- **Ultima Sync:** [docs/ULTIMA_SYNC_SETUP.md](docs/ULTIMA_SYNC_SETUP.md)
 
 ---
 
-**Thank You for using Phisher Repo!**
-# rebuild trigger
-# trigger rebuild for cache test
-# rebuild
-# rebuild trigger
+## 💖 Support
+
+Jika project ini membantu, consider support:
+
+- [Buy Me A Coffee](https://buymeacoffee.com/imam2nd)
+- [Ko-fi](https://ko-fi.com/imam2nd)
+
+---
+
+## ⚖️ License
+
+[GNU GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html)
+
+**Free software:** use, study, share, modify.
+
+---
+
+## ⚠️ Disclaimer
+
+- **No content hosted** by this repository
+- All content from **third-party websites**
+- Users responsible for their usage
+- Comply with local laws
+
+---
+
+**Maintained by:** imam2nd  
+**Last Updated:** 2026-03-20  
+**Status:** ✅ Production Ready
