@@ -1,6 +1,53 @@
 # 📚 Skills & Best Practices - CloudStream Extensions Development
 
+**Version:** 4.0.0 - ExtCloud Style Edition
+**Last Updated:** 2026-03-20
+**Philosophy:** KISS (Keep It Simple, Stupid) + YAGNI (You Ain't Gonna Need It)
+
 Dokumentasi ini berisi kumpulan ilmu, pola, dan best practices yang diperoleh selama pengembangan CloudStream Extensions.
+
+---
+
+## ⭐ EXT CLOUD STYLE PHILOSOPHY
+
+**Principle:** Keep It Simple, Stupid + You Ain't Gonna Need It
+
+### **Core Values:**
+
+1. ✅ **Simple Selectors** - Single selector, no fallback (unless really needed)
+2. ✅ **Inline Extraction** - Langsung extract, no over-abstraction
+3. ✅ **Minimal Helpers** - Only when truly reusable
+4. ✅ **Hardcoded Config** - No remote config needed
+5. ✅ **Production Proven** - ExtCloud style (100+ sites, works perfectly)
+
+### **Example:**
+
+```kotlin
+// ✅ EXT CLOUD STYLE: Simple, works!
+class Samehadaku : MainAPI() {
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val document = app.get("${request.data}$page").document
+        val home = document.select("div.animposx").mapNotNull { it.toSearchResult() }
+        return newHomePageResponse(request.name, home)
+    }
+}
+
+// ❌ OVER-ENGINEERED: Don't do this!
+class Samehadaku : MainAPI() {
+    override suspend fun getMainPage(...): HomePageResponse {
+        val selectors = RemoteConfig.getSelectors("mainPage", listOf("div.animposx"))
+        val elements = SmartSelectorV2.select(document, selectors)
+        // ... too complex!
+    }
+}
+```
+
+### **When to Use Complex Approach:**
+
+- ❌ **DON'T** add fallback unless website changes WEEKLY
+- ❌ **DON'T** add remote config unless manage 100+ sites  
+- ❌ **DON'T** add abstraction unless truly needed
+- ✅ **DO** follow KISS + YAGNI
 
 ---
 

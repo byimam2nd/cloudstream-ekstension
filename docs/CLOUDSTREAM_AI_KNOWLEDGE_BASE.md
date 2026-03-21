@@ -1,14 +1,16 @@
 # 🧠 CLOUDSTREAM EXTENSION - AI KNOWLEDGE BASE
 ## Pusat Skills & Pengetahuan Setara Memory untuk AI
 
-**Version:** 3.0.0
+**Version:** 4.0.0 - ExtCloud Style Edition
 **Last Updated:** 2026-03-20
 **Status:** ✅ PRODUCTION READY (9 Modules)
 **Source Analysis:** 700+ Kotlin files (ExtCloud + phisher + Animasu + Samehadaku)
 **Total Pages:** 1200+ baris dokumentasi lengkap
-**Latest Modules:** 
+**Latest Modules:**
 - Animasu 🆕 (Added 2026-03-20)
-- Samehadaku 🆕 (Added 2026-03-20 with full caching)
+- Samehadaku 🆕 (Added 2026-03-20)
+
+**Philosophy:** KISS (Keep It Simple, Stupid) + YAGNI (You Ain't Gonna Need It)
 
 ---
 
@@ -21,13 +23,13 @@
 4. [CloudStream API Overview](#cloudstream-api)
 
 ### 📗 BOOK 2: TECHNICAL SKILLS (Keahlian Teknis)
-5. [CSS Selectors Mastery](#css-selectors-mastery)
+5. [CSS Selectors Mastery - ExtCloud Style](#css-selectors-mastery) ⭐ UPDATED
 6. [Web Scraping Techniques](#web-scraping-techniques)
 7. [Extractor Development](#extractor-development)
 8. [Data Parsing & Transformation](#data-parsing)
 
 ### 📙 BOOK 3: BEST PRACTICES (Praktik Terbaik)
-9. [DO's and DON'Ts](#dos-and-donts)
+9. [DO's and DON'Ts](#dos-and-donts) ⭐ UPDATED
 10. [Code Quality Standards](#code-quality)
 11. [Security Best Practices](#security)
 12. [Performance Optimization](#performance)
@@ -558,6 +560,46 @@ Score.from10(8.5)  // → CloudStream score
 # 📗 BOOK 2: TECHNICAL SKILLS
 
 ## 5. CSS SELECTORS MASTERY
+
+### ⭐ EXT CLOUD STYLE SELECTOR PHILOSOPHY
+
+**Principle:** KISS (Keep It Simple, Stupid) + YAGNI (You Ain't Gonna Need It)
+
+```kotlin
+// ✅ EXT CLOUD STYLE: Simple, direct, works!
+class Samehadaku : MainAPI() {
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val document = app.get("${request.data}$page").document
+        val home = document.select("div.animposx").mapNotNull { it.toSearchResult() }
+        return newHomePageResponse(request.name, home)
+    }
+    
+    private fun Element.toSearchResult(): AnimeSearchResponse {
+        val title = selectFirst("a[title]")?.attr("title").orEmpty()
+        val href = selectFirst("a")?.attr("href").orEmpty()
+        val poster = selectFirst("img")?.attr("src").orEmpty()
+        
+        return newAnimeSearchResponse(title, href, TvType.Anime) {
+            this.posterUrl = poster
+        }
+    }
+}
+```
+
+**Why ExtCloud Style is Better:**
+- ✅ **Easy to read** - Langsung ke point
+- ✅ **Easy to understand** - No complex abstraction
+- ✅ **Easy to maintain** - Simple = easy to debug
+- ✅ **Easy to extend** - Add new site = copy-paste-modify
+- ✅ **Works perfectly** - Production proven (100+ sites)
+
+**When to Use Complex Approach:**
+- ❌ **DON'T** add fallback unless website changes WEEKLY
+- ❌ **DON'T** add remote config unless manage 100+ sites
+- ❌ **DON'T** add abstraction unless truly needed
+- ✅ **DO** follow KISS + YAGNI
+
+---
 
 ### 5.1 Basic Selectors
 
