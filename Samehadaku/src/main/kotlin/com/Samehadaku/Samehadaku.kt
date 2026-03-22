@@ -354,7 +354,7 @@ class Samehadaku : MainAPI() {
         }
         
         // Extract download links
-        downloadDoc.select("div#downloadb ul li")
+        downloadDoc.select("div#downloadb li")
             .amap { li ->
                 try {
                     val qualityText = li.selectFirst("strong")?.text() ?: "Unknown"
