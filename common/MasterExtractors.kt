@@ -1423,7 +1423,7 @@ class Xshotcok : Hxfile() {
 // Tambahkan extractor baru di sini setelah dibuat
 // ========================================
 
-object AllExtractors {
+object SyncExtractors {
     val list = listOf(
         // StreamWish based (11)
         Do7go(),
@@ -1489,6 +1489,6 @@ object AllExtractors {
 }
 
 // ========================================
-// TOTAL: 50 EXTRACTOR CLASSES
+// TOTAL: 52 EXTRACTOR CLASSES
 // ========================================
 // Build fix test

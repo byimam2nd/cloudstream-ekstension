@@ -2,7 +2,7 @@ package com.Donghuastream
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Donghuastream.AllExtractors
+import com.Donghuastream.SyncExtractors
 
 @CloudstreamPlugin
 class DonghuastreamPlugin: BasePlugin() {
@@ -11,7 +11,7 @@ class DonghuastreamPlugin: BasePlugin() {
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
-        AllExtractors.list.forEach { extractor ->
+        SyncExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
     }

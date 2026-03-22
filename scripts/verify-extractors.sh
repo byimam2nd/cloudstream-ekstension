@@ -73,7 +73,7 @@ for MODULE in "${MODULES[@]}"; do
     FOLDER=$(echo "$FOLDER" | xargs)
     echo "   Found folder: com.$FOLDER"
 
-    EXTRACTORS_FILE="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER/Extractors.kt"
+    EXTRACTORS_FILE="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER/SyncExtractors.kt"
 
     # Find Provider file - prioritize Plugin files
     PROVIDER_FILE=$(find "$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER" -maxdepth 1 -name "*Plugin.kt" 2>/dev/null | head -1)
@@ -83,28 +83,28 @@ for MODULE in "${MODULES[@]}"; do
 
     echo "   Provider: $(basename "$PROVIDER_FILE" 2>/dev/null || echo 'NOT FOUND')"
 
-    # Check 1: Extractors.kt exists
+    # Check 1: SyncExtractors.kt exists
     if [ ! -f "$EXTRACTORS_FILE" ]; then
-        echo "   ❌ ERROR: Extractors.kt not found: $EXTRACTORS_FILE"
+        echo "   ❌ ERROR: SyncExtractors.kt not found: $EXTRACTORS_FILE"
         ERRORS=$((ERRORS + 1))
         continue
     fi
-    echo "   ✅ Extractors.kt exists"
+    echo "   ✅ SyncExtractors.kt exists"
 
     # Check 2: Count extractor classes
     CLASS_COUNT=$(grep -c "^class \|^open class " "$EXTRACTORS_FILE" 2>/dev/null || echo 0)
     echo "   ✅ Extractor classes: $CLASS_COUNT"
 
-    # Check 3: AllExtractors object exists
-    if ! grep -q "object AllExtractors" "$EXTRACTORS_FILE" 2>/dev/null; then
-        echo "   ❌ ERROR: AllExtractors object not found in Extractors.kt"
+    # Check 3: SyncExtractors object exists
+    if ! grep -q "object SyncExtractors" "$EXTRACTORS_FILE" 2>/dev/null; then
+        echo "   ❌ ERROR: SyncExtractors object not found in SyncExtractors.kt"
         ERRORS=$((ERRORS + 1))
         continue
     fi
-    echo "   ✅ AllExtractors object exists"
+    echo "   ✅ SyncExtractors object exists"
 
     # Check 4: Count registered extractors
-    REGISTERED_COUNT=$(grep -A 100 "object AllExtractors" "$EXTRACTORS_FILE" 2>/dev/null | grep -c "()" || echo 0)
+    REGISTERED_COUNT=$(grep -A 100 "object SyncExtractors" "$EXTRACTORS_FILE" 2>/dev/null | grep -c "()" || echo 0)
     echo "   ✅ Registered extractors: $REGISTERED_COUNT"
 
     # Check 5: Provider file exists
@@ -115,32 +115,32 @@ for MODULE in "${MODULES[@]}"; do
     fi
     echo "   ✅ Provider file exists"
 
-    # Check 6: Provider imports AllExtractors OR uses fully qualified name
-    if ! grep -q "import.*AllExtractors" $PROVIDER_FILE 2>/dev/null && \
-       ! grep -q "com\..*\.AllExtractors" $PROVIDER_FILE 2>/dev/null; then
-        echo "   ❌ ERROR: Provider does not import AllExtractors"
+    # Check 6: Provider imports SyncExtractors OR uses fully qualified name
+    if ! grep -q "import.*SyncExtractors" $PROVIDER_FILE 2>/dev/null && \
+       ! grep -q "com\..*\.SyncExtractors" $PROVIDER_FILE 2>/dev/null; then
+        echo "   ❌ ERROR: Provider does not import SyncExtractors"
         ERRORS=$((ERRORS + 1))
         continue
     fi
-    echo "   ✅ Provider imports AllExtractors (or uses fully qualified name)"
+    echo "   ✅ Provider imports SyncExtractors (or uses fully qualified name)"
 
-    # Check 7: Provider uses AllExtractors.list.forEach (direct or fully qualified)
-    if ! grep -q "AllExtractors\.list\.forEach" $PROVIDER_FILE 2>/dev/null && \
-       ! grep -q "com\..*\.AllExtractors\.list\.forEach" $PROVIDER_FILE 2>/dev/null; then
-        echo "   ❌ ERROR: Provider does not use AllExtractors.list.forEach"
+    # Check 7: Provider uses SyncExtractors.list.forEach (direct or fully qualified)
+    if ! grep -q "SyncExtractors\.list\.forEach" $PROVIDER_FILE 2>/dev/null && \
+       ! grep -q "com\..*\.SyncExtractors\.list\.forEach" $PROVIDER_FILE 2>/dev/null; then
+        echo "   ❌ ERROR: Provider does not use SyncExtractors.list.forEach"
         ERRORS=$((ERRORS + 1))
         continue
     fi
-    echo "   ✅ Provider uses AllExtractors.list.forEach"
+    echo "   ✅ Provider uses SyncExtractors.list.forEach"
 
     # Check 8: Validate class count vs registered count
     if [ "$CLASS_COUNT" -lt "$REGISTERED_COUNT" ]; then
         echo "   ⚠️  WARNING: Registered count ($REGISTERED_COUNT) > Class count ($CLASS_COUNT)"
     fi
 
-    # Consistency check - expect ~39 classes
-    if [ "$CLASS_COUNT" -lt 30 ]; then
-        echo "   ⚠️  WARNING: Low extractor count ($CLASS_COUNT), expected ~39"
+    # Consistency check - expect ~52 classes
+    if [ "$CLASS_COUNT" -lt 45 ]; then
+        echo "   ⚠️  WARNING: Low extractor count ($CLASS_COUNT), expected ~52"
     fi
 
     echo "   ✅ $MODULE validation PASSED"
@@ -169,18 +169,18 @@ if [ "$VALID_COUNT" -eq 0 ]; then
     exit 1
 fi
 
-echo "✅ Validation PASSED: All $VALID_COUNT module(s) correctly use Extractors.kt"
+echo "✅ Validation PASSED: All $VALID_COUNT module(s) correctly use SyncExtractors.kt"
 echo ""
 
 # Consistency check
 echo "📋 Consistency Check:"
-echo "   Each module should have ~39 extractor classes"
-echo "   Expected total: ~$((VALID_COUNT * 39)) classes"
+echo "   Each module should have ~52 extractor classes"
+echo "   Expected total: ~$((VALID_COUNT * 52)) classes"
 echo ""
 
-if [ "$TOTAL_CLASSES" -lt "$((VALID_COUNT * 30))" ]; then
+if [ "$TOTAL_CLASSES" -lt "$((VALID_COUNT * 45))" ]; then
     echo "⚠️  Warning: Total classes ($TOTAL_CLASSES) seems low!"
-    echo "   Expected at least $((VALID_COUNT * 30)) classes for $VALID_COUNT modules"
+    echo "   Expected at least $((VALID_COUNT * 45)) classes for $VALID_COUNT modules"
     echo "   Check if MasterExtractors.kt is complete"
     exit 1
 fi

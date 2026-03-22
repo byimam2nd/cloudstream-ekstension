@@ -120,7 +120,7 @@ for MODULE in "${MODULES[@]}"; do
 
     # Destination directory and file
     DEST_DIR="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER"
-    DEST_FILE="$DEST_DIR/Extractors.kt"
+    DEST_FILE="$DEST_DIR/SyncExtractors.kt"
 
     # Check if source folder exists
     if [ ! -d "$DEST_DIR" ]; then
@@ -134,7 +134,8 @@ for MODULE in "${MODULES[@]}"; do
         NR==1 { print "// ========================================" }
         NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
         NR==3 { print "// Synced from common/MasterExtractors.kt" }
-        NR==4 { print "// ========================================" }
+        NR==4 { print "// File: SyncExtractors.kt" }
+        NR==5 { print "// ========================================" }
         /^package / { print "package com." pkg; next }
         { print }
     ' "$MASTER_FILE" > "$DEST_FILE"

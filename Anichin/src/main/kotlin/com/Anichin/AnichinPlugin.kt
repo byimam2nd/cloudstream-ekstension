@@ -2,7 +2,7 @@ package com.Anichin
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Anichin.AllExtractors
+import com.Anichin.SyncExtractors
 
 @CloudstreamPlugin
 class AnichinPlugin: BasePlugin() {
@@ -11,7 +11,7 @@ class AnichinPlugin: BasePlugin() {
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
-        AllExtractors.list.forEach { extractor ->
+        SyncExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
     }
