@@ -95,9 +95,9 @@ class Samehadaku : MainAPI() {
 
     override val mainPage = mainPageOf(
         "$mainUrl/page/" to "Episode Terbaru",
-        "$mainUrl/daftar-anime-2/?title=&status=&type=TV&order=popular&page=" to "TV Populer",
-        "$mainUrl/daftar-anime-2/?title=&status=&type=OVA&order=title&page=" to "OVA",
-        "$mainUrl/daftar-anime-2/?title=&status=&type=Movie&order=title&page=" to "Movie"
+        "daftar-anime-2/?title=&status=&type=TV&order=popular&page=" to "TV Populer",
+        "daftar-anime-2/?title=&status=&type=OVA&order=title&page=" to "OVA",
+        "daftar-anime-2/?title=&status=&type=Movie&order=title&page=" to "Movie"
     )
 
     // ========================================
@@ -164,11 +164,18 @@ class Samehadaku : MainAPI() {
         }
         
         Log.d("Samehadaku", "Cache MISS for mainPage: $cacheKey")
-        
+
+        // Fix: Handle relative URLs properly (like ExtCloud)
+        val url = if (request.data.startsWith("http")) {
+            "${request.data}$page"
+        } else {
+            "$mainUrl/${request.data}$page"
+        }
+
         val httpResult = executeWithRetry {
             rateLimitDelay()
             app.get(
-                "${request.data}$page",
+                url,
                 timeout = requestTimeout,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             )
