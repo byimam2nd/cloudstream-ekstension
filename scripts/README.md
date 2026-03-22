@@ -21,7 +21,7 @@ bash scripts/verify-extractors.sh
 
 ### 1. `sync-extractors.sh`
 
-**Fungsi:** Sync `docs/MasterExtractors.kt` ke semua active modules.
+**Fungsi:** Sync `common/MasterExtractors.kt` ke semua active modules.
 
 **Cara kerja:**
 1. Deteksi module aktif (folder dengan `build.gradle.kts`)
@@ -131,8 +131,8 @@ Workflow otomatis yang berjalan di GitHub Actions:
 **File:** `.github/workflows/sync-extractors.yml`
 
 **Trigger:**
-- Push ke `master` dengan perubahan `docs/MasterExtractors.kt`
-- Pull request dengan perubahan `docs/MasterExtractors.kt`
+- Push ke `master` dengan perubahan `common/MasterExtractors.kt`
+- Pull request dengan perubahan `common/MasterExtractors.kt`
 - Manual trigger via `workflow_dispatch`
 
 **Jobs:**
@@ -196,7 +196,7 @@ Workflow otomatis yang berjalan di GitHub Actions:
 
 ### Update Master Extractors
 
-1. Edit `docs/MasterExtractors.kt`:
+1. Edit `common/MasterExtractors.kt`:
    - Tambah extractor class baru
    - Tambah ke `AllExtractors.list`
    - Update TOTAL comment
@@ -260,10 +260,10 @@ bash scripts/sync-extractors.sh
 **Solution:**
 ```bash
 # Cek MasterExtractors.kt
-grep -c "^class \|^open class " docs/MasterExtractors.kt
+grep -c "^class \|^open class " common/MasterExtractors.kt
 
 # Cek AllExtractors.list
-grep -A 100 "object AllExtractors" docs/MasterExtractors.kt | grep -c "()"
+grep -A 100 "object AllExtractors" common/MasterExtractors.kt | grep -c "()"
 
 # Re-sync
 bash scripts/sync-extractors.sh
@@ -287,7 +287,7 @@ bash scripts/sync-extractors.sh
 
 - [EXTRACTOR_DOCUMENTATION.md](../docs/EXTRACTOR_DOCUMENTATION.md) - Extractor system docs
 - [EXTRACTOR_ARCHITECTURE.md](../docs/EXTRACTOR_ARCHITECTURE.md) - Architecture reference
-- [MasterExtractors.kt](../docs/MasterExtractors.kt) - Source code
+- [MasterExtractors.kt](../common/MasterExtractors.kt) - Source code
 
 ---
 

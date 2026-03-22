@@ -9,11 +9,11 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'docs/MasterExtractors.kt'
+      - 'common/MasterExtractors.kt'
   pull_request:
     branches: [ master ]
     paths:
-      - 'docs/MasterExtractors.kt'
+      - 'common/MasterExtractors.kt'
   workflow_dispatch:
 
 jobs:
@@ -54,7 +54,7 @@ jobs:
         echo "📦 Syncing Master Extractors to all active sites..."
 
         # Master Extractors file location
-        MASTER_FILE="docs/MasterExtractors.kt"
+        MASTER_FILE="common/MasterExtractors.kt"
 
         # Check if master file exists
         if [ ! -f "$MASTER_FILE" ]; then
@@ -153,7 +153,7 @@ jobs:
           awk -v pkg="$PACKAGE" '
             NR==1 { print "// ========================================" }
             NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
-            NR==3 { print "// Synced from docs/MasterExtractors.kt" }
+            NR==3 { print "// Synced from common/MasterExtractors.kt" }
             NR==4 { print "// ========================================" }
             /^package / { print "package com." pkg; next }
             { print }
