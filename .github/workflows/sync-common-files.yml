@@ -9,19 +9,19 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'docs/MasterCacheManager.kt'
-      - 'docs/MasterSmartCacheMonitor.kt'
-      - 'docs/MasterImageCache.kt'
-      - 'docs/MasterSuperSmartPrefetchManager.kt'
-      - 'docs/MasterUtils.kt'
+      - 'common/MasterCacheManager.kt'
+      - 'common/MasterSmartCacheMonitor.kt'
+      - 'common/MasterImageCache.kt'
+      - 'common/MasterSuperSmartPrefetchManager.kt'
+      - 'common/MasterUtils.kt'
   pull_request:
     branches: [ master ]
     paths:
-      - 'docs/MasterCacheManager.kt'
-      - 'docs/MasterSmartCacheMonitor.kt'
-      - 'docs/MasterImageCache.kt'
-      - 'docs/MasterSuperSmartPrefetchManager.kt'
-      - 'docs/MasterUtils.kt'
+      - 'common/MasterCacheManager.kt'
+      - 'common/MasterSmartCacheMonitor.kt'
+      - 'common/MasterImageCache.kt'
+      - 'common/MasterSuperSmartPrefetchManager.kt'
+      - 'common/MasterUtils.kt'
   workflow_dispatch:
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
         echo "📦 Syncing Master Common Files to all active modules..."
 
         # Master files location
-        DOCS_DIR="docs"
+        COMMON_DIR="common"
         
         MASTER_FILES=(
           "MasterCacheManager.kt:CacheManager.kt"
@@ -162,7 +162,7 @@ jobs:
             MASTER_FILE="${master_pair%%:*}"
             OUTPUT_FILE="${master_pair##*:}"
             
-            MASTER_PATH="$DOCS_DIR/$MASTER_FILE"
+            MASTER_PATH="$COMMON_DIR/$MASTER_FILE"
             OUTPUT_PATH="$DEST_DIR/$OUTPUT_FILE"
 
             if [ ! -f "$MASTER_PATH" ]; then
