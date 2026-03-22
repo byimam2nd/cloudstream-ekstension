@@ -38,7 +38,7 @@ class LayarKaca21 : MainAPI() {
 
     // Standard timeout untuk semua request (10 detik)
     private val requestTimeout = 10000L
- 
+
     override val mainPage = mainPageOf(
         "$mainUrl/latest/page/" to "Film Upload Terbaru",
         "$mainUrl/populer/page/" to "Film Terplopuler",
@@ -57,22 +57,59 @@ class LayarKaca21 : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        // Follow ExtCloud pattern - no cache for simplicity
-        val document = app.get(request.data + page).document
-        val home = document.select("article figure").mapNotNull {
-            it.toSearchResult()
+        val cacheKey = "${request.data}${page}"
+
+        // Check cache first
+        val cached = mainPageCache.get(cacheKey)
+        if (cached != null) {
+            Log.d("LayarKaca", "Cache HIT for $cacheKey")
+            return cached
         }
-        return newHomePageResponse(request.name, home)
+
+        Log.d("LayarKaca", "Cache MISS for $cacheKey")
+
+        // Fetch dengan retry logic dan rate limiting
+        val response = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                "${request.data}$page",
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
+
+        val home = response.select("article figure").mapNotNull {
+            runCatching { it.toSearchResult() }.getOrElse { null }
+        }
+
+        val result = newHomePageResponse(request.name, home)
+
+        // Cache the result
+        mainPageCache.put(cacheKey, result)
+
+        return result
     }
 
     private suspend fun getProperLink(url: String): String {
         if (url.startsWith(seriesUrl)) return url
-        val res = app.get(url).document
-        return if (res.select("title").text().contains("Nontondrama", true)) {
-            res.selectFirst("a#openNow")?.attr("href")
-                ?: res.selectFirst("div.links a")?.attr("href")
-                ?: url
-        } else {
+
+        return try {
+            rateLimitDelay()
+            val res = app.get(
+                url,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+
+            if (res.select("title").text().contains("Nontondrama", true)) {
+                res.selectFirst("a#openNow")?.attr("href")
+                    ?: res.selectFirst("div.links a")?.attr("href")
+                    ?: url
+            } else {
+                url
+            }
+        } catch (e: Exception) {
+            logError("LayarKaca", "Error getting proper link: ${e.message}", e)
             url
         }
     }
@@ -139,28 +176,39 @@ class LayarKaca21 : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val fixUrl = getProperLink(url)
-        val document = app.get(fixUrl).document
-        val baseurl = fetchURL(fixUrl)
-        val title = document.selectFirst("div.movie-info h1")?.text()?.trim().toString()
+
+        val document = executeWithRetry(maxRetries = 3) {
+            rateLimitDelay()
+            app.get(
+                fixUrl,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
+
+        val baseUrl = fetchURL(fixUrl)
+        val title = document.selectFirst("div.movie-info h1")?.text()?.trim().orEmpty()
         val poster = document.select("meta[property=og:image]").attr("content")
         val tags = document.select("div.tag-list span").map { it.text() }
-        val posterheaders = mapOf("Referer" to getBaseUrl(poster))
+        val posterHeaders = mapOf("Referer" to getBaseUrl(poster))
 
         val year = Regex("\\d, (\\d+)").find(
             document.select("div.movie-info h1").text().trim()
-        )?.groupValues?.get(1).toString().toIntOrNull()
+        )?.groupValues?.get(1)?.toIntOrNull()
+
         val tvType = if (document.selectFirst("#season-data") != null) TvType.TvSeries else TvType.Movie
         val description = document.selectFirst("div.meta-info")?.text()?.trim()
         val trailer = document.selectFirst("ul.action-left > li:nth-child(3) > a")?.attr("href")
         val rating = document.selectFirst("div.info-tag strong")?.text()
 
-        val recommendations = document.select("li.slider article").map {
-            val recName = it.selectFirst("h3")?.text()?.trim().toString()
-            val recHref = baseurl + it.selectFirst("a")!!.attr("href")
-            val recPosterUrl = fixUrl(it.selectFirst("img")?.attr("src").toString())
+        val recommendations = document.select("li.slider article").mapNotNull {
+            val recName = it.selectFirst("h3")?.text()?.trim().orEmpty()
+            val recHref = baseUrl + it.selectFirst("a")?.attr("href").orEmpty()
+            val recPosterUrl = fixUrl(it.selectFirst("img")?.attr("src").orEmpty())
+
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
-                this.posterHeaders = posterheaders
+                this.posterHeaders = posterHeaders
             }
         }
 
@@ -188,7 +236,7 @@ class LayarKaca21 : MainAPI() {
             }
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
-                this.posterHeaders = posterheaders
+                this.posterHeaders = posterHeaders
                 this.year = year
                 this.plot = description
                 this.tags = tags
@@ -199,7 +247,7 @@ class LayarKaca21 : MainAPI() {
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
-                this.posterHeaders = posterheaders
+                this.posterHeaders = posterHeaders
                 this.year = year
                 this.plot = description
                 this.tags = tags
@@ -242,18 +290,61 @@ class LayarKaca21 : MainAPI() {
     }
 
     private suspend fun String.getIframe(): String {
-        return app.get(this, referer = "$seriesUrl/").document.select("div.embed-container iframe")
-            .attr("src")
+        return try {
+            rateLimitDelay()
+            val response = app.get(
+                this,
+                referer = "$seriesUrl/",
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            )
+            val document = response.documentLarge
+
+            // Try multiple selectors for iframe
+            val iframeUrl = document.selectFirst("div.embed-container iframe")?.attr("src")
+                ?: document.selectFirst("iframe[name=\"iframe\"]")?.attr("src")
+                ?: document.selectFirst("body iframe")?.attr("src")
+                ?: document.selectFirst("meta[property=og:video\"]")?.attr("content")
+                ?: ""
+
+            // If still empty, try to extract from script tags
+            if (iframeUrl.isEmpty()) {
+                val scriptData = document.selectFirst("script:containsData(var player)")?.data()
+                    ?: document.selectFirst("script:containsData(player_url)")?.data()
+
+                if (scriptData != null) {
+                    // Extract URL from JavaScript variable
+                    val urlMatch = Regex("\"(https?://[^\"]+)\"").find(scriptData)
+                    return urlMatch?.groupValues?.get(1) ?: ""
+                }
+            }
+
+            iframeUrl
+        } catch (e: Exception) {
+            logError("LayarKaca", "getIframe failed: ${e.message}", e)
+            ""
+        }
     }
 
     private suspend fun fetchURL(url: String): String {
-        val res = app.get(url, allowRedirects = false)
-        val href = res.headers["location"]
+        return try {
+            rateLimitDelay()
+            val res = app.get(
+                url,
+                allowRedirects = false,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            )
+            val href = res.headers["location"]
 
-        return if (href != null) {
-            val it = URI(href)
-            "${it.scheme}://${it.host}"
-        } else {
+            if (href != null) {
+                val uri = URI(href)
+                "${uri.scheme}://${uri.host}"
+            } else {
+                url
+            }
+        } catch (e: Exception) {
+            logError("LayarKaca", "fetchURL failed: ${e.message}", e)
             url
         }
     }
@@ -267,8 +358,12 @@ class LayarKaca21 : MainAPI() {
     }
 
     fun getBaseUrl(url: String?): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
+        if (url.isNullOrEmpty()) return mainUrl
+        return try {
+            val uri = URI(url)
+            "${uri.scheme}://${uri.host}"
+        } catch (e: Exception) {
+            mainUrl
         }
     }
 }
