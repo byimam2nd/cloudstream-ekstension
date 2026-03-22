@@ -153,7 +153,8 @@ class LayarKaca21 : MainAPI() {
             val title = item.getString("title")
             val slug = item.getString("slug")
             val type = item.getString("type")
-            val posterUrl = "https://poster.lk21.party/wp-content/uploads/"+item.optString("poster")
+            // FIX: Use correct domain (static-jpg instead of poster)
+            val posterUrl = "https://static-jpg.lk21.party/wp-content/uploads/" + item.optString("poster")
             when (type) {
                 "series" -> results.add(
                     newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
@@ -264,62 +265,29 @@ class LayarKaca21 : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        try {
-            val document = executeWithRetry(maxRetries = 3) {
-                rateLimitDelay()
-                app.get(
-                    data,
-                    timeout = requestTimeout,
-                    headers = mapOf("User-Agent" to getRandomUserAgent())
-                ).documentLarge
-            }
-
-            // Simple approach like ExtCloud - select all player links
-            val playerLinks = document.select("ul#player-list a").mapNotNull {
-                val href = it.attr("href")
-                if (href.isNotEmpty()) fixUrl(href) else null
-            }
-
-            if (playerLinks.isEmpty()) {
-                logError("LayarKaca", "No player links found")
-                return false
-            }
-
-            playerLinks.forEach { playerUrl ->
-                try {
-                    rateLimitDelay()
-                    // Fetch player page
-                    val playerDoc = app.get(
-                        playerUrl,
-                        referer = "$mainUrl/",
-                        timeout = requestTimeout,
-                        headers = mapOf("User-Agent" to getRandomUserAgent())
-                    ).documentLarge
-
-                    // Extract iframe
-                    val iframeUrl = playerDoc.selectFirst("iframe")?.attr("src").orEmpty()
-
-                    if (iframeUrl.isNotEmpty()) {
-                        // Handle redirect URLs (like short.icu)
-                        val finalIframe = if (iframeUrl.contains("short.icu")) {
-                            app.get(iframeUrl, allowRedirects = true).url
-                        } else {
-                            iframeUrl
-                        }
-
-                        // Load extractor
-                        loadExtractor(finalIframe, "$mainUrl/", subtitleCallback, callback)
-                    }
-                } catch (e: Exception) {
-                    logError("LayarKaca", "Failed to load player: ${playerUrl} - ${e.message}")
+        // Simplified like ExtCloud - direct approach
+        val document = app.get(data).document
+        
+        val playerLinks = document.select("ul#player-list a")
+        
+        playerLinks.forEach { video ->
+            val player = video.attr("href")
+            val playerDoc = app.get(player, referer = "$mainUrl/").document
+            val iframe = playerDoc.selectFirst("iframe")?.attr("src").orEmpty()
+            
+            if (iframe.isNotEmpty()) {
+                // Handle short.icu redirect
+                val finalIframe = if (iframe.contains("short.icu")) {
+                    app.get(iframe, allowRedirects = true).url
+                } else {
+                    iframe
                 }
+                
+                loadExtractor(finalIframe, "$mainUrl/", subtitleCallback, callback)
             }
-
-            return true
-        } catch (e: Exception) {
-            logError("LayarKaca", "loadLinks failed: ${e.message}", e)
-            return false
         }
+        
+        return true
     }
 
     private suspend fun String.getIframe(): String {
