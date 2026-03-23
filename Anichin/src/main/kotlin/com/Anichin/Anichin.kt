@@ -48,8 +48,8 @@ import com.Anichin.executeWithRetry
 import com.Anichin.logError
 
 // Cache instances
-private val searchCache = SyncCacheManager<List<SearchResponse>>()
-private val mainPageCache = SyncCacheManager<HomePageResponse>()
+private val searchCache = CacheManager<List<SearchResponse>>()
+private val mainPageCache = CacheManager<HomePageResponse>()
 
 // Smart Cache Monitor untuk fingerprint-based invalidation
 private val monitor = AnichinMonitor()

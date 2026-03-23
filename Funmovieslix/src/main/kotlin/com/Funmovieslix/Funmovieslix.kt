@@ -34,8 +34,8 @@ import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
 
 // Caching using shared CacheManager from CacheManager.kt
-private val searchCache = SyncCacheManager<List<SearchResponse>>()
-private val mainPageCache = SyncCacheManager<HomePageResponse>()
+private val searchCache = CacheManager<List<SearchResponse>>()
+private val mainPageCache = CacheManager<HomePageResponse>()
 
 class Funmovieslix : MainAPI() {
     override var mainUrl = "https://funmovieslix.com"
