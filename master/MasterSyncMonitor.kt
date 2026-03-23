@@ -157,7 +157,7 @@ abstract class SyncMonitor {
             
             if (titles.isEmpty()) return false
             
-            val newFingerprint = titles.hashCode()
+            val newFingerprint = titles.hashCode().toLong()
             newFingerprint == currentFingerprint
         } catch (e: Exception) {
             Log.e(TAG, "checkCacheValidity failed: ${e.message}")
@@ -175,7 +175,7 @@ abstract class SyncMonitor {
         val titles = withTimeout(CHECK_TIMEOUT) { 
             fetchTitles(provider, url)
         }
-        return titles.hashCode()
+        return titles.hashCode().toLong()
     }
 
     /**
