@@ -1,6 +1,6 @@
 package com.Anichin
 
-import com.Anichin.SyncCacheManager
+import com.Anichin.CacheManager
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.HomePageList

@@ -1,6 +1,6 @@
 package com.Donghuastream
 
-import com.Donghuastream.SyncCacheManager
+import com.Donghuastream.CacheManager
 
 
 import com.lagradost.api.Log

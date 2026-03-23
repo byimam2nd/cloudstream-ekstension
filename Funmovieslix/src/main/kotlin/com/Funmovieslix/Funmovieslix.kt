@@ -1,6 +1,6 @@
 package com.Funmovieslix
 
-import com.Funmovieslix.SyncCacheManager
+import com.Funmovieslix.CacheManager
 
 import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.HomePageList
