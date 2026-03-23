@@ -9,10 +9,6 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import com.LayarKaca21.rateLimitDelay
-import com.LayarKaca21.getRandomUserAgent
-import com.LayarKaca21.executeWithRetry
-import com.LayarKaca21.logError
 import com.LayarKaca21.SmartCacheMonitor
 
 // Cache instances
@@ -283,17 +279,8 @@ class LayarKaca21 : MainAPI() {
                     iframe
                 }
 
-                // Pass iframe URL directly to callback as ExtractorLink
-                // CloudStream's extractor system will handle it automatically
-                callback(
-                    newExtractorLink(
-                        "LayarKaca21",
-                        "LayarKaca21",
-                        finalIframe
-                    ) {
-                        this.referer = "$mainUrl/"
-                    }
-                )
+                // Use CloudStream's built-in loadExtractor function
+                loadExtractor(finalIframe, "$mainUrl/", subtitleCallback, callback)
             }
         }
 
