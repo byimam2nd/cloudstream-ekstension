@@ -287,12 +287,12 @@ class LayarKaca21 : MainAPI() {
                 // CloudStream's extractor system will handle it automatically
                 callback(
                     newExtractorLink(
-                        source = "LayarKaca21",
-                        name = "LayarKaca21",
-                        url = finalIframe,
-                        referer = "$mainUrl/",
-                        quality = 0 // Unknown quality
-                    )
+                        "LayarKaca21",
+                        "LayarKaca21",
+                        finalIframe
+                    ) {
+                        this.referer = "$mainUrl/"
+                    }
                 )
             }
         }
