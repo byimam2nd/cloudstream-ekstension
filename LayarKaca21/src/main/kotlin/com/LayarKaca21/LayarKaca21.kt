@@ -286,13 +286,12 @@ class LayarKaca21 : MainAPI() {
                 // Pass iframe URL directly to callback as ExtractorLink
                 // CloudStream's extractor system will handle it automatically
                 callback(
-                    ExtractorLink(
+                    newExtractorLink(
                         source = "LayarKaca21",
                         name = "LayarKaca21",
                         url = finalIframe,
                         referer = "$mainUrl/",
-                        quality = Qualities.UNKNOWN.value,
-                        isM3u8 = finalIframe.contains(".m3u8")
+                        quality = 0 // Unknown quality
                     )
                 )
             }
