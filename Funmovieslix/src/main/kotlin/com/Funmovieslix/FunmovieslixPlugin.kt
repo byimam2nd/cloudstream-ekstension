@@ -2,7 +2,7 @@ package com.Funmovieslix
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Funmovieslix.AllExtractors
+import com.Funmovieslix.SyncExtractors
 
 @CloudstreamPlugin
 class FunmovieslixPlugin: BasePlugin() {
@@ -11,7 +11,7 @@ class FunmovieslixPlugin: BasePlugin() {
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
-        AllExtractors.list.forEach { extractor ->
+        SyncExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
     }

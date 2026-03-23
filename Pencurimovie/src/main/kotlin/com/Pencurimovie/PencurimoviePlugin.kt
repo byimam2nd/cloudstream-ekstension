@@ -2,7 +2,7 @@ package com.Pencurimovie
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Pencurimovie.AllExtractors
+import com.Pencurimovie.SyncExtractors
 
 @CloudstreamPlugin
 class PencurimoviePlugin: BasePlugin() {
@@ -11,7 +11,7 @@ class PencurimoviePlugin: BasePlugin() {
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
-        AllExtractors.list.forEach { extractor ->
+        SyncExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
     }

@@ -12,9 +12,9 @@ on:
       - main
     paths-ignore:
       - '*.md'
-  # ALSO trigger after Sync Master Extractors completes
+  # Trigger after Sync All Master Files completes
   workflow_run:
-    workflows: ["Sync Master Extractors"]
+    workflows: ["Sync All Master Files"]
     types:
       - completed
     branches:

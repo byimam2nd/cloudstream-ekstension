@@ -1,26 +1,45 @@
 #!/bin/bash
 
 # ========================================
-# Sync Master Extractors to All Active Sites
+# Sync ALL Master Files to All Active Sites
 # ========================================
 # FULLY DYNAMIC - No hardcoded module names!
 # Auto-detects modules, folders, and packages
+# Syncs all Master*.kt files with Sync prefix
 # ========================================
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-MASTER_FILE="$ROOT_DIR/common/MasterExtractors.kt"
+COMMON_DIR="$ROOT_DIR/common"
 
 echo "========================================"
-echo "📦 Sync Master Extractors"
+echo "📦 Sync All Master Files"
 echo "========================================"
 echo ""
 
-# Check if master file exists
-if [ ! -f "$MASTER_FILE" ]; then
-    echo "❌ Master Extractors file not found at: $MASTER_FILE"
+# List of Master files to sync
+MASTER_FILES=(
+    "MasterExtractors.kt:SyncExtractors.kt"
+    "MasterUtils.kt:SyncUtils.kt"
+    "MasterCacheManager.kt:SyncCacheManager.kt"
+    "MasterImageCache.kt:SyncImageCache.kt"
+    "MasterSmartCacheMonitor.kt:SyncSmartCacheMonitor.kt"
+    "MasterSuperSmartPrefetchManager.kt:SyncSuperSmartPrefetchManager.kt"
+)
+
+echo "📋 Master files to sync:"
+for master_entry in "${MASTER_FILES[@]}"; do
+    master_file="${master_entry%%:*}"
+    sync_file="${master_entry##*:}"
+    echo "   - $master_file → $sync_file"
+done
+echo ""
+
+# Check if common directory exists
+if [ ! -d "$COMMON_DIR" ]; then
+    echo "❌ Common directory not found at: $COMMON_DIR"
     exit 1
 fi
 
@@ -30,9 +49,15 @@ echo ""
 # Find all folders with build.gradle.kts (excluding root)
 MODULES=()
 while IFS= read -r build_file; do
-    module_dir=$(dirname "$build_file" | sed "s|$ROOT_DIR/||")
-    MODULES+=("$module_dir")
-done < <(find "$ROOT_DIR" -maxdepth 2 -name "build.gradle.kts" | grep -v "^$ROOT_DIR/build.gradle.kts" || true)
+    # Get directory relative to ROOT_DIR
+    module_dir=$(dirname "$build_file")
+    # Remove ROOT_DIR prefix and leading slash
+    module_dir="${module_dir#$ROOT_DIR/}"
+    # Skip root and empty
+    if [ -n "$module_dir" ] && [ "$module_dir" != "." ]; then
+        MODULES+=("$module_dir")
+    fi
+done < <(find "$ROOT_DIR" -mindepth 2 -maxdepth 2 -name "build.gradle.kts" 2>/dev/null || true)
 
 MODULE_COUNT=${#MODULES[@]}
 
@@ -44,8 +69,8 @@ fi
 echo "✅ Found $MODULE_COUNT active module(s): ${MODULES[*]}"
 echo ""
 
-SYNCED_COUNT=0
-ERRORS=0
+TOTAL_SYNCED=0
+TOTAL_ERRORS=0
 
 # Sync to each active module - FULLY DYNAMIC
 for MODULE in "${MODULES[@]}"; do
@@ -56,7 +81,7 @@ for MODULE in "${MODULES[@]}"; do
 
     if [ ! -d "$SRC_DIR" ]; then
         echo "   ❌ Error: Source directory not found: $SRC_DIR"
-        ERRORS=$((ERRORS + 1))
+        TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
         continue
     fi
 
@@ -66,7 +91,7 @@ for MODULE in "${MODULES[@]}"; do
 
     if [ "$FOLDER_COUNT" -eq 0 ]; then
         echo "   ❌ Error: No folders found in $SRC_DIR"
-        ERRORS=$((ERRORS + 1))
+        TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
         continue
     fi
 
@@ -118,52 +143,71 @@ for MODULE in "${MODULES[@]}"; do
 
     echo "   Detected package: $PACKAGE"
 
-    # Destination directory and file
+    # Destination directory
     DEST_DIR="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER"
-    DEST_FILE="$DEST_DIR/SyncExtractors.kt"
 
     # Check if source folder exists
     if [ ! -d "$DEST_DIR" ]; then
         echo "   ❌ Error: Destination directory not found: $DEST_DIR"
-        ERRORS=$((ERRORS + 1))
+        TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
         continue
     fi
 
-    # Copy master extractors with correct package name
-    awk -v pkg="$PACKAGE" '
-        NR==1 { print "// ========================================" }
-        NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
-        NR==3 { print "// Synced from common/MasterExtractors.kt" }
-        NR==4 { print "// File: SyncExtractors.kt" }
-        NR==5 { print "// ========================================" }
-        /^package / { print "package com." pkg; next }
-        { print }
-    ' "$MASTER_FILE" > "$DEST_FILE"
+    # Sync each Master file
+    MODULE_SYNCED=0
+    for master_entry in "${MASTER_FILES[@]}"; do
+        master_file="${master_entry%%:*}"
+        sync_file="${master_entry##*:}"
 
-    # Count extractor classes
-    CLASS_COUNT=$(grep -c "^class \|^open class " "$DEST_FILE" 2>/dev/null || echo 0)
+        MASTER_SOURCE="$COMMON_DIR/$master_file"
 
-    echo "   ✅ Synced: $MODULE/$FOLDER ($CLASS_COUNT extractor classes)"
+        # Check if master file exists
+        if [ ! -f "$MASTER_SOURCE" ]; then
+            echo "   ⚠️  Warning: Master file not found: $master_file"
+            continue
+        fi
+
+        DEST_FILE="$DEST_DIR/$sync_file"
+
+        # Copy master file with correct package name
+        awk -v pkg="$PACKAGE" '
+            NR==1 { print "// ========================================" }
+            NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
+            NR==3 { print "// Synced from common/'"$master_file"'" }
+            NR==4 { print "// File: '"$sync_file"'" }
+            NR==5 { print "// ========================================" }
+            /^package / { print "package com." pkg; next }
+            { print }
+        ' "$MASTER_SOURCE" > "$DEST_FILE"
+
+        # Count lines (excluding comments)
+        LINE_COUNT=$(wc -l < "$DEST_FILE")
+
+        echo "   ✅ Synced: $sync_file ($LINE_COUNT lines)"
+        MODULE_SYNCED=$((MODULE_SYNCED + 1))
+    done
+
+    echo "   📊 Module $MODULE: $MODULE_SYNCED files synced"
     echo ""
 
-    SYNCED_COUNT=$((SYNCED_COUNT + 1))
+    TOTAL_SYNCED=$((TOTAL_SYNCED + MODULE_SYNCED))
 done
 
 echo "========================================"
 echo "📊 Sync Summary"
 echo "========================================"
 echo "   Total modules: $MODULE_COUNT"
-echo "   Synced: $SYNCED_COUNT"
-echo "   Errors: $ERRORS"
+echo "   Total files synced: $TOTAL_SYNCED"
+echo "   Errors: $TOTAL_ERRORS"
 echo ""
 
-if [ "$ERRORS" -gt 0 ]; then
-    echo "❌ Sync FAILED with $ERRORS error(s)"
+if [ "$TOTAL_ERRORS" -gt 0 ]; then
+    echo "❌ Sync FAILED with $TOTAL_ERRORS error(s)"
     exit 1
 fi
 
-if [ "$SYNCED_COUNT" -eq 0 ]; then
-    echo "❌ Sync FAILED: No modules were synced"
+if [ "$TOTAL_SYNCED" -eq 0 ]; then
+    echo "❌ Sync FAILED: No files were synced"
     exit 1
 fi
 
@@ -171,5 +215,5 @@ echo "✅ Sync completed successfully!"
 echo ""
 echo "Next steps:"
 echo "  1. Review changes: git diff"
-echo "  2. Commit: git add -A && git commit -m 'chore: sync extractors'"
+echo "  2. Commit: git add -A && git commit -m 'chore: sync all master files'"
 echo "  3. Push: git push"

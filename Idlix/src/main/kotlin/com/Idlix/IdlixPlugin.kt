@@ -3,7 +3,7 @@ package com.Idlix
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.Idlix.Idlix
-import com.Idlix.AllExtractors
+import com.Idlix.SyncExtractors
 
 @CloudstreamPlugin
 class IdlixPlugin: BasePlugin() {
@@ -12,7 +12,7 @@ class IdlixPlugin: BasePlugin() {
 
         // DYNAMIC REGISTER: Auto-register ALL extractors
         // Tidak perlu hardcode satu-satu!
-        AllExtractors.list.forEach { extractor ->
+        SyncExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
     }

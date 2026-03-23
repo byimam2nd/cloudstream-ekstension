@@ -1,0 +1,205 @@
+name: Sync All Master Files
+
+# Consolidated sync workflow for all Master files
+concurrency:
+  group: "sync-all-masters"
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'common/MasterExtractors.kt'
+      - 'common/MasterUtils.kt'
+      - 'common/MasterCacheManager.kt'
+      - 'common/MasterImageCache.kt'
+      - 'common/MasterSmartCacheMonitor.kt'
+      - 'common/MasterSuperSmartPrefetchManager.kt'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'common/MasterExtractors.kt'
+      - 'common/MasterUtils.kt'
+      - 'common/MasterCacheManager.kt'
+      - 'common/MasterImageCache.kt'
+      - 'common/MasterSmartCacheMonitor.kt'
+      - 'common/MasterSuperSmartPrefetchManager.kt'
+  workflow_dispatch:
+
+jobs:
+  sync-all-masters:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Detect active modules dynamically
+      id: detect-modules
+      run: |
+        echo "🔍 Detecting active modules (folders with build.gradle.kts)..."
+
+        # Find all folders with build.gradle.kts (excluding root)
+        MODULES=""
+        for build_file in $(find . -maxdepth 2 -name "build.gradle.kts" | grep -v "^./build.gradle.kts"); do
+          module_dir=$(dirname "$build_file" | sed 's|^\./||')
+          MODULES="$MODULES $module_dir"
+        done
+
+        # Trim leading space
+        MODULES=$(echo $MODULES | xargs)
+
+        echo "MODULES=$MODULES"
+        echo "modules=$MODULES" >> $GITHUB_OUTPUT
+
+        MODULE_COUNT=$(echo $MODULES | wc -w)
+        echo "module_count=$MODULE_COUNT" >> $GITHUB_OUTPUT
+
+        echo "✅ Found $MODULE_COUNT active module(s): $MODULES"
+
+    - name: Sync All Master Files using script
+      run: |
+        echo "📦 Syncing All Master Files to all active modules..."
+        echo ""
+        
+        # Make script executable
+        chmod +x scripts/sync-all-masters.sh
+        
+        # Run the sync script
+        bash scripts/sync-all-masters.sh
+
+    - name: Verify all synced files
+      run: |
+        echo ""
+        echo "🔍 Verifying synced files..."
+        echo ""
+
+        MODULES="${{ steps.detect-modules.outputs.modules }}"
+        MODULE_COUNT=$(echo $MODULES | wc -w)
+        VALID_COUNT=0
+        ERRORS=0
+
+        # Files to verify (with Sync prefix)
+        SYNC_FILES=(
+          "SyncExtractors.kt"
+          "SyncUtils.kt"
+          "SyncCacheManager.kt"
+          "SyncImageCache.kt"
+          "SyncSmartCacheMonitor.kt"
+          "SyncSuperSmartPrefetchManager.kt"
+        )
+
+        for MODULE in $MODULES; do
+          echo "📋 Validating $MODULE..."
+
+          # Auto-detect folder structure
+          SRC_DIR="$MODULE/src/main/kotlin/com"
+
+          if [ ! -d "$SRC_DIR" ]; then
+            echo "   ❌ ERROR: Source directory not found: $SRC_DIR"
+            ERRORS=$((ERRORS + 1))
+            continue
+          fi
+
+          # Get folder name
+          FOLDERS=$(ls -1 "$SRC_DIR" 2>/dev/null)
+          FOLDER_COUNT=$(echo "$FOLDERS" | wc -l)
+
+          if [ "$FOLDER_COUNT" -gt 1 ]; then
+            # Find folder with Provider/Plugin
+            TARGET_FOLDER=""
+            for folder in $FOLDERS; do
+              if ls "$SRC_DIR/$folder"/*Plugin*.kt 1>/dev/null 2>&1 || \
+                 ls "$SRC_DIR/$folder"/*Provider*.kt 1>/dev/null 2>&1; then
+                TARGET_FOLDER="$folder"
+                break
+              fi
+            done
+            FOLDER="${TARGET_FOLDER:-$(echo "$FOLDERS" | head -1)}"
+          else
+            FOLDER="$FOLDERS"
+          fi
+
+          FOLDER=$(echo "$FOLDER" | xargs)
+          echo "   Found folder: com.$FOLDER"
+
+          # Check each sync file
+          for SYNC_FILE in "${SYNC_FILES[@]}"; do
+            FILE_PATH="$MODULE/src/main/kotlin/com/$FOLDER/$SYNC_FILE"
+
+            # Check if file exists
+            if [ ! -f "$FILE_PATH" ]; then
+              echo "   ❌ ERROR: $SYNC_FILE not found: $FILE_PATH"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+            echo "   ✅ $SYNC_FILE exists"
+
+            # Check if file has correct package (first 10 lines)
+            if ! head -10 "$FILE_PATH" | grep -q "^package com\\.$FOLDER"; then
+              echo "   ⚠️  WARNING: $SYNC_FILE package might be incorrect"
+            fi
+          done
+
+          # Special check for SyncExtractors.kt
+          EXTRACTORS_FILE="$MODULE/src/main/kotlin/com/$FOLDER/SyncExtractors.kt"
+          if [ -f "$EXTRACTORS_FILE" ]; then
+            # Check extractor count
+            CLASS_COUNT=$(grep -c "^class \|^open class " "$EXTRACTORS_FILE" 2>/dev/null || echo 0)
+            echo "   📊 SyncExtractors.kt: $CLASS_COUNT classes"
+            
+            if [ "$CLASS_COUNT" -lt 45 ]; then
+              echo "   ⚠️  WARNING: Low extractor count ($CLASS_COUNT), expected ~52"
+            fi
+
+            # Check SyncExtractors object exists
+            if ! grep -q "object SyncExtractors" "$EXTRACTORS_FILE" 2>/dev/null; then
+              echo "   ❌ ERROR: SyncExtractors object not found"
+              ERRORS=$((ERRORS + 1))
+            fi
+          fi
+
+          echo "   ✅ $MODULE validation PASSED"
+          echo ""
+
+          VALID_COUNT=$((VALID_COUNT + 1))
+        done
+
+        echo "========================================"
+        echo "📊 Validation Summary"
+        echo "========================================"
+        echo "   Total modules: $MODULE_COUNT"
+        echo "   Validated: $VALID_COUNT"
+        echo "   Errors: $ERRORS"
+        echo ""
+
+        if [ "$ERRORS" -gt 0 ]; then
+          echo "❌ Validation FAILED: $ERRORS error(s) found"
+          exit 1
+        fi
+
+        if [ "$VALID_COUNT" -eq 0 ]; then
+          echo "❌ Validation FAILED: No modules validated"
+          exit 1
+        fi
+
+        echo "✅ Validation PASSED: All $VALID_COUNT module(s) have synced files"
+
+    - name: Commit and push if changes exist
+      run: |
+        echo ""
+        echo "🔄 Checking for changes to commit..."
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+
+        if ! git diff --quiet; then
+          echo "Changes detected, committing..."
+          git add -A
+          git commit -m "chore: auto-sync all master files [skip ci]"
+          git push
+          echo "✅ Changes pushed successfully"
+        else
+          echo "✅ No changes to commit"
+        fi
