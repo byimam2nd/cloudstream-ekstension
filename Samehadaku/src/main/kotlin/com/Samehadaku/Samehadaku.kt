@@ -26,9 +26,9 @@ import org.jsoup.nodes.Element
 // ========================================
 // CACHE INSTANCES
 // ========================================
-private val searchCache = CacheManager<List<SearchResponse>>(ttl = 5 * 60 * 1000L)
-private val loadCache = CacheManager<LoadResponse>(ttl = 10 * 60 * 1000L)
-private val mainPageCache = CacheManager<HomePageResponse>(ttl = 3 * 60 * 1000L)
+private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 5 * 60 * 1000L)
+private val loadCache = CacheManager<LoadResponse>(defaultTtl = 10 * 60 * 1000L)
+private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 * 1000L)
 
 // ========================================
 // RATE LIMITING
