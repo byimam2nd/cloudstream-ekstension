@@ -216,40 +216,79 @@ class Funmovieslix : MainAPI() {
     ): Boolean {
         val document = app.get(data, timeout = 5000L).documentLarge
 
-        // 1. Get all <script> tags that contain "embeds"
+        // FIXED: Multiple strategies untuk extract embed URLs
+        var urls = emptyList<String>()
+        
+        // Strategy 1: Extract from "const embeds" in script tags
         val scriptContent = document.select("script")
             .map { it.data() }
             .firstOrNull { it.contains("const embeds") }
-            ?: return false
-
-        val regex = Regex("""https:\/\/[^"]+""")
-        val urls = regex.findAll(scriptContent)
-            .map { it.value.replace("\\/", "/").replace("\\", "") } // unescape \/ → / and remove \
-            .toList()
         
+        if (scriptContent != null) {
+            val regex = Regex("""https:\/\/[^"]+""")
+            urls = regex.findAll(scriptContent)
+                .map { it.value.replace("\\/", "/").replace("\\", "") } // unescape \/ → / and remove \
+                .filter { it.isNotBlank() && (it.contains("youtube") || it.contains("drive") || it.contains("stream") || it.contains("mp4")) }
+                .toList()
+        }
+        
+        // Strategy 2: Fallback - extract iframe URLs directly from HTML
+        if (urls.isEmpty()) {
+            urls = document.select("iframe[src]")
+                .map { it.attr("src") }
+                .filter { it.isNotBlank() }
+                .map { it.replace("\\/", "/").replace("\\", "") }
+        }
+        
+        // Strategy 3: Extract from data attributes
+        if (urls.isEmpty()) {
+            urls = document.select("[data-src], [data-url], [data-link]")
+                .map { it.attr("data-src") ?: it.attr("data-url") ?: it.attr("data-link") }
+                .filter { it.isNotBlank() }
+        }
+
+        if (urls.isEmpty()) {
+            logError("Funmovieslix", "No embed URLs found in page")
+            return false
+        }
+
         // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
         // 5x faster for episodes with multiple servers
         val loadedLinks = mutableListOf<String>()
-        
+        val mutex = Mutex()
+
         coroutineScope {
             urls.map { url ->
                 async {
                     try {
-                        val fixedUrl = fixUrl(url)
+                        // FIXED: Better URL fixing with scheme validation
+                        var fixedUrl = url
+                        if (!fixedUrl.startsWith("http://") && !fixedUrl.startsWith("https://")) {
+                            fixedUrl = when {
+                                fixedUrl.startsWith("//") -> "https:$fixedUrl"
+                                fixedUrl.startsWith("/") -> mainUrl + fixedUrl
+                                else -> "https://$fixedUrl"
+                            }
+                        }
+                        
+                        Log.d("Funmovieslix", "Trying to load: $fixedUrl")
                         loadExtractor(fixedUrl, mainUrl, subtitleCallback, callback)
-                        loadedLinks.add(url)
+                        
+                        mutex.withLock {
+                            loadedLinks.add(fixedUrl)
+                        }
                     } catch (e: Exception) {
                         logError("Funmovieslix", "loadExtractor failed for $url: ${e.message}")
                     }
                 }
             }.awaitAll()
         }
-        
+
         if (loadedLinks.isEmpty()) {
             logError("Funmovieslix", "No links loaded from ${urls.size} URLs found")
             return false
         }
-        
+
         Log.d("Funmovieslix", "Successfully loaded ${loadedLinks.size} links")
         return true
     }

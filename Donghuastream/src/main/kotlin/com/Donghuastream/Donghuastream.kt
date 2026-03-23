@@ -214,7 +214,7 @@ open class Donghuastream : MainAPI() {
     ): Boolean {
         val html = app.get(data, timeout = 5000L).documentLarge
         val options = html.select("option[data-index]")
-        
+
         // OPTIMIZED: Parallel link extraction (extract 5 servers simultaneously)
         // 5x faster for episodes with multiple servers
         coroutineScope {
@@ -223,20 +223,33 @@ open class Donghuastream : MainAPI() {
                     val base64 = option.attr("value")
                     if (base64.isBlank()) return@async
                     val label = option.text().trim()
-                    
+
                     val decodedHtml = try {
                         base64Decode(base64)
                     } catch (_: Exception) {
-                        Log.w("Error", "Base64 decode failed: $base64")
+                        Log.w("Donghuastream", "Base64 decode failed: $base64")
                         return@async
                     }
 
-                    val iframeUrl = Jsoup.parse(decodedHtml).selectFirst("iframe")?.attr("src")?.let(::httpsify)
+                    var iframeUrl = Jsoup.parse(decodedHtml).selectFirst("iframe")?.attr("src")
                     if (iframeUrl.isNullOrEmpty()) return@async
                     
+                    // FIXED: Ensure URL has proper scheme
+                    iframeUrl = when {
+                        iframeUrl.startsWith("//") -> "https:$iframeUrl"
+                        iframeUrl.startsWith("http") -> iframeUrl
+                        iframeUrl.startsWith("/") -> mainUrl + iframeUrl
+                        else -> "https://$iframeUrl"
+                    }
+
                     when {
                         "vidmoly" in iframeUrl -> {
-                            val cleanedUrl = "http:" + iframeUrl.substringAfter("=\"").substringBefore("\"")
+                            // FIXED: Better URL extraction for vidmoly
+                            val cleanedUrl = if (iframeUrl.contains("=\"")) {
+                                "http:" + iframeUrl.substringAfter("=\"").substringBefore("\"")
+                            } else {
+                                iframeUrl
+                            }
                             loadExtractor(cleanedUrl, referer = iframeUrl, subtitleCallback, callback)
                         }
                         iframeUrl.endsWith(".mp4") -> {
@@ -247,13 +260,13 @@ open class Donghuastream : MainAPI() {
                                     url = iframeUrl,
                                     INFER_TYPE
                                 ) {
-                                    this.referer = ""
+                                    this.referer = mainUrl
                                     this.quality = getQualityFromName(label)
                                 }
                             )
                         }
                         else -> {
-                            loadExtractor(iframeUrl, referer = iframeUrl, subtitleCallback, callback)
+                            loadExtractor(iframeUrl, referer = mainUrl, subtitleCallback, callback)
                         }
                     }
                 }

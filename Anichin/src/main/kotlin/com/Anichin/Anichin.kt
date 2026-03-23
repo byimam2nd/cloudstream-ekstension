@@ -215,7 +215,14 @@ open class Anichin : MainAPI() {
 
         val title = document.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
         val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
-        var poster = document.select("div.thumb > img").attr("src")
+        
+        // FIXED: Fallback strategy untuk poster - coba 3 selector berbeda
+        var poster = document.selectFirst("div.thumb > img")?.attr("src")
+            ?: document.selectFirst("div.thumb img")?.attr("src")
+            ?: document.selectFirst("img.ts-post-image")?.attr("src")
+            ?: document.selectFirst("meta[property=og:image]")?.attr("content")
+            ?: ""
+        
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
 
         // Fix: Robust type detection with fallback
