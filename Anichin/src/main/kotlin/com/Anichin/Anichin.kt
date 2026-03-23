@@ -259,7 +259,6 @@ open class Anichin : MainAPI() {
         val showStatus = when {
             "ongoing" in statusText || "continuing" in statusText -> ShowStatus.Ongoing
             "completed" in statusText || "finished" in statusText -> ShowStatus.Completed
-            "hiatus" in statusText -> ShowStatus.Hiatus
             else -> null
         }
 
