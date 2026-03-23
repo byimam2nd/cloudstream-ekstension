@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.SearchResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.jsoup.nodes.Element
 import kotlin.random.Random
 
 // ============================================
@@ -233,4 +234,22 @@ fun cleanDescription(text: String?): String? {
         .replace(Regex("\\s*View more.*", RegexOption.IGNORE_CASE), "") // Remove "View more"
         .replace(Regex("\\s*Continue reading.*", RegexOption.IGNORE_CASE), "") // Remove "Continue reading"
         .trim()
+}
+
+/**
+ * Extension function to get image URL from Element
+ * Handles various image attribute patterns used by anime streaming sites
+ */
+fun Element.getImageAttr(): String? {
+    return this?.attr("src")
+        ?: this?.attr("data-src")
+        ?: this?.attr("data-original")
+        ?: this?.attr("data-srcset")?.split(" ")?.firstOrNull()
+        ?: this?.attr("data-lazy-src")
+        ?: this?.attr("data-permalink")
+        ?: this?.attr("data-img")
+        ?: this?.attr("data-image")
+        ?: this?.attr("data-url")
+        ?: this?.attr("href")
+        ?: this?.text()
 }
