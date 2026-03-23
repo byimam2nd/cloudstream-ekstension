@@ -71,12 +71,9 @@ suspend fun <T> executeWithRetry(
 }
 
 // ========================================
-// LOGGING HELPER
+// LOGGING
+// Uses logError() from SyncUtils.kt
 // ========================================
-internal fun logError(tag: String, message: String, error: Throwable? = null) {
-    Log.e(tag, message)
-    error?.let { Log.e(tag, "Cause: ${it.message}") }
-}
 
 // ========================================
 // MAIN API CLASS
