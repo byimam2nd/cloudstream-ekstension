@@ -261,29 +261,21 @@ class LayarKaca21 : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Simplified like ExtCloud - direct approach
         val document = app.get(data).document
+        val videolar = document.select("ul#player-list a")
 
-        val playerLinks = document.select("ul#player-list a")
-
-        playerLinks.forEach { video ->
+        videolar.forEach { video ->
             val player = video.attr("href")
-            val playerDoc = app.get(player, referer = "$mainUrl/").document
-            val iframe = playerDoc.selectFirst("iframe")?.attr("src").orEmpty()
+            val playerAl = app.get(player, referer = "${mainUrl}/").document
+            val iframe = playerAl.selectFirst("iframe")?.attr("src").toString()
 
-            if (iframe.isNotEmpty()) {
-                // Handle short.icu redirect
-                val finalIframe = if (iframe.contains("short.icu")) {
-                    app.get(iframe, allowRedirects = true).url
-                } else {
-                    iframe
-                }
-
-                // Use CloudStream's built-in loadExtractor function
+            if (iframe.contains("https://short.icu")) {
+                val finalIframe = app.get(iframe, allowRedirects = true).url
                 loadExtractor(finalIframe, "$mainUrl/", subtitleCallback, callback)
+            } else {
+                loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
             }
         }
-
         return true
     }
 
