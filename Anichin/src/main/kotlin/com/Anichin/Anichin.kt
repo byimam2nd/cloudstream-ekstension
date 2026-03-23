@@ -41,7 +41,6 @@ import org.jsoup.nodes.Element
 // ============================================
 // OPTIMIZED: Import shared utilities
 // ============================================
-import com.Anichin.CacheManager
 import com.Anichin.rateLimitDelay
 import com.Anichin.getRandomUserAgent
 import com.Anichin.executeWithRetry

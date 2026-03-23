@@ -8,7 +8,6 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import com.LayarKaca21.CacheManager
 import com.LayarKaca21.rateLimitDelay
 import com.LayarKaca21.getRandomUserAgent
 import com.LayarKaca21.executeWithRetry

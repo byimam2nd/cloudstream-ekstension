@@ -19,7 +19,6 @@ import kotlinx.coroutines.awaitAll
 // ============================================
 // OPTIMIZED: Import shared utilities
 // ============================================
-import com.Idlix.CacheManager
 import com.Idlix.rateLimitDelay
 import com.Idlix.getRandomUserAgent
 import com.Idlix.executeWithRetry
