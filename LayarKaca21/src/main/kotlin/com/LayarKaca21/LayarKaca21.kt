@@ -283,13 +283,12 @@ class LayarKaca21 : MainAPI() {
                     iframe
                 }
 
-                // Call extractors directly - CloudStream will match URL to extractor
-                extractorVerifierService.extractUrls(
-                    finalIframe,
-                    referer = "$mainUrl/",
-                    subtitleCallback = subtitleCallback,
-                    callback = callback
-                )
+                // CloudStream will automatically call registered extractors based on URL
+                // Just pass the URL to the callback via extractor loading
+                runCatching {
+                    val extractor = extractorApiList?.find { it.mainUrl in finalIframe }
+                    extractor?.extractUrl(finalIframe, callback, subtitleCallback)
+                }
             }
         }
 
