@@ -85,8 +85,13 @@ class Funmovieslix : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse {
+        // FIXED: Fallback strategy untuk title (2-layer)
         val title = this.select("h3").text()
+            .ifEmpty { this.selectFirst("a")?.attr("title").orEmpty() }
+        
         val href = fixUrl(this.select("a").attr("href"))
+        
+        // FIXED: Fallback strategy untuk poster (3-layer: srcset, src, data-src)
         val posterUrl = this.select("a img").firstOrNull()?.let { img ->
             val srcSet = img.attr("srcset")
             val bestUrl = if (srcSet.isNotBlank()) {
@@ -95,7 +100,7 @@ class Funmovieslix : MainAPI() {
                     .maxByOrNull { it.substringAfterLast(" ").removeSuffix("w").toIntOrNull() ?: 0 }
                     ?.substringBefore(" ")
             } else {
-                img.attr("src")
+                img.attr("src").ifEmpty { img.attr("data-src") }
             }
 
             fixUrlNull(bestUrl?.replace(Regex("-\\d+x\\d+"), ""))
@@ -141,9 +146,25 @@ class Funmovieslix : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url, timeout = 5000L).documentLarge
-        val title =document.select("meta[property=og:title]").attr("content").substringBefore("(").substringBefore("-").trim()
+        
+        // FIXED: Fallback strategy untuk title (3-layer)
+        val title = document.select("meta[property=og:title]").attr("content")
+            .ifEmpty { document.selectFirst("h1.title")?.text().orEmpty() }
+            .ifEmpty { document.selectFirst("h1.entry-title")?.text().orEmpty() }
+            .substringBefore("(").substringBefore("-").trim()
+        
+        // FIXED: Fallback strategy untuk poster (4-layer)
         val poster = document.select("meta[property=og:image]").attr("content")
+            .ifEmpty { document.selectFirst("div.poster img")?.attr("src").orEmpty() }
+            .ifEmpty { document.selectFirst("img[data-src]")?.attr("data-src").orEmpty() }
+            .ifEmpty { document.selectFirst("img[src]")?.attr("src").orEmpty() }
+        
+        // FIXED: Fallback strategy untuk description (4-layer)
         val description = document.select("div.desc-box p,div.entry-content p").text()
+            .ifEmpty { document.selectFirst("div.synopsis")?.text().orEmpty() }
+            .ifEmpty { document.selectFirst("div.description")?.text().orEmpty() }
+            .ifEmpty { document.selectFirst("meta[name=description]")?.attr("content").orEmpty() }
+        
         val actors=document.select("div.cast-grid a").map { it.text() }
         val type = if (url.contains("tv")) TvType.TvSeries else TvType.Movie
         val trailer = document.select("meta[itemprop=embedUrl]").attr("content")

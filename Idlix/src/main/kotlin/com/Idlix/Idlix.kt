@@ -141,9 +141,19 @@ class Idlix : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.selectFirst("h3 > a")!!.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
-        val href = getProperLink(this.selectFirst("h3 > a")!!.attr("href"))
+        // FIXED: Fallback strategy untuk title (2-layer)
+        val titleElement = this.selectFirst("h3 > a")
+        val title = titleElement?.text()?.replace(Regex("\\(\\d{4}\\)"), "")?.trim()
+            ?: this.selectFirst("div.title > a")?.text()?.trim()
+            ?: "Unknown Title"
+        
+        val href = getProperLink(titleElement?.attr("href").orEmpty())
+        
+        // FIXED: Fallback strategy untuk poster (3-layer)
         val posterUrl = this.select("div.poster > img").attr("src")
+            .ifEmpty { this.selectFirst("img[itemprop=image]")?.attr("src").orEmpty() }
+            .ifEmpty { this.selectFirst("img")?.attr("src").orEmpty() }
+        
         val quality = getQualityFromString(this.select("span.quality").text())
 
         return newMovieSearchResponse(title, href, TvType.Movie) {
@@ -264,15 +274,23 @@ class Idlix : MainAPI() {
         directUrl = getBaseUrl(request.url)
         val document = request.documentLarge
 
-        val title = document.selectFirst("div.data > h1")?.text()?.replace(Regex("\\(\\d{4}\\)"), "")?.trim().orEmpty()
+        val title = document.selectFirst("div.data > h1")?.text()?.replace(Regex("\\(\\d{4}\\)"), "")?.trim()
+            ?: document.selectFirst("h1.title")?.text()?.replace(Regex("\\(\\d{4}\\)"), "")?.trim()
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")
+            ?: "Unknown Title"
+        
         val images = document.select("div.g-item")
 
+        // FIXED: Fallback strategy untuk poster (4-layer)
         val poster = images
             .shuffled()
             .firstOrNull()
             ?.selectFirst("a")
             ?.attr("href")
             ?: document.select("div.poster > img").attr("src")
+            .ifEmpty { document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty() }
+            .ifEmpty { document.selectFirst("img[itemprop=image]")?.attr("src").orEmpty() }
+            .ifEmpty { document.selectFirst("img[data-src]")?.attr("data-src").orEmpty() }
 
         val tags = document.select("div.sgeneros > a").map { it.text() }
         val year = Regex(",\\s?(\\d+)").find(
@@ -282,7 +300,12 @@ class Idlix : MainAPI() {
         val tvType = if (document.select("ul#section > li:nth-child(1)").text().contains("Episodes"))
             TvType.TvSeries else TvType.Movie
 
+        // FIXED: Fallback strategy untuk description (4-layer)
         val description = document.select("p:nth-child(3)").text().trim()
+            .ifEmpty { document.select("div.wp-content > p").text().trim() }
+            .ifEmpty { document.select("div.content > p").text().trim() }
+            .ifEmpty { document.selectFirst("meta[name=description]")?.attr("content").orEmpty() }
+        
         val trailer = document.selectFirst("div.embed iframe")?.attr("src")
         val rating = document.selectFirst("span.dt_rating_vgs")?.text()
 

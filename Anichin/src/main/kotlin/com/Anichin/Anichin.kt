@@ -116,9 +116,18 @@ open class Anichin : MainAPI() {
     }
 
     suspend fun Element.toSearchResult(): SearchResponse {
+        // FIXED: Fallback strategy untuk title (2-layer)
         val title = this.select("div.bsx > a").attr("title")
+            .ifEmpty { this.selectFirst("div.bsx a")?.attr("title").orEmpty() }
+
         val href = fixUrl(this.select("div.bsx > a").attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
+        
+        // FIXED: Fallback strategy untuk poster image (3-layer)
+        val posterUrl = fixUrlNull(
+            this.selectFirst("div.bsx a img")?.getImageAttr()
+                ?: this.selectFirst("div.bsx img")?.attr("data-src")
+                ?: this.selectFirst("div.bsx img")?.attr("src")
+        )
 
         // Fix: Use correct selector - .epx for status (Ongoing/Completed)
         val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
@@ -213,28 +222,44 @@ open class Anichin : MainAPI() {
             ).documentLarge
         }
 
-        val title = document.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
+        // FIXED: Fallback strategy untuk title (3-layer)
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim()
+            ?: document.selectFirst("h1.title")?.text()?.trim()
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")
+            ?: "Unknown Title"
+
         val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
-        
-        // FIXED: Fallback strategy untuk poster - coba 3 selector berbeda
+
+        // FIXED: Fallback strategy untuk poster (4-layer)
         var poster = document.selectFirst("div.thumb > img")?.attr("src")
             ?: document.selectFirst("div.thumb img")?.attr("src")
             ?: document.selectFirst("img.ts-post-image")?.attr("src")
             ?: document.selectFirst("meta[property=og:image]")?.attr("content")
             ?: ""
-        
-        val description = document.selectFirst("div.entry-content")?.text()?.trim()
 
-        // Fix: Robust type detection with fallback
-        val type = document.selectFirst(".spe")?.text() ?: ""
+        // FIXED: Fallback strategy untuk description (4-layer)
+        val description = document.selectFirst("div.entry-content")?.text()?.trim()
+            ?: document.selectFirst("div.description")?.text()?.trim()
+            ?: document.selectFirst("div.synopsis")?.text()?.trim()
+            ?: document.selectFirst("meta[name=description]")?.attr("content")
+            ?: ""
+
+        // FIXED: Robust type detection dengan fallback strategy
+        val type = document.selectFirst(".spe")?.text()
+            ?: document.selectFirst(".meta .type")?.text()
+            ?: document.selectFirst("span.type")?.text()
+            ?: ""
         val isMovie = type.contains("Movie", ignoreCase = true) || url.contains("-movie-", ignoreCase = true)
         val tvType = if (isMovie) TvType.AnimeMovie else TvType.Anime
 
-        // Set showStatus from real .spe element
+        // FIXED: Robust status detection dengan fallback
         val statusText = document.select(".spe").text().lowercase()
+            .ifEmpty { document.select(".meta .status").text().lowercase() }
+            .ifEmpty { document.select("span.status").text().lowercase() }
         val showStatus = when {
-            "ongoing" in statusText -> ShowStatus.Ongoing
-            "completed" in statusText -> ShowStatus.Completed
+            "ongoing" in statusText || "continuing" in statusText -> ShowStatus.Ongoing
+            "completed" in statusText || "finished" in statusText -> ShowStatus.Completed
+            "hiatus" in statusText -> ShowStatus.Hiatus
             else -> null
         }
 
@@ -250,10 +275,15 @@ open class Anichin : MainAPI() {
                 val episodeText = info.selectFirst(".epl-num")?.text()?.trim().orEmpty()
                 // Try to extract number from text like "52", "52 END", "END", etc.
                 val episodeNumber = episodeText.replace(Regex("[^0-9]"), "").toIntOrNull()
-                
+
                 val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
                 val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()
-                var posterr = info.selectFirst("a img")?.attr("data-src") ?: ""
+                
+                // FIXED: Fallback strategy untuk episode poster (3-layer)
+                var posterr = info.selectFirst("a img")?.attr("data-src")
+                    ?: info.selectFirst("a img")?.attr("src")
+                    ?: info.selectFirst("img[data-lazy-src]")?.attr("data-lazy-src")
+                    ?: ""
 
                 // Image optimization
                 if (posterr.isNotEmpty()) {

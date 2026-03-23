@@ -84,9 +84,19 @@ open class Donghuastream : MainAPI() {
     }
 
     fun Element.toSearchResult(): SearchResponse {
-        val title     = this.select("div.bsx > a").attr("title")
-        val href      = fixUrl(this.select("div.bsx > a").attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("div.bsx a img")?.getImageAttr())
+        // FIXED: Fallback strategy untuk title (2-layer)
+        val title = this.select("div.bsx > a").attr("title")
+            .ifEmpty { this.selectFirst("div.bsx a")?.attr("title").orEmpty() }
+        
+        val href = fixUrl(this.select("div.bsx > a").attr("href"))
+        
+        // FIXED: Fallback strategy untuk poster (3-layer)
+        val posterUrl = fixUrlNull(
+            this.selectFirst("div.bsx a img")?.getImageAttr()
+                ?: this.selectFirst("div.bsx img")?.attr("data-src")
+                ?: this.selectFirst("div.bsx img")?.attr("src")
+        )
+        
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
@@ -134,12 +144,35 @@ open class Donghuastream : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url, timeout = 5000L).documentLarge
-        val title       = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
-        val href=document.selectFirst(".eplister li > a")?.attr("href") ?:""
-        var poster = document.select("div.ime > img").attr("data-src")
+        
+        // FIXED: Fallback strategy untuk title (3-layer)
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim()
+            ?: document.selectFirst("h1.title")?.text()?.trim()
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")
+            ?: "Unknown Title"
+        
+        val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
+        
+        // FIXED: Fallback strategy untuk poster (4-layer)
+        var poster = document.selectFirst("div.ime > img")?.attr("data-src")
+            ?: document.selectFirst("div.thumb img")?.attr("src")
+            ?: document.selectFirst("img.ts-post-image")?.attr("src")
+            ?: document.selectFirst("meta[property=og:image]")?.attr("content")
+            ?: ""
+        
+        // FIXED: Fallback strategy untuk description (4-layer)
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
-        val type=document.selectFirst(".spe")?.text().toString()
-        val tvtag=if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
+            ?: document.selectFirst("div.description")?.text()?.trim()
+            ?: document.selectFirst("div.synopsis")?.text()?.trim()
+            ?: document.selectFirst("meta[name=description]")?.attr("content")
+            ?: ""
+        
+        // FIXED: Fallback strategy untuk type (3-layer)
+        val type = document.selectFirst(".spe")?.text()
+            ?: document.selectFirst(".meta .type")?.text()
+            ?: document.selectFirst("span.type")?.text()
+            ?: ""
+        val tvtag = if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
         return if (tvtag == TvType.TvSeries) {
             val Eppage= fixUrl(document.selectFirst(".eplister li > a")?.attr("href") ?:"")
             val doc= app.get(Eppage, timeout = 5000L).documentLarge
@@ -151,14 +184,19 @@ open class Donghuastream : MainAPI() {
                     async {
                         val href1 = info.select("a").attr("href")
                         val episode = info.select("a span").text().substringAfter("-").substringBeforeLast("-")
-                        var posterr = info.selectFirst("a img")?.attr("data-src") ?:""
                         
+                        // FIXED: Fallback strategy untuk episode poster (3-layer)
+                        var posterr = info.selectFirst("a img")?.attr("data-src")
+                            ?: info.selectFirst("a img")?.attr("src")
+                            ?: info.selectFirst("img[data-lazy-src]")?.attr("data-lazy-src")
+                            ?: ""
+
                         // OPTIMIZED: Resize poster for mobile screens (prevent breaking)
                         // Max 500px width for better quality on non-Android TV
                         if (posterr.isNotEmpty()) {
                             posterr = optimizeImageUrl(posterr, 500)
                         }
-                        
+
                         newEpisode(href1) {
                             this.name = episode.replace(title, "", ignoreCase = true)
                             this.episode = episode.toIntOrNull()
