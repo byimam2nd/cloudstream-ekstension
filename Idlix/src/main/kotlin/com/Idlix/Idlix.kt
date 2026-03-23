@@ -162,7 +162,61 @@ class Idlix : MainAPI() {
             return cached
         }
 
-        // OPTIMIZED: Parallel search dengan rate limiting
+        // FIXED: Gunakan API JSON seperti ExtCloud untuk search yang lebih reliable
+        val refer = app.get(mainUrl).url
+        val searchUrl = "https://lk21.indianindia.com"
+        
+        val res = try {
+            app.get("$searchUrl/search.php?s=$query", referer = refer).text
+        } catch (e: Exception) {
+            logError("Idlix", "Search API failed: ${e.message}")
+            return emptyList()
+        }
+        
+        val results = mutableListOf<SearchResponse>()
+        
+        try {
+            val root = org.json.JSONObject(res)
+            val arr = root.getJSONArray("data")
+
+            for (i in 0 until arr.length()) {
+                val item = arr.getJSONObject(i)
+                val title = item.getString("title")
+                val slug = item.getString("slug")
+                val type = item.getString("type")
+                val posterUrl = "https://static-jpg.lk21.party/wp-content/uploads/" + item.optString("poster")
+                
+                when (type) {
+                    "series" -> results.add(
+                        newTvSeriesSearchResponse(title, "$mainUrl/series/$slug", TvType.TvSeries) {
+                            this.posterUrl = posterUrl
+                        }
+                    )
+                    "movie" -> results.add(
+                        newMovieSearchResponse(title, "$mainUrl/movie/$slug", TvType.Movie) {
+                            this.posterUrl = posterUrl
+                        }
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            logError("Idlix", "Search JSON parsing failed: ${e.message}")
+            // Fallback to old method if JSON fails
+            return searchWithScraping(query)
+        }
+
+        // Cache the result
+        searchCache.put(cacheKey, results)
+
+        return results
+    }
+
+    // Fallback method jika API JSON gagal
+    private suspend fun searchWithScraping(query: String): List<SearchResponse> {
+        val cacheKey = "search_${query}_scraping"
+        val cached = searchCache.get(cacheKey)
+        if (cached != null) return cached
+        
         val results = coroutineScope {
             (1..3).map { page ->
                 async {
@@ -179,16 +233,14 @@ class Idlix : MainAPI() {
                             runCatching { it.toSearchResult() }.getOrElse { null }
                         }
                     } catch (e: Exception) {
-                        logError("Idlix", "Search page $page failed: ${e.message}", e)
+                        logError("Idlix", "Search scraping page $page failed: ${e.message}", e)
                         emptyList<SearchResponse>()
                     }
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }
-
-        // Cache the result
+        
         searchCache.put(cacheKey, results)
-
         return results
     }
 
