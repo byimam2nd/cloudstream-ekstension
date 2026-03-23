@@ -24,7 +24,7 @@ import org.jsoup.nodes.Element
 
 // ========================================
 // CACHE INSTANCES
-// Uses CacheManager from common/MasterCacheManager.kt
+// Uses CacheManager from master/MasterCacheManager.kt
 // ========================================
 private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 5 * 60 * 1000L)
 private val loadCache = CacheManager<LoadResponse>(defaultTtl = 10 * 60 * 1000L)

@@ -11,7 +11,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-MASTER_FILE="$ROOT_DIR/common/MasterExtractors.kt"
+MASTER_FILE="$ROOT_DIR/master/MasterExtractors.kt"
 
 echo "========================================"
 echo "📦 Sync Master Extractors"
@@ -133,7 +133,7 @@ for MODULE in "${MODULES[@]}"; do
     awk -v pkg="$PACKAGE" '
         NR==1 { print "// ========================================" }
         NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
-        NR==3 { print "// Synced from common/MasterExtractors.kt" }
+        NR==3 { print "// Synced from master/MasterExtractors.kt" }
         NR==4 { print "// File: SyncExtractors.kt" }
         NR==5 { print "// ========================================" }
         /^package / { print "package com." pkg; next }

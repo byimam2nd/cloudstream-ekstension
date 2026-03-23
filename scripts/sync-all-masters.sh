@@ -12,7 +12,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-COMMON_DIR="$ROOT_DIR/common"
+MASTER_DIR="$ROOT_DIR/master"
 
 echo "========================================"
 echo "📦 Sync All Master Files"
@@ -27,6 +27,7 @@ MASTER_FILES=(
     "MasterImageCache.kt:SyncImageCache.kt"
     "MasterSmartCacheMonitor.kt:SyncSmartCacheMonitor.kt"
     "MasterSuperSmartPrefetchManager.kt:SyncSuperSmartPrefetchManager.kt"
+    "MasterSyncMonitor.kt:SyncMonitor.kt"
 )
 
 echo "📋 Master files to sync:"
@@ -37,9 +38,9 @@ for master_entry in "${MASTER_FILES[@]}"; do
 done
 echo ""
 
-# Check if common directory exists
-if [ ! -d "$COMMON_DIR" ]; then
-    echo "❌ Common directory not found at: $COMMON_DIR"
+# Check if master directory exists
+if [ ! -d "$MASTER_DIR" ]; then
+    echo "❌ Master directory not found at: $MASTER_DIR"
     exit 1
 fi
 
@@ -159,7 +160,7 @@ for MODULE in "${MODULES[@]}"; do
         master_file="${master_entry%%:*}"
         sync_file="${master_entry##*:}"
 
-        MASTER_SOURCE="$COMMON_DIR/$master_file"
+        MASTER_SOURCE="$MASTER_DIR/$master_file"
 
         # Check if master file exists
         if [ ! -f "$MASTER_SOURCE" ]; then
