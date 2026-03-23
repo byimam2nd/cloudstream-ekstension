@@ -38,7 +38,7 @@ private val mutex = kotlinx.coroutines.sync.Mutex()
 private var lastRequestTime = 0L
 private const val MIN_REQUEST_DELAY = 500L // 500ms between requests - Animasu specific
 
-internal suspend fun rateLimitDelay() = mutex.withLock {
+internal suspend fun animasuRateLimitDelay() = mutex.withLock {
     val now = System.currentTimeMillis()
     val elapsed = now - lastRequestTime
     if (elapsed < MIN_REQUEST_DELAY) {
@@ -174,7 +174,7 @@ class Animasu : MainAPI() {
         
         // Fetch dengan retry logic dan rate limiting
         val document = executeWithRetry {
-            rateLimitDelay()
+            animasuRateLimitDelay()
             app.get(
                 "$mainUrl/pencarian/?${request.data}&halaman=$page",
                 timeout = requestTimeout,
@@ -209,7 +209,7 @@ class Animasu : MainAPI() {
         
         // Fetch dengan retry logic
         val document = executeWithRetry {
-            rateLimitDelay()
+            animasuRateLimitDelay()
             app.get(
                 "$mainUrl/?s=$query",
                 timeout = requestTimeout,
@@ -242,7 +242,7 @@ class Animasu : MainAPI() {
         
         // Fetch dengan retry logic
         val document = executeWithRetry {
-            rateLimitDelay()
+            animasuRateLimitDelay()
             app.get(
                 url,
                 timeout = requestTimeout,
@@ -307,7 +307,7 @@ class Animasu : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = executeWithRetry {
-            rateLimitDelay()
+            animasuRateLimitDelay()
             app.get(
                 data,
                 timeout = requestTimeout,
