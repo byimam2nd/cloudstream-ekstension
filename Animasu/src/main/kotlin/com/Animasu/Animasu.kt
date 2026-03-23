@@ -15,6 +15,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.*
+import com.Animasu.SyncCacheManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
@@ -23,17 +24,19 @@ import org.jsoup.nodes.Element
 
 // ========================================
 // CACHE INSTANCES
+// Uses SyncCacheManager from common/MasterCacheManager.kt
 // ========================================
-private val searchCache = CacheManager<List<SearchResponse>>(ttl = 5 * 60 * 1000L)
-private val loadCache = CacheManager<LoadResponse>(ttl = 10 * 60 * 1000L)
-private val mainPageCache = CacheManager<HomePageResponse>(ttl = 3 * 60 * 1000L)
+private val searchCache = SyncCacheManager<List<SearchResponse>>(ttl = 5 * 60 * 1000L)
+private val loadCache = SyncCacheManager<LoadResponse>(ttl = 10 * 60 * 1000L)
+private val mainPageCache = SyncCacheManager<HomePageResponse>(ttl = 3 * 60 * 1000L)
 
 // ========================================
 // RATE LIMITING
+// Custom implementation for Animasu (overrides SyncUtils default)
 // ========================================
 private val mutex = kotlinx.coroutines.sync.Mutex()
 private var lastRequestTime = 0L
-private const val MIN_REQUEST_DELAY = 500L // 500ms between requests
+private const val MIN_REQUEST_DELAY = 500L // 500ms between requests - Animasu specific
 
 internal suspend fun rateLimitDelay() = mutex.withLock {
     val now = System.currentTimeMillis()

@@ -15,8 +15,8 @@ import com.LayarKaca21.logError
 import com.LayarKaca21.SmartCacheMonitor
 
 // Cache instances
-private val searchCache = CacheManager<List<SearchResponse>>()
-private val mainPageCache = CacheManager<HomePageResponse>()
+private val searchCache = SyncCacheManager<List<SearchResponse>>()
+private val mainPageCache = SyncCacheManager<HomePageResponse>()
 
 // Smart Cache Monitor untuk fingerprint-based invalidation
 private val monitor = LayarKacaMonitor()

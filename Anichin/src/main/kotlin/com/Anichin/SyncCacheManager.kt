@@ -10,8 +10,13 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Generic thread-safe cache manager with TTL
+ * 
+ * Usage:
+ * ```
+ * val cache = CacheManager<List<SearchResponse>>(defaultTtl = 5 * 60 * 1000L)
+ * ```
  */
-class CacheManager<T> {
+class CacheManager<T>(private val defaultTtl: Long = 300000) {
     private val cache = mutableMapOf<String, CachedResult<T>>()
     private val mutex = Mutex()
 
@@ -27,7 +32,7 @@ class CacheManager<T> {
         }
     }
 
-    suspend fun put(key: String, data: T, ttl: Long = 300000) {
+    suspend fun put(key: String, data: T, ttl: Long = defaultTtl) {
         mutex.withLock {
             cache[key] = CachedResult(data, System.currentTimeMillis(), ttl)
             cache.entries.removeAll { it.value.isExpired() }
