@@ -170,13 +170,21 @@ for MODULE in "${MODULES[@]}"; do
         DEST_FILE="$DEST_DIR/$sync_file"
 
         # Copy master file with correct package name
+        # Handle files that start with package declaration
         awk -v pkg="$PACKAGE" '
-            NR==1 { print "// ========================================" }
-            NR==2 { print "// AUTO-GENERATED - DO NOT EDIT MANUALLY" }
-            NR==3 { print "// Synced from common/'"$master_file"'" }
-            NR==4 { print "// File: '"$sync_file"'" }
-            NR==5 { print "// ========================================" }
-            /^package / { print "package com." pkg; next }
+            BEGIN { printed_header = 0 }
+            /^package / {
+                if (!printed_header) {
+                    print "// ========================================"
+                    print "// AUTO-GENERATED - DO NOT EDIT MANUALLY"
+                    print "// Synced from common/'"$master_file"'"
+                    print "// File: '"$sync_file"'"
+                    print "// ========================================"
+                    printed_header = 1
+                }
+                print "package com." pkg
+                next
+            }
             { print }
         ' "$MASTER_SOURCE" > "$DEST_FILE"
 

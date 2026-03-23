@@ -1,12 +1,12 @@
 // ========================================
-package com.Funmovieslix
 // AUTO-GENERATED - DO NOT EDIT MANUALLY
-
 // Synced from common/MasterUtils.kt
-import com.lagradost.api.Log
 // File: SyncUtils.kt
-import com.lagradost.cloudstream3.HomePageResponse
 // ========================================
+package com.Funmovieslix
+
+import com.lagradost.api.Log
+import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.SearchResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex

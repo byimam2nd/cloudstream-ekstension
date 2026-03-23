@@ -1,12 +1,12 @@
 // ========================================
-package com.Funmovieslix
 // AUTO-GENERATED - DO NOT EDIT MANUALLY
-
 // Synced from common/MasterSuperSmartPrefetchManager.kt
-import com.lagradost.api.Log
 // File: SyncSuperSmartPrefetchManager.kt
-import com.lagradost.cloudstream3.app
 // ========================================
+package com.Funmovieslix
+
+import com.lagradost.api.Log
+import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

@@ -1,17 +1,17 @@
 // ========================================
-// ========================================
-// AUTO-GENERATED - DO NOT EDIT MANUALLY
 // MASTER EXTRACTORS COLLECTION - v2.0
-// Synced from common/MasterExtractors.kt
 // Kumpulan 75+ Extractor untuk CloudStream
-// File: SyncExtractors.kt
-// ========================================
 // ========================================
 // Source: ExtCloud + cloudstream-ekstension + CloudStream Built-in
 // Last Updated: 2026-03-18
 // Maintainer: Phisher98
 // ========================================
 
+// ========================================
+// AUTO-GENERATED - DO NOT EDIT MANUALLY
+// Synced from common/MasterExtractors.kt
+// File: SyncExtractors.kt
+// ========================================
 package com.Pencurimovie
 
 import com.lagradost.cloudstream3.*

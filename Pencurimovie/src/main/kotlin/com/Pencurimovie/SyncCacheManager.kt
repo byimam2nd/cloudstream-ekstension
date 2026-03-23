@@ -1,12 +1,12 @@
 // ========================================
-package com.Pencurimovie
 // AUTO-GENERATED - DO NOT EDIT MANUALLY
-
 // Synced from common/MasterCacheManager.kt
-import kotlinx.coroutines.sync.Mutex
 // File: SyncCacheManager.kt
-import kotlinx.coroutines.sync.withLock
 // ========================================
+package com.Pencurimovie
+
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Generic thread-safe cache manager with TTL

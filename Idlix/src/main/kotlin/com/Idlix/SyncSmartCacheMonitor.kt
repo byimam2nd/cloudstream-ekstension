@@ -1,12 +1,12 @@
 // ========================================
-package com.Idlix
 // AUTO-GENERATED - DO NOT EDIT MANUALLY
-
 // Synced from common/MasterSmartCacheMonitor.kt
-import com.lagradost.api.Log
 // File: SyncSmartCacheMonitor.kt
-import com.lagradost.cloudstream3.app
 // ========================================
+package com.Idlix
+
+import com.lagradost.api.Log
+import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.withTimeout
 
 /**
