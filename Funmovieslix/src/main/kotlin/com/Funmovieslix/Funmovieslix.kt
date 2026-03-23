@@ -229,14 +229,28 @@ class Funmovieslix : MainAPI() {
         
         // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
         // 5x faster for episodes with multiple servers
+        val loadedLinks = mutableListOf<String>()
+        
         coroutineScope {
             urls.map { url ->
                 async {
-                    loadExtractor(url, subtitleCallback, callback)
+                    try {
+                        val fixedUrl = fixUrl(url)
+                        loadExtractor(fixedUrl, mainUrl, subtitleCallback, callback)
+                        loadedLinks.add(url)
+                    } catch (e: Exception) {
+                        logError("Funmovieslix", "loadExtractor failed for $url: ${e.message}")
+                    }
                 }
             }.awaitAll()
         }
         
+        if (loadedLinks.isEmpty()) {
+            logError("Funmovieslix", "No links loaded from ${urls.size} URLs found")
+            return false
+        }
+        
+        Log.d("Funmovieslix", "Successfully loaded ${loadedLinks.size} links")
         return true
     }
 

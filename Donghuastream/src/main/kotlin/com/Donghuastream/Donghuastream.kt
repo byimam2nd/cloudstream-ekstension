@@ -141,7 +141,7 @@ open class Donghuastream : MainAPI() {
         val type=document.selectFirst(".spe")?.text().toString()
         val tvtag=if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
         return if (tvtag == TvType.TvSeries) {
-            val Eppage= document.selectFirst(".eplister li > a")?.attr("href") ?:""
+            val Eppage= fixUrl(document.selectFirst(".eplister li > a")?.attr("href") ?:"")
             val doc= app.get(Eppage, timeout = 5000L).documentLarge
             
             // OPTIMIZED: Parallel episode loading (all episodes at once)
