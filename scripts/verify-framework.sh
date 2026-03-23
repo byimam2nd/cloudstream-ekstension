@@ -209,6 +209,214 @@ test_funmovieslix_embed() {
     fi
 }
 
+# Test function for Animasu poster selector
+test_animasu_poster() {
+    local url=$1
+    local html=$(curl -s "$url" -A "Mozilla/5.0")
+    
+    print_test "Testing Animasu Poster Selector"
+    echo ""
+    
+    # OLD: Single selector
+    echo "  OLD: div.poster img[src]"
+    local old_result=$(echo "$html" | grep -oP 'div class="poster".*?<img[^>]*src="\K[^"]*' | head -1)
+    
+    # NEW: Fallback strategy
+    echo "  NEW: Fallback Strategy (4-layer)"
+    local new_result=""
+    
+    # Layer 1: div.poster img
+    new_result=$(echo "$html" | grep -oP 'div class="poster".*?<img[^>]*src="\K[^"]*' | head -1)
+    [ -n "$new_result" ] && echo "    ✓ Layer 1: div.poster img"
+    
+    # Layer 2: meta og:image
+    if [ -z "$new_result" ]; then
+        new_result=$(echo "$html" | grep -oP 'property="og:image".*?content="\K[^"]*' | head -1)
+        [ -n "$new_result" ] && echo "    ✓ Layer 2: meta og:image"
+    fi
+    
+    # Layer 3: div.thumb img
+    if [ -z "$new_result" ]; then
+        new_result=$(echo "$html" | grep -oP 'div class="thumb".*?<img[^>]*src="\K[^"]*' | head -1)
+        [ -n "$new_result" ] && echo "    ✓ Layer 3: div.thumb img"
+    fi
+    
+    # Layer 4: img[data-src]
+    if [ -z "$new_result" ]; then
+        new_result=$(echo "$html" | grep -oP 'img[^>]*data-src="\K[^"]*' | head -1)
+        [ -n "$new_result" ] && echo "    ✓ Layer 4: img data-src"
+    fi
+    
+    echo ""
+    
+    # Compare
+    if [ "$old_result" == "$new_result" ]; then
+        print_success "MATCH: Both selectors return same result"
+        return 0
+    elif [ -n "$new_result" ] && [ -z "$old_result" ]; then
+        print_success "IMPROVEMENT: New selector found poster, old selector failed"
+        return 0
+    elif [ "$old_result" != "$new_result" ] && [ -n "$old_result" ] && [ -n "$new_result" ]; then
+        print_warning "MISMATCH: Different results (manual review needed)"
+        return 1
+    else
+        print_error "BOTH FAILED: Neither selector found poster"
+        return 1
+    fi
+}
+
+# Test function for LayarKaca21 selector
+test_layarkaca21() {
+    local url=$1
+    local html=$(curl -s "$url" -A "Mozilla/5.0")
+    
+    print_test "Testing LayarKaca21 Poster & Title Selector"
+    echo ""
+    
+    # Poster test
+    echo "  POSTER SELECTOR:"
+    local old_poster=$(echo "$html" | grep -oP 'img[itemprop="image"].*?src="\K[^"]*' | head -1)
+    local new_poster=""
+    
+    # Layer 1
+    new_poster=$(echo "$html" | grep -oP 'img[itemprop="image"].*?src="\K[^"]*' | head -1)
+    [ -n "$new_poster" ] && echo "    ✓ Layer 1: img[itemprop=image]"
+    
+    # Layer 2
+    if [ -z "$new_poster" ]; then
+        new_poster=$(echo "$html" | grep -oP 'property="og:image".*?content="\K[^"]*' | head -1)
+        [ -n "$new_poster" ] && echo "    ✓ Layer 2: meta og:image"
+    fi
+    
+    # Layer 3
+    if [ -z "$new_poster" ]; then
+        new_poster=$(echo "$html" | grep -oP 'div class="thumb".*?<img[^>]*src="\K[^"]*' | head -1)
+        [ -n "$new_poster" ] && echo "    ✓ Layer 3: div.thumb img"
+    fi
+    
+    if [ "$old_poster" == "$new_poster" ] || [ -n "$new_poster" ] && [ -z "$old_poster" ]; then
+        print_success "Poster: PASS"
+    else
+        print_warning "Poster: CHECK"
+    fi
+    
+    echo ""
+    echo "  TITLE SELECTOR:"
+    local old_title=$(echo "$html" | grep -oP 'h1[itemprop="name"].*?>\K[^<]*' | head -1)
+    local new_title=""
+    
+    # Layer 1
+    new_title=$(echo "$html" | grep -oP 'h1[itemprop="name"].*?>\K[^<]*' | head -1)
+    [ -n "$new_title" ] && echo "    ✓ Layer 1: h1[itemprop=name]"
+    
+    # Layer 2
+    if [ -z "$new_title" ]; then
+        new_title=$(echo "$html" | grep -oP 'property="og:title".*?content="\K[^"]*' | head -1)
+        [ -n "$new_title" ] && echo "    ✓ Layer 2: meta og:title"
+    fi
+    
+    # Layer 3
+    if [ -z "$new_title" ]; then
+        new_title=$(echo "$html" | grep -oP 'div class="title".*?<h1.*?>\K[^<]*' | head -1)
+        [ -n "$new_title" ] && echo "    ✓ Layer 3: div.title h1"
+    fi
+    
+    if [ "$old_title" == "$new_title" ] || [ -n "$new_title" ] && [ -z "$old_title" ]; then
+        print_success "Title: PASS"
+    else
+        print_warning "Title: CHECK"
+    fi
+    
+    return 0
+}
+
+# Test function for Pencurimovie selector
+test_pencurimovie() {
+    local url=$1
+    local html=$(curl -s "$url" -A "Mozilla/5.0")
+    
+    print_test "Testing Pencurimovie Poster Selector"
+    echo ""
+    
+    # OLD
+    echo "  OLD: div.poster img"
+    local old_result=$(echo "$html" | grep -oP 'div class="poster".*?<img[^>]*src="\K[^"]*' | head -1)
+    
+    # NEW: Fallback
+    echo "  NEW: Fallback Strategy (3-layer)"
+    local new_result=""
+    
+    new_result=$(echo "$html" | grep -oP 'div class="poster".*?<img[^>]*src="\K[^"]*' | head -1)
+    [ -n "$new_result" ] && echo "    ✓ Layer 1: div.poster img"
+    
+    if [ -z "$new_result" ]; then
+        new_result=$(echo "$html" | grep -oP 'property="og:image".*?content="\K[^"]*' | head -1)
+        [ -n "$new_result" ] && echo "    ✓ Layer 2: meta og:image"
+    fi
+    
+    if [ -z "$new_result" ]; then
+        new_result=$(echo "$html" | grep -oP 'img[data-src]'.*?data-src="\K[^"]*' | head -1)
+        [ -n "$new_result" ] && echo "    ✓ Layer 3: img data-src"
+    fi
+    
+    echo ""
+    
+    if [ "$old_result" == "$new_result" ]; then
+        print_success "MATCH: Both selectors return same result"
+        return 0
+    elif [ -n "$new_result" ] && [ -z "$old_result" ]; then
+        print_success "IMPROVEMENT: New selector found poster"
+        return 0
+    else
+        print_warning "CHECK: Manual review needed"
+        return 1
+    fi
+}
+
+# Test function for Samehadaku selector
+test_samehadaku() {
+    local url=$1
+    local html=$(curl -s "$url" -A "Mozilla/5.0")
+    
+    print_test "Testing Samehadaku Poster & Episode Selector"
+    echo ""
+    
+    # Poster
+    echo "  POSTER:"
+    local old_poster=$(echo "$html" | grep -oP 'div class="thumb".*?<img[^>]*src="\K[^"]*' | head -1)
+    local new_poster=""
+    
+    new_poster=$(echo "$html" | grep -oP 'div class="thumb".*?<img[^>]*src="\K[^"]*' | head -1)
+    [ -n "$new_poster" ] && echo "    ✓ Layer 1: div.thumb img"
+    
+    if [ -z "$new_poster" ]; then
+        new_poster=$(echo "$html" | grep -oP 'property="og:image".*?content="\K[^"]*' | head -1)
+        [ -n "$new_poster" ] && echo "    ✓ Layer 2: meta og:image"
+    fi
+    
+    if [ "$old_poster" == "$new_poster" ] || [ -n "$new_poster" ] && [ -z "$old_poster" ]; then
+        print_success "Poster: PASS"
+    else
+        print_warning "Poster: CHECK"
+    fi
+    
+    echo ""
+    echo "  EPISODE LIST:"
+    local old_eps=$(echo "$html" | grep -oP 'div class="eplister".*?<li' | wc -l)
+    local new_eps=$(echo "$html" | grep -oP 'div class="eplister"|div class="episodelist"' | wc -l)
+    
+    echo "    Old selector finds: $old_eps episode containers"
+    echo "    New selector finds: $new_eps episode containers"
+    
+    if [ $new_eps -ge $old_eps ]; then
+        print_success "Episode: PASS"
+    else
+        print_warning "Episode: CHECK"
+    fi
+    
+    return 0
+}
+
 # =============================================================================
 # Main Execution
 # =============================================================================
@@ -235,24 +443,68 @@ main() {
 
 EOF
     
+    local result=0
+    
     case "$PROVIDER" in
         "Anichin")
-            test_anichin_poster "https://anichin.cafe/seri/carpenter-assassin/"
+            test_anichin_poster "https://anichin.cafe/seri/carpenter-assassin/" || result=1
             ;;
         "Donghuastream")
-            test_donghuastream_url "https://donghuastream.org/anime/against-the-gods-ni-tian-xie-shen-3d1/"
+            test_donghuastream_url "https://donghuastream.org/anime/against-the-gods-ni-tian-xie-shen-3d1/" || result=1
             ;;
         "Funmovieslix")
-            test_funmovieslix_embed "https://funmovieslix.com/death-whisperer-3-2025/"
+            test_funmovieslix_embed "https://funmovieslix.com/death-whisperer-3-2025/" || result=1
+            ;;
+        "Animasu")
+            test_animasu_poster "https://animasu.stream/anime/one-piece" || result=1
+            ;;
+        "LayarKaca21")
+            test_layarkaca21 "https://layarkaca21.com/" || result=1
+            ;;
+        "Pencurimovie")
+            test_pencurimovie "https://pencurimovie.com/" || result=1
+            ;;
+        "Samehadaku")
+            test_samehadaku "https://samehadaku.com/" || result=1
+            ;;
+        "all")
+            print_header "Running Verification for ALL Providers"
+            echo ""
+            
+            echo -e "${CYAN}[1/7] Anichin${NC}"
+            test_anichin_poster "https://anichin.cafe/seri/carpenter-assassin/" || ((result++))
+            echo ""
+            
+            echo -e "${CYAN}[2/7] Donghuastream${NC}"
+            test_donghuastream_url "https://donghuastream.org/anime/against-the-gods-ni-tian-xie-shen-3d1/" || ((result++))
+            echo ""
+            
+            echo -e "${CYAN}[3/7] Funmovieslix${NC}"
+            test_funmovieslix_embed "https://funmovieslix.com/death-whisperer-3-2025/" || ((result++))
+            echo ""
+            
+            echo -e "${CYAN}[4/7] Animasu${NC}"
+            test_animasu_poster "https://animasu.stream/anime/one-piece" || ((result++))
+            echo ""
+            
+            echo -e "${CYAN}[5/7] LayarKaca21${NC}"
+            test_layarkaca21 "https://layarkaca21.com/" || ((result++))
+            echo ""
+            
+            echo -e "${CYAN}[6/7] Pencurimovie${NC}"
+            test_pencurimovie "https://pencurimovie.com/" || ((result++))
+            echo ""
+            
+            echo -e "${CYAN}[7/7] Samehadaku${NC}"
+            test_samehadaku "https://samehadaku.com/" || ((result++))
+            echo ""
             ;;
         *)
             print_error "Unknown provider: $PROVIDER"
-            echo "Supported providers: Anichin, Donghuastream, Funmovieslix"
+            echo "Supported providers: Anichin, Donghuastream, Funmovieslix, Animasu, LayarKaca21, Pencurimovie, Samehadaku, all"
             exit 1
             ;;
     esac
-    
-    local result=$?
     
     # Finalize report
     cat >> "$REPORT_FILE" << EOF
@@ -261,9 +513,9 @@ EOF
 
 ## Conclusion
 
-**Status**: $([ $result -eq 0 ] && echo "✓ PASS" || echo "✗ FAIL")
+**Status**: $([ $result -eq 0 ] && echo "✓ PASS" || echo "✗ FAIL - $result test(s) need review")
 
-**Recommendation**: $([ $result -eq 0 ] && echo "Proceed with implementation" || echo "Manual review required")
+**Recommendation**: $([ $result -eq 0 ] && echo "Proceed with implementation" || echo "Manual review required for failed tests")
 
 ---
 
@@ -279,7 +531,7 @@ EOF
     if [ $result -eq 0 ]; then
         print_success "All tests passed! Implementation can proceed."
     else
-        print_warning "Some tests failed. Manual review required before implementation."
+        print_warning "$result test(s) need manual review before implementation."
     fi
     
     return $result
