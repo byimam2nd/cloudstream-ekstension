@@ -32,18 +32,19 @@ private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 *
 
 // ========================================
 // RATE LIMITING
+// Custom implementation for Samehadaku
 // ========================================
-private val rateLimitMutex = Mutex()
-private var lastRequestTime = 0L
-private const val MIN_REQUEST_DELAY = 500L
+private val samehadakuMutex = Mutex()
+private var samehadakuLastRequestTime = 0L
+private const val SAMEHADAKU_MIN_REQUEST_DELAY = 500L
 
-internal suspend fun rateLimitDelay() = rateLimitMutex.withLock {
+internal suspend fun samehadakuRateLimitDelay() = samehadakuMutex.withLock {
     val now = System.currentTimeMillis()
-    val elapsed = now - lastRequestTime
-    if (elapsed < MIN_REQUEST_DELAY) {
-        delay(MIN_REQUEST_DELAY - elapsed)
+    val elapsed = now - samehadakuLastRequestTime
+    if (elapsed < SAMEHADAKU_MIN_REQUEST_DELAY) {
+        delay(SAMEHADAKU_MIN_REQUEST_DELAY - elapsed)
     }
-    lastRequestTime = System.currentTimeMillis()
+    samehadakuLastRequestTime = System.currentTimeMillis()
 }
 
 // ========================================
@@ -70,12 +71,9 @@ suspend fun <T> executeWithRetry(
 }
 
 // ========================================
-// LOGGING HELPER
+// LOGGING
+// Uses logError() from SyncUtils.kt
 // ========================================
-internal fun logError(tag: String, message: String, error: Throwable? = null) {
-    Log.e(tag, message)
-    error?.let { Log.e(tag, "Cause: ${it.message}") }
-}
 
 // ========================================
 // MAIN API CLASS
@@ -175,7 +173,7 @@ class Samehadaku : MainAPI() {
         }
 
         val httpResult = executeWithRetry {
-            rateLimitDelay()
+            samehadakuRateLimitDelay()
             app.get(
                 url,
                 timeout = requestTimeout,
@@ -242,7 +240,7 @@ class Samehadaku : MainAPI() {
         Log.d("Samehadaku", "Cache MISS for search: $query")
         
         val searchResult = executeWithRetry {
-            rateLimitDelay()
+            samehadakuRateLimitDelay()
             app.get(
                 "$mainUrl/?s=$query",
                 timeout = requestTimeout,
@@ -274,7 +272,7 @@ class Samehadaku : MainAPI() {
         Log.d("Samehadaku", "Cache MISS for load: $url")
         
         val loadResult = executeWithRetry {
-            rateLimitDelay()
+            samehadakuRateLimitDelay()
             app.get(
                 url,
                 timeout = requestTimeout,
@@ -354,7 +352,7 @@ class Samehadaku : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val downloadDoc = executeWithRetry {
-            rateLimitDelay()
+            samehadakuRateLimitDelay()
             app.get(
                 data,
                 timeout = requestTimeout,
