@@ -32,19 +32,19 @@ private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 *
 
 // ========================================
 // RATE LIMITING
-// Custom implementation for Animasu (overrides SyncUtils default)
+// Custom implementation for Animasu
 // ========================================
-private val mutex = kotlinx.coroutines.sync.Mutex()
-private var lastRequestTime = 0L
-private const val MIN_REQUEST_DELAY = 500L // 500ms between requests - Animasu specific
+private val animasuMutex = kotlinx.coroutines.sync.Mutex()
+private var animasuLastRequestTime = 0L
+private const val ANIMASU_MIN_REQUEST_DELAY = 500L // 500ms between requests - Animasu specific
 
-internal suspend fun animasuRateLimitDelay() = mutex.withLock {
+internal suspend fun animasuRateLimitDelay() = animasuMutex.withLock {
     val now = System.currentTimeMillis()
-    val elapsed = now - lastRequestTime
-    if (elapsed < MIN_REQUEST_DELAY) {
-        delay(MIN_REQUEST_DELAY - elapsed)
+    val elapsed = now - animasuLastRequestTime
+    if (elapsed < ANIMASU_MIN_REQUEST_DELAY) {
+        delay(ANIMASU_MIN_REQUEST_DELAY - elapsed)
     }
-    lastRequestTime = System.currentTimeMillis()
+    animasuLastRequestTime = System.currentTimeMillis()
 }
 
 // ========================================
