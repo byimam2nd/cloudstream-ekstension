@@ -9,21 +9,21 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'common/MasterExtractors.kt'
-      - 'common/MasterUtils.kt'
-      - 'common/MasterCacheManager.kt'
-      - 'common/MasterImageCache.kt'
-      - 'common/MasterSmartCacheMonitor.kt'
-      - 'common/MasterSuperSmartPrefetchManager.kt'
+      - 'master/MasterExtractors.kt'
+      - 'master/MasterUtils.kt'
+      - 'master/MasterCacheManager.kt'
+      - 'master/MasterImageCache.kt'
+      - 'master/MasterSmartCacheMonitor.kt'
+      - 'master/MasterSuperSmartPrefetchManager.kt'
   pull_request:
     branches: [ master ]
     paths:
-      - 'common/MasterExtractors.kt'
-      - 'common/MasterUtils.kt'
-      - 'common/MasterCacheManager.kt'
-      - 'common/MasterImageCache.kt'
-      - 'common/MasterSmartCacheMonitor.kt'
-      - 'common/MasterSuperSmartPrefetchManager.kt'
+      - 'master/MasterExtractors.kt'
+      - 'master/MasterUtils.kt'
+      - 'master/MasterCacheManager.kt'
+      - 'master/MasterImageCache.kt'
+      - 'master/MasterSmartCacheMonitor.kt'
+      - 'master/MasterSuperSmartPrefetchManager.kt'
   workflow_dispatch:
 
 jobs:
