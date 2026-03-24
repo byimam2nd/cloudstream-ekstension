@@ -9,7 +9,7 @@ package com.Samehadaku
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Samehadaku.SyncExtractors
+import com.Samehadaku.generated-sync.SyncExtractors
 
 @CloudstreamPlugin
 class SamehadakuPlugin: BasePlugin() {

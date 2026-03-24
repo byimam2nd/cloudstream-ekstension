@@ -2,7 +2,7 @@ package com.Donghuastream
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Donghuastream.SyncExtractors
+import com.Donghuastream.generated-sync.SyncExtractors
 
 @CloudstreamPlugin
 class DonghuastreamPlugin: BasePlugin() {

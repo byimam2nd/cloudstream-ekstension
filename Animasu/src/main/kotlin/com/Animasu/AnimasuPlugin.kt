@@ -9,7 +9,7 @@ package com.Animasu
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Animasu.SyncExtractors
+import com.Animasu.generated-sync.SyncExtractors
 
 @CloudstreamPlugin
 class AnimasuPlugin: BasePlugin() {

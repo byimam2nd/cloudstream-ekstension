@@ -3,7 +3,7 @@ package com.Idlix
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.Idlix.Idlix
-import com.Idlix.SyncExtractors
+import com.Idlix.generated-sync.SyncExtractors
 
 @CloudstreamPlugin
 class IdlixPlugin: BasePlugin() {
