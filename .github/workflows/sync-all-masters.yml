@@ -197,7 +197,7 @@ jobs:
         if ! git diff --quiet; then
           echo "Changes detected, committing..."
           git add -A
-          git commit -m "chore: auto-sync all master files [skip ci]"
+          git commit -m "chore: auto-sync all master files"
           git push
           echo "✅ Changes pushed successfully"
         else

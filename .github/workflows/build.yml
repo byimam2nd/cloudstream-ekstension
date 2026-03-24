@@ -1,18 +1,20 @@
 name: Build
 
-# SEPARATE concurrency group from Sync workflow
 concurrency:
   group: "build"
   cancel-in-progress: true
 
 on:
+  # Trigger 1: Direct push (exclude master folder changes - handled by sync workflow)
   push:
     branches:
       - master
       - main
     paths-ignore:
       - '*.md'
-  # Trigger after Sync All Master Files completes
+      - 'master/**'  # Skip master folder changes (sync workflow handles this)
+  
+  # Trigger 2: After Sync All Master Files completes
   workflow_run:
     workflows: ["Sync All Master Files"]
     types:
