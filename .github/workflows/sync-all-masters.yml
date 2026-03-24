@@ -15,6 +15,8 @@ on:
       - 'master/MasterImageCache.kt'
       - 'master/MasterSmartCacheMonitor.kt'
       - 'master/MasterSuperSmartPrefetchManager.kt'
+      - 'master/HttpClientFactory.kt'      # Added: Performance optimization
+      - 'master/CompiledRegexPatterns.kt'  # Added: Performance optimization
   pull_request:
     branches: [ master ]
     paths:
@@ -24,6 +26,8 @@ on:
       - 'master/MasterImageCache.kt'
       - 'master/MasterSmartCacheMonitor.kt'
       - 'master/MasterSuperSmartPrefetchManager.kt'
+      - 'master/HttpClientFactory.kt'      # Added: Performance optimization
+      - 'master/CompiledRegexPatterns.kt'  # Added: Performance optimization
   workflow_dispatch:
 
 jobs:
