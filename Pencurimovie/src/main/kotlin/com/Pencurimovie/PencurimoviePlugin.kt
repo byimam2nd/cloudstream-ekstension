@@ -2,7 +2,7 @@ package com.Pencurimovie
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Pencurimovie.generated-sync.SyncExtractors
+import com.Pencurimovie.generated_sync.SyncExtractors
 
 @CloudstreamPlugin
 class PencurimoviePlugin: BasePlugin() {

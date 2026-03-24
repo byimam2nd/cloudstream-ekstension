@@ -5,13 +5,13 @@
 # ========================================
 # FULLY DYNAMIC - No hardcoded module names!
 # Auto-detects modules, folders, and packages
-# Syncs all Master*.kt files to generated-sync/ folder
+# Syncs all Master*.kt files to generated_sync/ folder
 # 
 # Structure after sync:
 #   Module/src/main/kotlin/com/{Module}/
 #   ├── {Module}.kt (original)
 #   ├── {Module}Provider.kt (original)
-#   └── generated-sync/ (auto-generated - DO NOT EDIT)
+#   └── generated_sync/ (auto-generated - DO NOT EDIT)
 #       ├── SyncExtractors.kt
 #       ├── SyncUtils.kt
 #       ├── SyncHttpClientFactory.kt
@@ -19,10 +19,10 @@
 #
 # Package structure:
 #   - Original: com.{Module}
-#   - Generated: com.{Module}.generated-sync
+#   - Generated: com.{Module}.generated_sync
 #
 # Import paths after sync:
-#   - master.HttpClientFactory → com.{Module}.generated-sync.SyncHttpClientFactory
+#   - master.HttpClientFactory → com.{Module}.generated_sync.SyncHttpClientFactory
 # ========================================
 
 set -e
@@ -170,8 +170,9 @@ for MODULE in "${MODULES[@]}"; do
     # Destination directory
     DEST_DIR="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER"
     
-    # Create generated-sync folder for auto-generated code
-    GENERATED_DIR="$DEST_DIR/generated-sync"
+    # Create generated_sync folder for auto-generated code
+    # Note: Use underscore (_) not hyphen (-) because Kotlin package names don't support hyphens
+    GENERATED_DIR="$DEST_DIR/generated_sync"
     mkdir -p "$GENERATED_DIR"
 
     # Check if source folder exists
@@ -211,12 +212,12 @@ for MODULE in "${MODULES[@]}"; do
                     print "// ========================================"
                     printed_header = 1
                 }
-                print "package com." pkg ".generated-sync"
+                print "package com." pkg ".generated_sync"
                 next
             }
-            # Replace import master. with import com.{package}.generated-sync.
+            # Replace import master. with import com.{package}.generated_sync.
             /^import master\./ {
-                sub(/^import master\./, "import com." pkg ".generated-sync.")
+                sub(/^import master\./, "import com." pkg ".generated_sync.")
                 print
                 next
             }
@@ -226,7 +227,7 @@ for MODULE in "${MODULES[@]}"; do
         # Count lines (excluding comments)
         LINE_COUNT=$(wc -l < "$DEST_FILE")
 
-        echo "   ✅ Synced: generated-sync/$sync_file ($LINE_COUNT lines)"
+        echo "   ✅ Synced: generated_sync/$sync_file ($LINE_COUNT lines)"
         MODULE_SYNCED=$((MODULE_SYNCED + 1))
     done
 
@@ -258,12 +259,12 @@ for MODULE in "${MODULES[@]}"; do
                     print "// ========================================"
                     printed_header = 1
                 }
-                print "package com." pkg ".generated-sync"
+                print "package com." pkg ".generated_sync"
                 next
             }
-            # Replace import master. with import com.{package}.generated-sync.
+            # Replace import master. with import com.{package}.generated_sync.
             /^import master\./ {
-                sub(/^import master\./, "import com." pkg ".generated-sync.")
+                sub(/^import master\./, "import com." pkg ".generated_sync.")
                 print
                 next
             }
@@ -271,7 +272,7 @@ for MODULE in "${MODULES[@]}"; do
         ' "$MASTER_SOURCE" > "$DEST_FILE"
 
         LINE_COUNT=$(wc -l < "$DEST_FILE")
-        echo "   ✅ Synced: generated-sync/$sync_file ($LINE_COUNT lines)"
+        echo "   ✅ Synced: generated_sync/$sync_file ($LINE_COUNT lines)"
         MODULE_SYNCED=$((MODULE_SYNCED + 1))
     done
 

@@ -2,7 +2,7 @@ package com.Anichin
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Anichin.generated-sync.SyncExtractors
+import com.Anichin.generated_sync.SyncExtractors
 
 @CloudstreamPlugin
 class AnichinPlugin: BasePlugin() {

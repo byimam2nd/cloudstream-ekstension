@@ -2,7 +2,7 @@ package com.Funmovieslix
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.Funmovieslix.generated-sync.SyncExtractors
+import com.Funmovieslix.generated_sync.SyncExtractors
 
 @CloudstreamPlugin
 class FunmovieslixPlugin: BasePlugin() {
