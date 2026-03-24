@@ -181,19 +181,23 @@ jobs:
 
         echo "✅ Validation PASSED: All $VALID_COUNT module(s) have synced files"
 
-    - name: Commit and push if changes exist
+    - name: Commit and push generated_sync files
       run: |
         echo ""
-        echo "🔄 Checking for changes to commit..."
+        echo "🔄 Committing generated_sync files..."
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
-        if ! git diff --quiet; then
-          echo "Changes detected, committing..."
-          git add -A
-          git commit -m "chore: auto-sync all master files"
+        # Force add generated_sync directories (even if gitignored)
+        # These files are auto-generated but MUST be in repo for build to work
+        git add -f */src/main/kotlin/com/*/generated_sync/ || true
+
+        # Check if any files were staged
+        if ! git diff --cached --quiet; then
+          echo "Generated files staged, committing..."
+          git commit -m "chore: update generated_sync files [auto-generated]"
           git push
-          echo "✅ Changes pushed successfully"
+          echo "✅ Generated files pushed successfully"
         else
-          echo "✅ No changes to commit"
+          echo "ℹ️ No generated files to commit (already up-to-date)"
         fi
