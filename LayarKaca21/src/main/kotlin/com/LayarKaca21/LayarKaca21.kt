@@ -1,6 +1,6 @@
 package com.LayarKaca21
 
-import com.LayarKaca21.CacheManager
+import com.LayarKaca21.generated_sync.CacheManager
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import com.LayarKaca21.SmartCacheMonitor
+import com.LayarKaca21.generated_sync.SmartCacheMonitor
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()

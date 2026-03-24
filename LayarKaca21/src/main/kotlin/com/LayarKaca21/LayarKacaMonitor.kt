@@ -1,6 +1,6 @@
 package com.LayarKaca21
 
-import com.LayarKaca21.SmartCacheMonitor
+import com.LayarKaca21.generated_sync.SmartCacheMonitor
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.withTimeout

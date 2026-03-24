@@ -45,10 +45,6 @@ MASTER_FILES=(
     "MasterSmartCacheMonitor.kt:SyncSmartCacheMonitor.kt"
     "MasterSuperSmartPrefetchManager.kt:SyncSuperSmartPrefetchManager.kt"
     "MasterSyncMonitor.kt:SyncMonitor.kt"
-)
-
-# Additional master files to copy with Sync prefix
-ADDITIONAL_MASTER_FILES=(
     "MasterHttpClientFactory.kt:SyncHttpClientFactory.kt"
     "MasterCompiledRegexPatterns.kt:SyncCompiledRegexPatterns.kt"
 )
@@ -227,51 +223,6 @@ for MODULE in "${MODULES[@]}"; do
         # Count lines (excluding comments)
         LINE_COUNT=$(wc -l < "$DEST_FILE")
 
-        echo "   ✅ Synced: generated_sync/$sync_file ($LINE_COUNT lines)"
-        MODULE_SYNCED=$((MODULE_SYNCED + 1))
-    done
-
-    # Copy additional master files (with Sync prefix, rename) to generated-sync/ folder
-    for master_entry in "${ADDITIONAL_MASTER_FILES[@]}"; do
-        master_file="${master_entry%%:*}"
-        sync_file="${master_entry##*:}"
-
-        MASTER_SOURCE="$MASTER_DIR/$master_file"
-
-        # Check if master file exists
-        if [ ! -f "$MASTER_SOURCE" ]; then
-            echo "   ⚠️  Warning: Additional master file not found: $master_file"
-            continue
-        fi
-
-        # Destination in generated-sync folder
-        DEST_FILE="$GENERATED_DIR/$sync_file"
-
-        # Copy file with updated package (com.{package}.generated-sync)
-        awk -v pkg="$PACKAGE" '
-            BEGIN { printed_header = 0 }
-            /^package / {
-                if (!printed_header) {
-                    print "// ========================================"
-                    print "// AUTO-GENERATED - DO NOT EDIT MANUALLY"
-                    print "// Synced from common/'"$master_file"'"
-                    print "// File: '"$sync_file"'"
-                    print "// ========================================"
-                    printed_header = 1
-                }
-                print "package com." pkg ".generated_sync"
-                next
-            }
-            # Replace import master. with import com.{package}.generated_sync.
-            /^import master\./ {
-                sub(/^import master\./, "import com." pkg ".generated_sync.")
-                print
-                next
-            }
-            { print }
-        ' "$MASTER_SOURCE" > "$DEST_FILE"
-
-        LINE_COUNT=$(wc -l < "$DEST_FILE")
         echo "   ✅ Synced: generated_sync/$sync_file ($LINE_COUNT lines)"
         MODULE_SYNCED=$((MODULE_SYNCED + 1))
     done

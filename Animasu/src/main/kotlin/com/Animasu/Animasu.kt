@@ -15,7 +15,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.*
-import com.Animasu.CacheManager
+import com.Animasu.generated_sync.CacheManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock

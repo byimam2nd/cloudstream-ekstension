@@ -1,6 +1,6 @@
 package com.Idlix
 
-import com.Idlix.SmartCacheMonitor
+import com.Idlix.generated_sync.SmartCacheMonitor
 import com.lagradost.api.Log
 import kotlinx.coroutines.withTimeout
 import com.lagradost.cloudstream3.app

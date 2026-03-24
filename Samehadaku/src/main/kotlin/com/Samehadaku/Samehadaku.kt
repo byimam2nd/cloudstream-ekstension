@@ -8,7 +8,7 @@
 
 package com.Samehadaku
 
-import com.Samehadaku.CacheManager
+import com.Samehadaku.generated_sync.CacheManager
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*

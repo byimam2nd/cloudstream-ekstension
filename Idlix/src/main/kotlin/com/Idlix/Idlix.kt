@@ -1,6 +1,6 @@
 package com.Idlix
 
-import com.Idlix.CacheManager
+import com.Idlix.generated_sync.CacheManager
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
@@ -18,12 +18,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 
 // ============================================
-// OPTIMIZED: Import shared utilities
+// OPTIMIZED: Import shared utilities from generated_sync
 // ============================================
-import com.Idlix.rateLimitDelay
-import com.Idlix.getRandomUserAgent
-import com.Idlix.executeWithRetry
-import com.Idlix.logError
+import com.Idlix.generated_sync.rateLimitDelay
+import com.Idlix.generated_sync.getRandomUserAgent
+import com.Idlix.generated_sync.executeWithRetry
+import com.Idlix.generated_sync.logError
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()

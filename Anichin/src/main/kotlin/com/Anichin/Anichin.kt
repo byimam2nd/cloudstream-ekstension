@@ -1,6 +1,6 @@
 package com.Anichin
 
-import com.Anichin.CacheManager
+import com.Anichin.generated_sync.CacheManager
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.HomePageList
@@ -40,12 +40,12 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 // ============================================
-// OPTIMIZED: Import shared utilities
+// OPTIMIZED: Import shared utilities from generated_sync
 // ============================================
-import com.Anichin.rateLimitDelay
-import com.Anichin.getRandomUserAgent
-import com.Anichin.executeWithRetry
-import com.Anichin.logError
+import com.Anichin.generated_sync.rateLimitDelay
+import com.Anichin.generated_sync.getRandomUserAgent
+import com.Anichin.generated_sync.executeWithRetry
+import com.Anichin.generated_sync.logError
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()

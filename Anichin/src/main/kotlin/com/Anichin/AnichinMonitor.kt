@@ -1,6 +1,6 @@
 package com.Anichin
 
-import com.Anichin.SmartCacheMonitor
+import com.Anichin.generated_sync.SmartCacheMonitor
 import com.lagradost.api.Log
 import kotlinx.coroutines.withTimeout
 import com.lagradost.cloudstream3.app
