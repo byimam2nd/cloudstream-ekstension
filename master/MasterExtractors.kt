@@ -34,8 +34,8 @@ import android.annotation.SuppressLint
 //   - Package: com.{Module} → com.{Module}.generated-sync
 //   - Imports: master. → com.{Module}.generated-sync.
 //   - Files: 
-//     * HttpClientFactory.kt → generated-sync/SyncHttpClientFactory.kt
-//     * CompiledRegexPatterns.kt → generated-sync/SyncCompiledRegexPatterns.kt
+//     * MasterHttpClientFactory.kt → generated-sync/SyncHttpClientFactory.kt
+//     * MasterCompiledRegexPatterns.kt → generated-sync/SyncCompiledRegexPatterns.kt
 //
 // Script sync akan otomatis update semua import paths
 // ========================================

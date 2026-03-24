@@ -49,8 +49,8 @@ MASTER_FILES=(
 
 # Additional master files to copy with Sync prefix
 ADDITIONAL_MASTER_FILES=(
-    "HttpClientFactory.kt:SyncHttpClientFactory.kt"
-    "CompiledRegexPatterns.kt:SyncCompiledRegexPatterns.kt"
+    "MasterHttpClientFactory.kt:SyncHttpClientFactory.kt"
+    "MasterCompiledRegexPatterns.kt:SyncCompiledRegexPatterns.kt"
 )
 
 echo "📋 Master files to sync:"

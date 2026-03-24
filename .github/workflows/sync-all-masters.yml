@@ -9,25 +9,11 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'master/MasterExtractors.kt'
-      - 'master/MasterUtils.kt'
-      - 'master/MasterCacheManager.kt'
-      - 'master/MasterImageCache.kt'
-      - 'master/MasterSmartCacheMonitor.kt'
-      - 'master/MasterSuperSmartPrefetchManager.kt'
-      - 'master/HttpClientFactory.kt'      # Added: Performance optimization
-      - 'master/CompiledRegexPatterns.kt'  # Added: Performance optimization
+      - 'master/Master*.kt'  # All files with Master prefix
   pull_request:
     branches: [ master ]
     paths:
-      - 'master/MasterExtractors.kt'
-      - 'master/MasterUtils.kt'
-      - 'master/MasterCacheManager.kt'
-      - 'master/MasterImageCache.kt'
-      - 'master/MasterSmartCacheMonitor.kt'
-      - 'master/MasterSuperSmartPrefetchManager.kt'
-      - 'master/HttpClientFactory.kt'      # Added: Performance optimization
-      - 'master/CompiledRegexPatterns.kt'  # Added: Performance optimization
+      - 'master/Master*.kt'  # All files with Master prefix
   workflow_dispatch:
 
 jobs:
