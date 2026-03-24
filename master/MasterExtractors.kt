@@ -27,6 +27,10 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import android.annotation.SuppressLint
 
+// Import Master utilities untuk performa optimal
+import master.HttpClientFactory
+import master.CompiledRegexPatterns
+
 // ========================================
 // HELPER FUNCTIONS
 // ========================================
@@ -1137,7 +1141,8 @@ class Megacloud : ExtractorApi() {
     override val mainUrl = "https://megacloud.blog"
     override val requiresReferer = false
 
-    private val client = okhttp3.OkHttpClient()
+    // Gunakan HttpClientFactory untuk koneksi optimal
+    private val client = HttpClientFactory.getClient()
     private val gson = com.google.gson.Gson()
 
     private fun fetchUrl(url: String, headers: Map<String, String> = emptyMap()): String? {
@@ -1182,8 +1187,12 @@ class Megacloud : ExtractorApi() {
             val id = url.substringAfterLast("/").substringBefore("?")
             val responseText = fetchUrl(url, headers) ?: throw Exception("Failed to fetch page")
 
-            val match1 = Regex("""\b[a-zA-Z0-9]{48}\b""").find(responseText)
-            val match2 = Regex("""\b([a-zA-Z0-9]{16})\b.*?\b([a-zA-Z0-9]{16})\b.*?\b([a-zA-Z0-9]{16})\b""").find(responseText)
+            // Gunakan regex yang sudah di-compile untuk performa
+            val nonceRegex = CompiledRegexPatterns.ENCRYPTED_BASE64
+            val tripleIdRegex = Regex("""\b([a-zA-Z0-9]{16})\b.*?\b([a-zA-Z0-9]{16})\b.*?\b([a-zA-Z0-9]{16})\b""")
+            
+            val match1 = nonceRegex.find(responseText)
+            val match2 = tripleIdRegex.find(responseText)
             val nonce = match1?.value ?: match2?.let { it.groupValues[1] + it.groupValues[2] + it.groupValues[3] }
             ?: throw Exception("Nonce not found")
 
@@ -1207,7 +1216,8 @@ class Megacloud : ExtractorApi() {
                             "&secret=${java.net.URLEncoder.encode(key ?: "", "UTF-8")}"
 
                 val decryptedResponse = fetchUrl(fullUrl) ?: throw Exception("Failed to decrypt URL")
-                Regex("\"file\":\"(.*?)\"").find(decryptedResponse)?.groupValues?.get(1)
+                // Gunakan pre-compiled pattern
+                CompiledRegexPatterns.M3U8_JSON_VALUE.find(decryptedResponse)?.groupValues?.get(1)
                     ?: throw Exception("Video URL not found in decrypted response")
             }
 
