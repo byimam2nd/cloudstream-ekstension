@@ -192,6 +192,12 @@ for MODULE in "${MODULES[@]}"; do
                 print "package com." pkg
                 next
             }
+            # Replace import master. with import com.{package}.
+            /^import master\./ {
+                sub(/^import master\./, "import com." pkg ".")
+                print
+                next
+            }
             { print }
         ' "$MASTER_SOURCE" > "$DEST_FILE"
 
@@ -227,6 +233,12 @@ for MODULE in "${MODULES[@]}"; do
                     printed_header = 1
                 }
                 print "package com." pkg
+                next
+            }
+            # Replace import master. with import com.{package}.
+            /^import master\./ {
+                sub(/^import master\./, "import com." pkg ".")
+                print
                 next
             }
             { print }
