@@ -112,9 +112,20 @@ class LayarKaca21 : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
+        // FIXED: Fallback strategy untuk title (2-layer)
+        val title = this.selectFirst("h3")?.ownText()?.trim()
+            ?: this.selectFirst("h3")?.text()?.trim()
+            ?: return null
+        
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr())
+        
+        // FIXED: Fallback strategy untuk poster (3-layer)
+        val posterUrl = fixUrlNull(
+            this.selectFirst("img")?.getImageAttr()
+                ?: this.selectFirst("img[data-src]")?.attr("data-src")
+                ?: this.selectFirst("img[src]")?.attr("src")
+        )
+        
         val ratingText = selectFirst("span.rating")?.ownText()?.trim()
         val type = if (this.selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
         val posterheaders = mapOf("Referer" to getBaseUrl(posterUrl))
@@ -184,8 +195,19 @@ class LayarKaca21 : MainAPI() {
         }
 
         val baseUrl = fetchURL(fixUrl)
-        val title = document.selectFirst("div.movie-info h1")?.text()?.trim().orEmpty()
+        
+        // FIXED: Fallback strategy untuk title (3-layer)
+        val title = document.selectFirst("div.movie-info h1")?.text()?.trim()
+            ?: document.selectFirst("h1.title")?.text()?.trim()
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")
+            ?: ""
+        
+        // FIXED: Fallback strategy untuk poster (4-layer)
         val poster = document.select("meta[property=og:image]").attr("content")
+            .ifEmpty { document.selectFirst("div.poster img")?.attr("src").orEmpty() }
+            .ifEmpty { document.selectFirst("img[data-src]")?.attr("data-src").orEmpty() }
+            .ifEmpty { document.selectFirst("img[src]")?.attr("src").orEmpty() }
+        
         val tags = document.select("div.tag-list span").map { it.text() }
         val posterHeaders = mapOf("Referer" to getBaseUrl(poster))
 
@@ -194,7 +216,12 @@ class LayarKaca21 : MainAPI() {
         )?.groupValues?.get(1)?.toIntOrNull()
 
         val tvType = if (document.selectFirst("#season-data") != null) TvType.TvSeries else TvType.Movie
+        
+        // FIXED: Fallback strategy untuk description (3-layer)
         val description = document.selectFirst("div.meta-info")?.text()?.trim()
+            ?: document.selectFirst("div.description")?.text()?.trim()
+            ?: document.selectFirst("meta[name=description]")?.attr("content").orEmpty()
+        
         val trailer = document.selectFirst("ul.action-left > li:nth-child(3) > a")?.attr("href")
         val rating = document.selectFirst("div.info-tag strong")?.text()
 

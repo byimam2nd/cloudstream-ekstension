@@ -170,9 +170,19 @@ class Pencurimovie : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse {
+        // FIXED: Fallback strategy untuk title (2-layer)
         val title = this.select("a").attr("oldtitle").substringBefore("(")
+            .ifEmpty { this.select("a").attr("title").substringBefore("(") }
+        
         val href = fixUrl(this.select("a").attr("href"))
-        val posterUrl = fixUrlNull(this.select("a img").attr("data-original").toString())
+        
+        // FIXED: Fallback strategy untuk poster (3-layer)
+        val posterUrl = fixUrlNull(
+            this.select("a img").attr("data-original")
+                .ifEmpty { this.select("a img").attr("data-src") }
+                .ifEmpty { this.select("a img").attr("src") }
+        )
+        
         val quality = getQualityFromString(this.select("span.mli-quality").text())
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
@@ -189,10 +199,25 @@ class Pencurimovie : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url, timeout = 50L).document
-        val title =
-            document.selectFirst("div.mvic-desc h3")?.text()?.trim().toString().substringBefore("(")
-        val poster = document.select("meta[property=og:image]").attr("content").toString()
+        
+        // FIXED: Fallback strategy untuk title (3-layer)
+        val title = document.selectFirst("div.mvic-desc h3")?.text()?.trim()
+            ?.substringBefore("(")
+            ?: document.selectFirst("h1.title")?.text()?.trim()?.substringBefore("(")
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")
+            ?: ""
+        
+        // FIXED: Fallback strategy untuk poster (4-layer)
+        val poster = document.select("meta[property=og:image]").attr("content")
+            .ifEmpty { document.selectFirst("div.mvic-thumb img")?.attr("src").orEmpty() }
+            .ifEmpty { document.selectFirst("img[data-original]")?.attr("data-original").orEmpty() }
+            .ifEmpty { document.selectFirst("img[data-src]")?.attr("data-src").orEmpty() }
+        
+        // FIXED: Fallback strategy untuk description (3-layer)
         val description = document.selectFirst("div.desc p.f-desc")?.text()?.trim()
+            ?: document.selectFirst("div.description")?.text()?.trim()
+            ?: document.selectFirst("meta[name=description]")?.attr("content").orEmpty()
+        
         val tvtag = if (url.contains("series")) TvType.TvSeries else TvType.Movie
         val trailer = document.select("meta[itemprop=embedUrl]").attr("content") ?: ""
         val genre = document.select("div.mvic-info p:contains(Genre)").select("a").map { it.text() }
