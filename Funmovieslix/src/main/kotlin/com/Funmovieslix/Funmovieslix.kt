@@ -114,10 +114,13 @@ class Funmovieslix : MainAPI() {
         }
     }
 
+    // Standard timeout (10 detik)
+    private val requestTimeout = 10000L
+
     override suspend fun search(query: String): List<SearchResponse> {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "search_${query}"
-        
+
         // Check cache first
         val cached = searchCache.get(cacheKey)
         if (cached != null) {
@@ -129,7 +132,11 @@ class Funmovieslix : MainAPI() {
             (1..3).map { page ->
                 async {
                     try {
-                        val document = app.get("${mainUrl}?s=$query&page=$page", timeout = 5000L).documentLarge
+                        val document = app.get(
+                            "${mainUrl}?s=$query&page=$page",
+                            timeout = requestTimeout,
+                            headers = mapOf("User-Agent" to "Mozilla/5.0")
+                        ).documentLarge
                         document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
                     } catch (e: Exception) {
                         emptyList<SearchResponse>()
@@ -145,7 +152,11 @@ class Funmovieslix : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url, timeout = 5000L).documentLarge
+        val document = app.get(
+            url,
+            timeout = requestTimeout,
+            headers = mapOf("User-Agent" to "Mozilla/5.0")
+        ).documentLarge
         
         // FIXED: Fallback strategy untuk title (3-layer)
         val title = document.select("meta[property=og:title]").attr("content")
