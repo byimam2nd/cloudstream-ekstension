@@ -33,10 +33,11 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import android.annotation.SuppressLint
 
 // Import Master utilities untuk performa optimal
-// Note: Setelah sync, HttpClientFactory dan CompiledRegexPatterns akan berada di package yang sama
+// Note: Setelah sync, nama file akan di-prefix "Sync"
+// master.HttpClientFactory → com.{Module}.SyncHttpClientFactory
+// master.CompiledRegexPatterns → com.{Module}.SyncCompiledRegexPatterns
 import com.Animasu.HttpClientFactory
 import com.Animasu.CompiledRegexPatterns
-// Setelah sync menjadi: import com.{Module}.HttpClientFactory (auto-adjusted by sync script)
 
 // ========================================
 // HELPER FUNCTIONS
