@@ -1,6 +1,7 @@
 package com.Funmovieslix
 
 import com.Funmovieslix.generated_sync.CacheManager
+import com.Funmovieslix.generated_sync.logError
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.Episode

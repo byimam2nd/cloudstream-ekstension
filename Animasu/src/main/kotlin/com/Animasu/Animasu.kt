@@ -16,6 +16,11 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.*
 import com.Animasu.generated_sync.CacheManager
+import com.Animasu.generated_sync.getImageAttr
+import com.Animasu.generated_sync.getRandomUserAgent
+import com.Animasu.generated_sync.logError
+import com.Animasu.generated_sync.executeWithRetry
+import com.Animasu.generated_sync.rateLimitDelay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
