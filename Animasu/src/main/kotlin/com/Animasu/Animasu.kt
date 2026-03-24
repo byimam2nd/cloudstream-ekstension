@@ -262,8 +262,9 @@ class Animasu : MainAPI() {
             ?.toString()
             ?.replace("Sub Indo", "")
             ?.trim()
-            .ifEmpty { document.selectFirst("h1.entry-title")?.text()?.replace("Sub Indo", "")?.trim() }
-            .ifEmpty { document.selectFirst("meta[property=og:title]")?.attr("content") }
+            .orEmpty()
+            .ifEmpty { document.selectFirst("h1.entry-title")?.text()?.replace("Sub Indo", "")?.trim().orEmpty() }
+            .ifEmpty { document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty() }
             ?: ""
 
         // FIXED: Fallback strategy untuk poster (4-layer)
