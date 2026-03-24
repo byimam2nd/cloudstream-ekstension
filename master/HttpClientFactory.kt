@@ -59,7 +59,7 @@ object HttpClientFactory {
      */
     fun resetClient() {
         synchronized(this) {
-            instance?.connectionPool.evictAll()
+            instance?.connectionPool?.evictAll()
             instance = null
         }
     }
