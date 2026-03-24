@@ -144,8 +144,18 @@ class Animasu : MainAPI() {
 
     private fun Element.toSearchResult(): AnimeSearchResponse {
         val href = getProperAnimeLink(fixUrlNull(this.selectFirst("a")?.attr("href")).toString())
+        
+        // FIXED: Fallback strategy untuk title (2-layer)
         val title = this.select("div.tt").text().trim()
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr())
+            .ifEmpty { this.selectFirst("a")?.attr("title").orEmpty() }
+        
+        // FIXED: Fallback strategy untuk poster (3-layer)
+        val posterUrl = fixUrlNull(
+            this.selectFirst("img")?.getImageAttr()
+                ?: this.selectFirst("img[data-src]")?.attr("data-src")
+                ?: this.selectFirst("meta[property=og:image]")?.attr("content")
+        )
+        
         val epNum = this.selectFirst("span.epx")?.text()?.filter { it.isDigit() }?.toIntOrNull()
         
         return newAnimeSearchResponse(title, href, TvType.Anime) {
@@ -247,13 +257,21 @@ class Animasu : MainAPI() {
             ).document
         }
         
+        // FIXED: Fallback strategy untuk title (3-layer)
         val title = document.selectFirst("div.infox h1")?.text()
             ?.toString()
             ?.replace("Sub Indo", "")
-            ?.trim() ?: ""
-        
+            ?.trim()
+            .ifEmpty { document.selectFirst("h1.entry-title")?.text()?.replace("Sub Indo", "")?.trim() }
+            .ifEmpty { document.selectFirst("meta[property=og:title]")?.attr("content") }
+            ?: ""
+
+        // FIXED: Fallback strategy untuk poster (4-layer)
         val poster = document.selectFirst("div.bigcontent img")?.getImageAttr()
-        
+            ?: document.selectFirst("meta[property=og:image]")?.attr("content")
+            ?: document.selectFirst("div.thumb img")?.attr("src")
+            ?: document.selectFirst("img[data-src]")?.attr("data-src")
+
         val table = document.selectFirst("div.infox div.spe")
         val type = getType(table?.selectFirst("span:contains(Jenis:)")?.ownText())
         val year = table?.selectFirst("span:contains(Rilis:)")?.ownText()
@@ -262,6 +280,11 @@ class Animasu : MainAPI() {
             ?.toIntOrNull()
         val status = table?.selectFirst("span:contains(Status:) font")?.text()
         val trailer = document.selectFirst("div.trailer iframe")?.attr("src")
+
+        // FIXED: Fallback strategy untuk description (3-layer)
+        val plot = document.select("div.sinopsis p").text()
+            .ifEmpty { document.select("div.entry-content p").text() }
+            .ifEmpty { document.selectFirst("meta[name=description]")?.attr("content").orEmpty() }
         
         val episodes = document.select("ul#daftarepisode > li").mapNotNull {
             val link = fixUrl(it.selectFirst("a")!!.attr("href"))
@@ -281,7 +304,7 @@ class Animasu : MainAPI() {
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = getStatus(status)
-            plot = document.select("div.sinopsis p").text()
+            this.plot = plot
             this.tags = table?.select("span:contains(Genre:) a")?.map { it.text() }
             addTrailer(trailer)
             addMalId(tracker?.malId)
