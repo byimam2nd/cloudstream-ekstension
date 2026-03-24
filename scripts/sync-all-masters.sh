@@ -5,7 +5,24 @@
 # ========================================
 # FULLY DYNAMIC - No hardcoded module names!
 # Auto-detects modules, folders, and packages
-# Syncs all Master*.kt files with Sync prefix
+# Syncs all Master*.kt files to generated-sync/ folder
+# 
+# Structure after sync:
+#   Module/src/main/kotlin/com/{Module}/
+#   ├── {Module}.kt (original)
+#   ├── {Module}Provider.kt (original)
+#   └── generated-sync/ (auto-generated - DO NOT EDIT)
+#       ├── SyncExtractors.kt
+#       ├── SyncUtils.kt
+#       ├── SyncHttpClientFactory.kt
+#       └── ...
+#
+# Package structure:
+#   - Original: com.{Module}
+#   - Generated: com.{Module}.generated-sync
+#
+# Import paths after sync:
+#   - master.HttpClientFactory → com.{Module}.generated-sync.SyncHttpClientFactory
 # ========================================
 
 set -e
@@ -152,6 +169,10 @@ for MODULE in "${MODULES[@]}"; do
 
     # Destination directory
     DEST_DIR="$ROOT_DIR/$MODULE/src/main/kotlin/com/$FOLDER"
+    
+    # Create generated-sync folder for auto-generated code
+    GENERATED_DIR="$DEST_DIR/generated-sync"
+    mkdir -p "$GENERATED_DIR"
 
     # Check if source folder exists
     if [ ! -d "$DEST_DIR" ]; then
@@ -160,7 +181,7 @@ for MODULE in "${MODULES[@]}"; do
         continue
     fi
 
-    # Sync each Master file
+    # Sync each Master file to generated-sync/ folder
     MODULE_SYNCED=0
     for master_entry in "${MASTER_FILES[@]}"; do
         master_file="${master_entry%%:*}"
@@ -174,9 +195,10 @@ for MODULE in "${MODULES[@]}"; do
             continue
         fi
 
-        DEST_FILE="$DEST_DIR/$sync_file"
+        # Destination in generated-sync folder
+        DEST_FILE="$GENERATED_DIR/$sync_file"
 
-        # Copy master file with correct package name
+        # Copy master file with correct package name (com.{package}.generated-sync)
         # Handle files that start with package declaration
         awk -v pkg="$PACKAGE" '
             BEGIN { printed_header = 0 }
@@ -189,12 +211,12 @@ for MODULE in "${MODULES[@]}"; do
                     print "// ========================================"
                     printed_header = 1
                 }
-                print "package com." pkg
+                print "package com." pkg ".generated-sync"
                 next
             }
-            # Replace import master. with import com.{package}.
+            # Replace import master. with import com.{package}.generated-sync.
             /^import master\./ {
-                sub(/^import master\./, "import com." pkg ".")
+                sub(/^import master\./, "import com." pkg ".generated-sync.")
                 print
                 next
             }
@@ -204,15 +226,15 @@ for MODULE in "${MODULES[@]}"; do
         # Count lines (excluding comments)
         LINE_COUNT=$(wc -l < "$DEST_FILE")
 
-        echo "   ✅ Synced: $sync_file ($LINE_COUNT lines)"
+        echo "   ✅ Synced: generated-sync/$sync_file ($LINE_COUNT lines)"
         MODULE_SYNCED=$((MODULE_SYNCED + 1))
     done
 
-    # Copy additional master files (with Sync prefix, rename)
+    # Copy additional master files (with Sync prefix, rename) to generated-sync/ folder
     for master_entry in "${ADDITIONAL_MASTER_FILES[@]}"; do
         master_file="${master_entry%%:*}"
         sync_file="${master_entry##*:}"
-        
+
         MASTER_SOURCE="$MASTER_DIR/$master_file"
 
         # Check if master file exists
@@ -221,9 +243,10 @@ for MODULE in "${MODULES[@]}"; do
             continue
         fi
 
-        DEST_FILE="$DEST_DIR/$sync_file"
+        # Destination in generated-sync folder
+        DEST_FILE="$GENERATED_DIR/$sync_file"
 
-        # Copy file with updated package
+        # Copy file with updated package (com.{package}.generated-sync)
         awk -v pkg="$PACKAGE" '
             BEGIN { printed_header = 0 }
             /^package / {
@@ -235,12 +258,12 @@ for MODULE in "${MODULES[@]}"; do
                     print "// ========================================"
                     printed_header = 1
                 }
-                print "package com." pkg
+                print "package com." pkg ".generated-sync"
                 next
             }
-            # Replace import master. with import com.{package}.
+            # Replace import master. with import com.{package}.generated-sync.
             /^import master\./ {
-                sub(/^import master\./, "import com." pkg ".")
+                sub(/^import master\./, "import com." pkg ".generated-sync.")
                 print
                 next
             }
@@ -248,7 +271,7 @@ for MODULE in "${MODULES[@]}"; do
         ' "$MASTER_SOURCE" > "$DEST_FILE"
 
         LINE_COUNT=$(wc -l < "$DEST_FILE")
-        echo "   ✅ Synced: $sync_file ($LINE_COUNT lines)"
+        echo "   ✅ Synced: generated-sync/$sync_file ($LINE_COUNT lines)"
         MODULE_SYNCED=$((MODULE_SYNCED + 1))
     done
 

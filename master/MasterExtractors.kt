@@ -28,9 +28,17 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import android.annotation.SuppressLint
 
 // Import Master utilities untuk performa optimal
-// Note: Setelah sync, nama file akan di-prefix "Sync"
-// master.HttpClientFactory → com.{Module}.SyncHttpClientFactory
-// master.CompiledRegexPatterns → com.{Module}.SyncCompiledRegexPatterns
+// ========================================
+// NOTE: Setelah sync workflow berjalan:
+//   - Folder: master/ → generated-sync/
+//   - Package: com.{Module} → com.{Module}.generated-sync
+//   - Imports: master. → com.{Module}.generated-sync.
+//   - Files: 
+//     * HttpClientFactory.kt → generated-sync/SyncHttpClientFactory.kt
+//     * CompiledRegexPatterns.kt → generated-sync/SyncCompiledRegexPatterns.kt
+//
+// Script sync akan otomatis update semua import paths
+// ========================================
 import master.HttpClientFactory
 import master.CompiledRegexPatterns
 
