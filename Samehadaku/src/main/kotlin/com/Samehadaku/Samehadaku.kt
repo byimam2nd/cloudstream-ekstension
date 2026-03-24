@@ -136,15 +136,16 @@ class Samehadaku : MainAPI() {
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         val a = selectFirst("a") ?: return null
 
-        // FIXED: Fallback strategy untuk title (2-layer)
+        // FIXED: Fallback strategy untuk title (3-layer)
         val title = (selectFirst("a")?.attr("title").orEmpty().ifBlank {
-            selectFirst("div.title, h2.entry-title a, div.lftinfo h2")?.text()
+            selectFirst("div.title, h2.entry-title a, div.lftinfo h2")?.text().orEmpty()
         }).ifEmpty {
-            selectFirst("h2")?.text()
-        } ?: return null
+            selectFirst("h2")?.text().orEmpty()
+        }
+        if (title.isEmpty()) return null
 
         val href = fixUrl(a.attr("href"))
-        
+
         // FIXED: Fallback strategy untuk poster (3-layer)
         val poster = fixUrlNull(
             selectFirst("img")?.attr("src")
