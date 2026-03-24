@@ -6,7 +6,7 @@
 // Last Updated: 2026-03-18
 // Maintainer: Phisher98
 // ========================================
-
+ 
 package com.MasterExtractors
 
 import com.lagradost.cloudstream3.*
