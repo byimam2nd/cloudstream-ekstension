@@ -30,10 +30,10 @@ MASTER_FILES=(
     "MasterSyncMonitor.kt:SyncMonitor.kt"
 )
 
-# Additional master files to copy as-is (no rename)
+# Additional master files to copy with Sync prefix
 ADDITIONAL_MASTER_FILES=(
-    "HttpClientFactory.kt"
-    "CompiledRegexPatterns.kt"
+    "HttpClientFactory.kt:SyncHttpClientFactory.kt"
+    "CompiledRegexPatterns.kt:SyncCompiledRegexPatterns.kt"
 )
 
 echo "📋 Master files to sync:"
@@ -208,17 +208,20 @@ for MODULE in "${MODULES[@]}"; do
         MODULE_SYNCED=$((MODULE_SYNCED + 1))
     done
 
-    # Copy additional master files (as-is, no rename)
-    for additional_file in "${ADDITIONAL_MASTER_FILES[@]}"; do
-        MASTER_SOURCE="$MASTER_DIR/$additional_file"
+    # Copy additional master files (with Sync prefix, rename)
+    for master_entry in "${ADDITIONAL_MASTER_FILES[@]}"; do
+        master_file="${master_entry%%:*}"
+        sync_file="${master_entry##*:}"
+        
+        MASTER_SOURCE="$MASTER_DIR/$master_file"
 
         # Check if master file exists
         if [ ! -f "$MASTER_SOURCE" ]; then
-            echo "   ⚠️  Warning: Additional master file not found: $additional_file"
+            echo "   ⚠️  Warning: Additional master file not found: $master_file"
             continue
         fi
 
-        DEST_FILE="$DEST_DIR/$additional_file"
+        DEST_FILE="$DEST_DIR/$sync_file"
 
         # Copy file with updated package
         awk -v pkg="$PACKAGE" '
@@ -227,8 +230,8 @@ for MODULE in "${MODULES[@]}"; do
                 if (!printed_header) {
                     print "// ========================================"
                     print "// AUTO-GENERATED - DO NOT EDIT MANUALLY"
-                    print "// Synced from common/'"$additional_file"'"
-                    print "// File: '"$additional_file"'"
+                    print "// Synced from common/'"$master_file"'"
+                    print "// File: '"$sync_file"'"
                     print "// ========================================"
                     printed_header = 1
                 }
@@ -245,7 +248,7 @@ for MODULE in "${MODULES[@]}"; do
         ' "$MASTER_SOURCE" > "$DEST_FILE"
 
         LINE_COUNT=$(wc -l < "$DEST_FILE")
-        echo "   ✅ Copied: $additional_file ($LINE_COUNT lines)"
+        echo "   ✅ Synced: $sync_file ($LINE_COUNT lines)"
         MODULE_SYNCED=$((MODULE_SYNCED + 1))
     done
 
