@@ -20,14 +20,16 @@
 
 ---
 
-### ⏸️ PENDING (4 providers - blocked by anti-bot)
+### ⏸️ PENDING (4 providers - Cloudflare protected)
 
-| Provider | Verification Status | Reason | Recommendation |
-|----------|-------------------|---------|----------------|
-| **LayarKaca21** | ⚠️ CHECK | No poster found with current selectors | Manual HTML audit needed |
-| **Samehadaku** | ⚠️ CHECK | No poster found with current selectors | Manual HTML audit needed |
-| **Animasu** | ⚠️ SKIP | Site blocking automated requests | Use reference from ExtCloud |
-| **Pencurimovie** | ⚠️ SKIP | Site blocking automated requests | Use reference from ExtCloud |
+| Provider | Verification Status | Protection | Solution |
+|----------|-------------------|------------|----------|
+| **LayarKaca21** | ⚠️ CHECK | Cloudflare | Use `usesWebView = true` + cookies |
+| **Samehadaku** | ⚠️ CHECK | Cloudflare | Use `usesWebView = true` + cookies |
+| **Animasu** | ⚠️ SKIP | Cloudflare | Use `usesWebView = true` + cookies |
+| **Pencurimovie** | ⚠️ SKIP | Cloudflare | Use `usesWebView = true` + cookies |
+
+**Note**: Cloudflare protection requires JavaScript execution. CloudStream uses `usesWebView = true` to bypass.
 
 ---
 
@@ -101,39 +103,54 @@
 
 ### Technical Challenges
 
-1. **Anti-Bot Protection**
-   - Cloudflare protection
-   - JavaScript challenges
-   - Fingerprint-based blocking
-   - Rate limiting
+1. **Cloudflare Protection** 🔒
+   - JavaScript challenges (CF Turnstile)
+   - Browser fingerprinting
+   - Cookie-based validation
+   - Dynamic content loading
 
-2. **Curl Blocking**
-   - All 4 providers block curl requests
-   - Even with custom headers
-   - Even with user-agent rotation
+2. **Curl Limitations**
+   - ❌ Cannot execute JavaScript
+   - ❌ Cannot pass CF challenges
+   - ❌ Cannot maintain session cookies
+   - ❌ Blocked by anti-bot measures
 
-3. **Verification Impossible**
-   - Cannot fetch HTML for analysis
-   - Cannot test selectors
-   - Cannot verify fallback strategy
+3. **CloudStream Solution**
+   - ✅ Uses `WebView` for JS execution
+   - ✅ Maintains cookies automatically
+   - ✅ Passes CF challenges
+   - ✅ Real browser headers
+
+### Why Verification Failed
+
+```bash
+# Curl request - BLOCKED by Cloudflare
+curl https://samehadaku.com/
+# Result: Cloudflare challenge page
+
+# CloudStream WebView - WORKS
+override val usesWebView = true
+# Result: Full HTML access with cookies
+```
 
 ### Recommended Approach
 
-**Option 1: Use ExtCloud References** (Recommended)
-- ExtCloud has working providers for these sites
-- Copy selector patterns from ExtCloud
-- Adapt to your codebase structure
+**For Cloudflare-Protected Sites:**
 
-**Option 2: Manual Browser Testing**
-- Open sites in browser
-- Inspect HTML manually
-- Document selectors
-- Implement based on findings
+1. **Enable WebView** (already done in your providers)
+   ```kotlin
+   override val usesWebView = true
+   ```
 
-**Option 3: Skip for Now**
-- Focus on 4 working providers
-- Monitor user feedback
-- Implement later if needed
+2. **Use ExtCloud References**
+   - ExtCloud providers already handle Cloudflare
+   - Copy selector patterns
+   - Adapt to your codebase
+
+3. **Trust Existing Selectors**
+   - Your providers already work in CloudStream
+   - Add fallback based on common patterns
+   - Test in app, not with curl
 
 ---
 
