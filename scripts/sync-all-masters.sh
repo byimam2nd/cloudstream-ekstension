@@ -30,6 +30,12 @@ MASTER_FILES=(
     "MasterSyncMonitor.kt:SyncMonitor.kt"
 )
 
+# Additional master files to copy as-is (no rename)
+ADDITIONAL_MASTER_FILES=(
+    "HttpClientFactory.kt"
+    "CompiledRegexPatterns.kt"
+)
+
 echo "📋 Master files to sync:"
 for master_entry in "${MASTER_FILES[@]}"; do
     master_file="${master_entry%%:*}"
@@ -193,6 +199,41 @@ for MODULE in "${MODULES[@]}"; do
         LINE_COUNT=$(wc -l < "$DEST_FILE")
 
         echo "   ✅ Synced: $sync_file ($LINE_COUNT lines)"
+        MODULE_SYNCED=$((MODULE_SYNCED + 1))
+    done
+
+    # Copy additional master files (as-is, no rename)
+    for additional_file in "${ADDITIONAL_MASTER_FILES[@]}"; do
+        MASTER_SOURCE="$MASTER_DIR/$additional_file"
+
+        # Check if master file exists
+        if [ ! -f "$MASTER_SOURCE" ]; then
+            echo "   ⚠️  Warning: Additional master file not found: $additional_file"
+            continue
+        fi
+
+        DEST_FILE="$DEST_DIR/$additional_file"
+
+        # Copy file with updated package
+        awk -v pkg="$PACKAGE" '
+            BEGIN { printed_header = 0 }
+            /^package / {
+                if (!printed_header) {
+                    print "// ========================================"
+                    print "// AUTO-GENERATED - DO NOT EDIT MANUALLY"
+                    print "// Synced from common/'"$additional_file"'"
+                    print "// File: '"$additional_file"'"
+                    print "// ========================================"
+                    printed_header = 1
+                }
+                print "package com." pkg
+                next
+            }
+            { print }
+        ' "$MASTER_SOURCE" > "$DEST_FILE"
+
+        LINE_COUNT=$(wc -l < "$DEST_FILE")
+        echo "   ✅ Copied: $additional_file ($LINE_COUNT lines)"
         MODULE_SYNCED=$((MODULE_SYNCED + 1))
     done
 
