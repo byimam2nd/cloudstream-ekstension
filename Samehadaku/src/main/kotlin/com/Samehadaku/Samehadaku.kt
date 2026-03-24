@@ -136,12 +136,21 @@ class Samehadaku : MainAPI() {
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         val a = selectFirst("a") ?: return null
 
+        // FIXED: Fallback strategy untuk title (2-layer)
         val title = (selectFirst("a")?.attr("title").orEmpty().ifBlank {
             selectFirst("div.title, h2.entry-title a, div.lftinfo h2")?.text()
-        }) ?: return null
+        }).ifEmpty {
+            selectFirst("h2")?.text()
+        } ?: return null
 
         val href = fixUrl(a.attr("href"))
-        val poster = fixUrlNull(selectFirst("img")?.attr("src"))
+        
+        // FIXED: Fallback strategy untuk poster (3-layer)
+        val poster = fixUrlNull(
+            selectFirst("img")?.attr("src")
+                ?: selectFirst("img[data-src]")?.attr("data-src")
+                ?: selectFirst("meta[property=og:image]")?.attr("content")
+        )
 
         val type = getType(href)
 
@@ -283,10 +292,21 @@ class Samehadaku : MainAPI() {
         val animeTitle = loadResult.selectFirst("h1.entry-title")
             ?.text()
             ?.removeBloat()
+            ?: loadResult.selectFirst("h1.title")?.text()?.removeBloat()
+            ?: loadResult.selectFirst("meta[property=og:title]")?.attr("content")
             ?: throw Exception("Title not found")
-        
+
+        // FIXED: Fallback strategy untuk poster (4-layer)
         val posterUrlValue = loadResult.selectFirst("div.thumb img")?.attr("src")
+            ?: loadResult.selectFirst("meta[property=og:image]")?.attr("content")
+            ?: loadResult.selectFirst("img[data-src]")?.attr("data-src")
+            ?: loadResult.selectFirst("img[src]")?.attr("src")
+
+        // FIXED: Fallback strategy untuk description (3-layer)
         val description = loadResult.select("div.desc p").text()
+            .ifEmpty { loadResult.select("div.description p").text() }
+            .ifEmpty { loadResult.selectFirst("meta[name=description]")?.attr("content").orEmpty() }
+        
         val tags = loadResult.select("div.genre-info a").map { it.text() }
 
         val year = loadResult.selectFirst("div.spe span:contains(Rilis)")
