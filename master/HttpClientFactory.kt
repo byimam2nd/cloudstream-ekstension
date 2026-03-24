@@ -84,9 +84,9 @@ object HttpClientFactory {
             "Accept-Language" to "en-US,en;q=0.9,id;q=0.8",
             "Connection" to "keep-alive",
             "DNT" to "1",
-            "Sec-Ch-Ua" to """"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"""",
+            "Sec-Ch-Ua" to "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
             "Sec-Ch-Ua-Mobile" to "?0",
-            "Sec-Ch-Ua-Platform" to ""Windows"",
+            "Sec-Ch-Ua-Platform" to "\"Windows\"",
             "Sec-Fetch-Dest" to "empty",
             "Sec-Fetch-Mode" to "cors",
             "Sec-Fetch-Site" to "cross-site"
@@ -159,9 +159,9 @@ object HttpClientFactory {
                 .header("Accept-Language", "en-US,en;q=0.9,id;q=0.8")
                 .header("Connection", "keep-alive")
                 .header("DNT", "1")
-                .header("Sec-Ch-Ua", """"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"""")
+                .header("Sec-Ch-Ua", "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"")
                 .header("Sec-Ch-Ua-Mobile", "?0")
-                .header("Sec-Ch-Ua-Platform", ""Windows"")
+                .header("Sec-Ch-Ua-Platform", "\"Windows\"")
                 .header("Sec-Fetch-Dest", "empty")
                 .header("Sec-Fetch-Mode", "cors")
                 .header("Sec-Fetch-Site", "cross-site")
