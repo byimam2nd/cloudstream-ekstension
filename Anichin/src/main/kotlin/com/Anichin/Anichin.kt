@@ -77,7 +77,7 @@ open class Anichin : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
             Log.d("Anichin", "Cache HIT for $cacheKey")
@@ -168,7 +168,7 @@ open class Anichin : MainAPI() {
         // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
         val cacheKey = "search_${query}"
 
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(cacheKey)
         if (cached != null) {
             return cached

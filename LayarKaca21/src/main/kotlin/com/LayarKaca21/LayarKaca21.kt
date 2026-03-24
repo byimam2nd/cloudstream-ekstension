@@ -56,18 +56,18 @@ class LayarKaca21 : MainAPI() {
     ): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
-            Log.d("LayarKaca", "Cache HIT for $cacheKey")
+            Log.d("LayarKaca", "Cache HIT for $cacheKey - INSTANT LOAD!")
             return cached
         }
 
-        Log.d("LayarKaca", "Cache MISS for $cacheKey")
+        Log.d("LayarKaca", "Cache MISS for $cacheKey - fetching from network...")
 
-        // Fetch dengan retry logic dan rate limiting
+        // Only apply rate limit and retry for network requests (cache miss)
         val response = executeWithRetry(maxRetries = 3) {
-            rateLimitDelay()
+            rateLimitDelay() // Only delay for network requests
             app.get(
                 "${request.data}$page",
                 timeout = requestTimeout,
@@ -83,6 +83,7 @@ class LayarKaca21 : MainAPI() {
 
         // Cache the result
         mainPageCache.put(cacheKey, result)
+        Log.d("LayarKaca", "Cached result for $cacheKey")
 
         return result
     }

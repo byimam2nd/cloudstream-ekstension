@@ -166,7 +166,7 @@ class Samehadaku : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
         
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
             Log.d("Samehadaku", "Cache HIT for mainPage: $cacheKey")
@@ -240,7 +240,7 @@ class Samehadaku : MainAPI() {
     // SEARCH
     // ========================================
     override suspend fun search(query: String): List<SearchResponse> {
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(query)
         if (cached != null) {
             Log.d("Samehadaku", "Cache HIT for search: $query")
@@ -272,7 +272,7 @@ class Samehadaku : MainAPI() {
     // LOAD
     // ========================================
     override suspend fun load(url: String): LoadResponse {
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = loadCache.get(url)
         if (cached != null) {
             Log.d("Samehadaku", "Cache HIT for load: $url")

@@ -61,7 +61,7 @@ class Funmovieslix : MainAPI() {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "${request.data}${page}"
         
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
             return cached
@@ -121,7 +121,7 @@ class Funmovieslix : MainAPI() {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "search_${query}"
 
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(cacheKey)
         if (cached != null) {
             return cached

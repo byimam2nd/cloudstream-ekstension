@@ -74,7 +74,7 @@ class Idlix : MainAPI() {
     ): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
             Log.d("Idlix", "Cache HIT for $cacheKey")
@@ -166,7 +166,7 @@ class Idlix : MainAPI() {
         // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
         val cacheKey = "search_${query}"
 
-        // Check cache first
+        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(cacheKey)
         if (cached != null) {
             return cached
