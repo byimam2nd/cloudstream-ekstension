@@ -115,9 +115,12 @@ jobs:
           FOLDER=$(echo "$FOLDER" | xargs)
           echo "   Found folder: com.$FOLDER"
 
-          # Check each sync file
+          # Sync files are in generated-sync/ subfolder
+          GENERATED_DIR="$MODULE/src/main/kotlin/com/$FOLDER/generated-sync"
+
+          # Check each sync file in generated-sync/ folder
           for SYNC_FILE in "${SYNC_FILES[@]}"; do
-            FILE_PATH="$MODULE/src/main/kotlin/com/$FOLDER/$SYNC_FILE"
+            FILE_PATH="$GENERATED_DIR/$SYNC_FILE"
 
             # Check if file exists
             if [ ! -f "$FILE_PATH" ]; then
@@ -128,13 +131,14 @@ jobs:
             echo "   ✅ $SYNC_FILE exists"
 
             # Check if file has correct package (first 10 lines)
-            if ! head -10 "$FILE_PATH" | grep -q "^package com\\.$FOLDER"; then
-              echo "   ⚠️  WARNING: $SYNC_FILE package might be incorrect"
+            # Package should be com.{FOLDER}.generated-sync
+            if ! head -10 "$FILE_PATH" | grep -q "^package com\\.$FOLDER\\.generated-sync"; then
+              echo "   ⚠️  WARNING: $SYNC_FILE package might be incorrect (expected com.$FOLDER.generated-sync)"
             fi
           done
 
-          # Special check for SyncExtractors.kt
-          EXTRACTORS_FILE="$MODULE/src/main/kotlin/com/$FOLDER/SyncExtractors.kt"
+          # Special check for SyncExtractors.kt in generated-sync/ folder
+          EXTRACTORS_FILE="$GENERATED_DIR/SyncExtractors.kt"
           if [ -f "$EXTRACTORS_FILE" ]; then
             # Check extractor count
             CLASS_COUNT=$(grep -c "^class \|^open class " "$EXTRACTORS_FILE" 2>/dev/null || echo 0)
