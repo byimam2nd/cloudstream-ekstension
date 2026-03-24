@@ -52,6 +52,168 @@ fun base64DecodeStr(str: String): String {
 }
 
 // ========================================
+// PERFORMANCE OPTIMIZATIONS (2026-03-24)
+// ========================================
+// Helper objects dan extension functions untuk meningkatkan performa
+// tanpa mengubah CloudStream API structure
+// ========================================
+
+/**
+ * Shared constants untuk semua extractors
+ * Mengurangi alokasi objek berulang dan memastikan konsistensi
+ */
+object ExtractorConstants {
+    // Standard User-Agents
+    const val USER_AGENT_CHROME = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    const val USER_AGENT_FIREFOX = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+    
+    // Standard Headers (immutable, reused)
+    val DEFAULT_HEADERS = mapOf(
+        "Accept" to "*/*",
+        "Accept-Encoding" to "gzip, deflate, br",
+        "Accept-Language" to "en-US,en;q=0.9,id;q=0.8",
+        "Connection" to "keep-alive",
+        "Sec-Fetch-Dest" to "empty",
+        "Sec-Fetch-Mode" to "cors",
+        "Sec-Fetch-Site" to "cross-site"
+    )
+    
+    // Quality mappings (O(1) lookup vs string manipulation)
+    val QUALITY_MAP = mapOf(
+        "MOBILE" to 144,
+        "LOWEST" to 240,
+        "LOW" to 360,
+        "SD" to 480,
+        "HD" to 720,
+        "FULL" to 1080,
+        "QUAD" to 1440,
+        "ULTRA" to 2160,
+        "4K" to 2160,
+        "2K" to 1440,
+        "FHD" to 1080,
+        "P2160" to 2160,
+        "P1440" to 1440,
+        "P1080" to 1080,
+        "P720" to 720,
+        "P480" to 480,
+        "P360" to 360,
+        "P240" to 240,
+        "P144" to 144
+    )
+}
+
+/**
+ * Helper functions untuk operasi yang sering digunakan
+ * Mengurangi duplikasi kode dan memastikan konsistensi
+ */
+object ExtractorHelpers {
+    /**
+     * Transform embed URL ke video URL dengan pola standar
+     * @param url URL yang akan ditransform
+     * @return URL yang sudah ditransform
+     */
+    fun transformEmbedUrl(url: String): String {
+        return when {
+            url.contains("/d/") -> url.replace("/d/", "/v/")
+            url.contains("/download/") -> url.replace("/download/", "/v/")
+            url.contains("/file/") -> url.replace("/file/", "/v/")
+            else -> url.replace("/f/", "/v/")
+        }
+    }
+    
+    /**
+     * Get standard headers dengan User-Agent yang konsisten per domain
+     * @param domain Domain untuk User-Agent session
+     * @return Map headers yang siap digunakan
+     */
+    fun getStandardHeaders(domain: String): Map<String, String> {
+        return ExtractorConstants.DEFAULT_HEADERS + 
+            ("User-Agent" to HttpClientFactory.getUserAgentForDomain(domain)) +
+            ("Origin" to domain)
+    }
+    
+    /**
+     * Extract script dari HTML response dengan multiple fallback methods
+     * @param html HTML content
+     * @return Script string atau null jika tidak ditemukan
+     */
+    fun extractScriptFromHtml(html: String): String? {
+        // Method 1: Unpack packed JavaScript
+        val packed = getPacked(html)
+        if (!packed.isNullOrEmpty()) {
+            return getAndUnpack(html).substringAfter("var links")
+        }
+        
+        // Method 2: Look for sources in script tags
+        val doc = org.jsoup.Jsoup.parse(html)
+        return doc.selectFirst("script:containsData(sources:)")?.data()
+            ?: doc.selectFirst("script:containsData(file:)")?.data()
+    }
+    
+    /**
+     * Extract video URLs dari meta tags
+     * @param html HTML content
+     * @return Video URL atau null
+     */
+    fun extractVideoFromMeta(html: String): String? {
+        val doc = org.jsoup.Jsoup.parse(html)
+        val videoUrl = doc.selectFirst("meta[property=og:video]")?.attr("content")
+        
+        if (!videoUrl.isNullOrEmpty() && 
+            (videoUrl.contains(".m3u8") || videoUrl.contains(".mp4"))) {
+            return videoUrl
+        }
+        
+        return null
+    }
+}
+
+// ========================================
+// EXTENSION FUNCTIONS
+// ========================================
+
+/**
+ * Extension function untuk String → Quality mapping
+ * Menggunakan map lookup (O(1)) vs string manipulation (O(n))
+ */
+fun String.toQuality(): Int {
+    val upper = this.uppercase()
+    
+    // Check direct mappings first (fastest)
+    ExtractorConstants.QUALITY_MAP[upper]?.let { return it }
+    
+    // Check patterns
+    return when {
+        contains("4K") || contains("2160") -> 2160
+        contains("1440") || contains("2K") -> 1440
+        contains("1080") || contains("FHD") || contains("FULL") -> 1080
+        contains("720") || contains("HD") -> 720
+        contains("480") || contains("SD") -> 480
+        contains("360") -> 360
+        contains("240") || contains("LOW") -> 240
+        contains("144") || contains("MOBILE") -> 144
+        else -> 0
+    }
+}
+
+/**
+ * Extension function untuk ExtractorApi → fix URL dengan base URL extractor
+ */
+fun ExtractorApi.fixUrl(url: String): String {
+    if (url.startsWith("http://") || url.startsWith("https://")) return url
+    if (url.startsWith("//")) return "https:$url"
+    if (url.startsWith("/")) return "$mainUrl$url"
+    return "$mainUrl/$url"
+}
+
+/**
+ * Extension function untuk quality detection dari nama
+ */
+fun ExtractorApi.detectQualityFromName(name: String): Int {
+    return name.toQuality()
+}
+
+// ========================================
 // STREAMWISH BASED EXTRACTORS (From ExtCloud/Dutamovie)
 // ========================================
 
@@ -91,65 +253,31 @@ open class Dingtezuni : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val headers = mapOf(
-            "Sec-Fetch-Dest" to "empty",
-            "Sec-Fetch-Mode" to "cors",
-            "Sec-Fetch-Site" to "cross-site",
-            "Origin" to mainUrl,
-            "User-Agent" to USER_AGENT,
-        )
+        // ✅ OPTIMIZED: Gunakan helper untuk headers (reuse + session UA)
+        val headers = ExtractorHelpers.getStandardHeaders(mainUrl)
 
         try {
-            val response = app.get(getEmbedUrl(url), referer = referer)
-            
-            // Try multiple methods to extract video URL
-            var script: String? = null
-            
-            // Method 1: Unpack packed JavaScript
-            val packed = getPacked(response.text)
-            if (!packed.isNullOrEmpty()) {
-                var result = getAndUnpack(response.text)
-                if (result.contains("var links")) {
-                    result = result.substringAfter("var links")
-                }
-                script = result
-            }
-            
-            // Method 2: Look for sources in script tags
+            // ✅ OPTIMIZED: Gunakan helper untuk transform URL
+            val embedUrl = ExtractorHelpers.transformEmbedUrl(url)
+            val response = app.get(embedUrl, referer = referer)
+
+            // ✅ OPTIMIZED: Gunakan helper untuk extract script
+            var script = ExtractorHelpers.extractScriptFromHtml(response.text)
+
+            // Fallback ke meta tags
             if (script == null) {
-                script = response.document.selectFirst("script:containsData(sources:)")?.data()
-            }
-            
-            // Method 3: Look for direct m3u8/mp4 in data attributes
-            if (script == null) {
-                val videoUrl = response.document.selectFirst("meta[property=og:video]")?.attr("content")
-                if (!videoUrl.isNullOrEmpty() && (videoUrl.contains(".m3u8") || videoUrl.contains(".mp4"))) {
-                    script = "sources:[{file:\"$videoUrl\"}]"
+                val metaVideo = ExtractorHelpers.extractVideoFromMeta(response.text)
+                if (metaVideo != null) {
+                    script = "sources:[{file:\"$metaVideo\"}]"
                 }
             }
-            
+
             script ?: return
 
-            // Extract m3u8 links with multiple regex patterns for robustness
-            val patterns = listOf(
-                ":\\s*\"(.*?m3u8.*?)\"",
-                "file:\\s*\"(.*?m3u8.*?)\"",
-                "src:\\s*\"(.*?m3u8.*?)\"",
-                "\"(https?://[^\"]+?\\.m3u8[^\"]*?)\""
-            )
-            
-            val extractedUrls = mutableSetOf<String>()
-            
-            for (pattern in patterns) {
-                Regex(pattern).findAll(script).forEach { match ->
-                    val videoUrl = match.groupValues[1].trim()
-                    if (videoUrl.isNotEmpty() && videoUrl.contains("m3u8")) {
-                        extractedUrls.add(fixUrl(videoUrl))
-                    }
-                }
-            }
-            
-            // Generate extractor links for all unique URLs found
+            // ✅ OPTIMIZED: Gunakan CompiledRegexPatterns (pre-compiled regex)
+            val extractedUrls = CompiledRegexPatterns.extractAllM3u8Urls(script, mainUrl)
+
+            // Generate extractor links untuk semua URLs
             extractedUrls.forEach { videoUrl ->
                 try {
                     generateM3u8(
@@ -159,22 +287,20 @@ open class Dingtezuni : ExtractorApi() {
                         headers = headers
                     ).forEach(callback)
                 } catch (e: Exception) {
-                    // Skip invalid URLs but continue processing others
+                    // Skip invalid URLs
                 }
             }
         } catch (e: Exception) {
-            // Log error but don't crash
             throw Exception("Failed to extract video from $url: ${e.message}")
         }
     }
 
+    /**
+     * Transform embed URL ke video URL
+     * ✅ OPTIMIZED: Gunakan helper function
+     */
     private fun getEmbedUrl(url: String): String {
-        return when {
-            url.contains("/d/") -> url.replace("/d/", "/v/")
-            url.contains("/download/") -> url.replace("/download/", "/v/")
-            url.contains("/file/") -> url.replace("/file/", "/v/")
-            else -> url.replace("/f/", "/v/")
-        }
+        return ExtractorHelpers.transformEmbedUrl(url)
     }
 }
 
@@ -248,65 +374,31 @@ open class Dintezuvio : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val headers = mapOf(
-            "Sec-Fetch-Dest" to "empty",
-            "Sec-Fetch-Mode" to "cors",
-            "Sec-Fetch-Site" to "cross-site",
-            "Origin" to mainUrl,
-            "User-Agent" to USER_AGENT,
-        )
+        // ✅ OPTIMIZED: Gunakan helper untuk headers (reuse + session UA)
+        val headers = ExtractorHelpers.getStandardHeaders(mainUrl)
 
         try {
-            val response = app.get(getEmbedUrl(url), referer = referer)
-            
-            // Try multiple methods to extract video URL
-            var script: String? = null
-            
-            // Method 1: Unpack packed JavaScript
-            val packed = getPacked(response.text)
-            if (!packed.isNullOrEmpty()) {
-                var result = getAndUnpack(response.text)
-                if (result.contains("var links")) {
-                    result = result.substringAfter("var links")
-                }
-                script = result
-            }
-            
-            // Method 2: Look for sources in script tags
+            // ✅ OPTIMIZED: Gunakan helper untuk transform URL
+            val embedUrl = ExtractorHelpers.transformEmbedUrl(url)
+            val response = app.get(embedUrl, referer = referer)
+
+            // ✅ OPTIMIZED: Gunakan helper untuk extract script
+            var script = ExtractorHelpers.extractScriptFromHtml(response.text)
+
+            // Fallback ke meta tags
             if (script == null) {
-                script = response.document.selectFirst("script:containsData(sources:)")?.data()
-            }
-            
-            // Method 3: Look for direct m3u8/mp4 in meta tags
-            if (script == null) {
-                val videoUrl = response.document.selectFirst("meta[property=og:video]")?.attr("content")
-                if (!videoUrl.isNullOrEmpty() && (videoUrl.contains(".m3u8") || videoUrl.contains(".mp4"))) {
-                    script = "sources:[{file:\"$videoUrl\"}]"
+                val metaVideo = ExtractorHelpers.extractVideoFromMeta(response.text)
+                if (metaVideo != null) {
+                    script = "sources:[{file:\"$metaVideo\"}]"
                 }
             }
-            
+
             script ?: return
 
-            // Extract m3u8 links with multiple regex patterns for robustness
-            val patterns = listOf(
-                ":\\s*\"(.*?m3u8.*?)\"",
-                "file:\\s*\"(.*?m3u8.*?)\"",
-                "src:\\s*\"(.*?m3u8.*?)\"",
-                "\"(https?://[^\"]+?\\.m3u8[^\"]*?)\""
-            )
-            
-            val extractedUrls = mutableSetOf<String>()
-            
-            for (pattern in patterns) {
-                Regex(pattern).findAll(script).forEach { match ->
-                    val videoUrl = match.groupValues[1].trim()
-                    if (videoUrl.isNotEmpty() && videoUrl.contains("m3u8")) {
-                        extractedUrls.add(fixUrl(videoUrl))
-                    }
-                }
-            }
-            
-            // Generate extractor links for all unique URLs found
+            // ✅ OPTIMIZED: Gunakan CompiledRegexPatterns (pre-compiled regex)
+            val extractedUrls = CompiledRegexPatterns.extractAllM3u8Urls(script, mainUrl)
+
+            // Generate extractor links untuk semua URLs
             extractedUrls.forEach { videoUrl ->
                 try {
                     generateM3u8(
@@ -316,22 +408,20 @@ open class Dintezuvio : ExtractorApi() {
                         headers = headers
                     ).forEach(callback)
                 } catch (e: Exception) {
-                    // Skip invalid URLs but continue processing others
+                    // Skip invalid URLs
                 }
             }
         } catch (e: Exception) {
-            // Log error but don't crash
             throw Exception("Dintezuvio: Failed to extract video from $url: ${e.message}")
         }
     }
 
+    /**
+     * Transform embed URL ke video URL
+     * ✅ OPTIMIZED: Gunakan helper function
+     */
     private fun getEmbedUrl(url: String): String {
-        return when {
-            url.contains("/d/") -> url.replace("/d/", "/v/")
-            url.contains("/download/") -> url.replace("/download/", "/v/")
-            url.contains("/file/") -> url.replace("/file/", "/v/")
-            else -> url.replace("/f/", "/v/")
-        }
+        return ExtractorHelpers.transformEmbedUrl(url)
     }
 }
 
@@ -531,15 +621,9 @@ open class Odnoklassniki : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val headers = mapOf(
-            "Accept" to "*/*",
-            "Connection" to "keep-alive",
-            "Sec-Fetch-Dest" to "empty",
-            "Sec-Fetch-Mode" to "cors",
-            "Sec-Fetch-Site" to "cross-site",
-            "Origin" to mainUrl,
-            "User-Agent" to USER_AGENT,
-        )
+        // ✅ OPTIMIZED: Gunakan helper untuk headers (reuse + session UA)
+        val headers = ExtractorHelpers.getStandardHeaders(mainUrl)
+        
         val embedUrl = url.replace("/video/", "/videoembed/")
         val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
             .replace("\\\\", "\\")
@@ -554,15 +638,8 @@ open class Odnoklassniki : ExtractorApi() {
         for (video in videos) {
             val videoUrl = if (video.url.startsWith("//")) "https:${video.url}" else video.url
 
-            val quality = video.name.uppercase()
-                .replace("MOBILE", "144p")
-                .replace("LOWEST", "240p")
-                .replace("LOW", "360p")
-                .replace("SD", "480p")
-                .replace("HD", "720p")
-                .replace("FULL", "1080p")
-                .replace("QUAD", "1440p")
-                .replace("ULTRA", "4k")
+            // ✅ OPTIMIZED: Gunakan extension function untuk quality detection
+            val quality = video.name.toQuality()
 
             callback.invoke(
                 newExtractorLink(
@@ -572,7 +649,7 @@ open class Odnoklassniki : ExtractorApi() {
                     type = INFER_TYPE
                 ) {
                     this.referer = "$mainUrl/"
-                    this.quality = getQualityFromName(quality)
+                    this.quality = quality
                     this.headers = headers
                 }
             )
@@ -654,7 +731,7 @@ open class StreamRuby : ExtractorApi() {
     ) {
         try {
             val id = "embed-([a-zA-Z0-9]+)\\.html".toRegex().find(url)?.groupValues?.get(1) ?: return
-            
+
             val response = app.post(
                 "$mainUrl/dl", data = mapOf(
                     "op" to "embed",
@@ -663,47 +740,24 @@ open class StreamRuby : ExtractorApi() {
                     "referer" to "",
                 ), referer = referer
             )
-            
-            // Try multiple extraction methods
-            var script: String? = null
-            
-            // Method 1: Unpack packed JavaScript
-            val packed = getPacked(response.text)
-            if (!packed.isNullOrEmpty()) {
-                script = getAndUnpack(response.text)
-            }
-            
-            // Method 2: Look for sources in script tags
+
+            // ✅ OPTIMIZED: Gunakan helper untuk extract script
+            var script = ExtractorHelpers.extractScriptFromHtml(response.text)
+
+            // Fallback ke meta tags
             if (script == null) {
-                script = response.document.selectFirst("script:containsData(sources:)")?.data()
-            }
-            
-            // Method 3: Look for direct m3u8 in meta tags
-            if (script == null) {
-                val videoUrl = response.document.selectFirst("meta[property=og:video]")?.attr("content")
-                if (!videoUrl.isNullOrEmpty() && videoUrl.contains(".m3u8")) {
-                    script = "file:\"$videoUrl\""
+                val metaVideo = ExtractorHelpers.extractVideoFromMeta(response.text)
+                if (metaVideo != null && metaVideo.contains(".m3u8")) {
+                    script = "file:\"$metaVideo\""
                 }
             }
-            
+
             script ?: return
 
-            // Extract m3u8 with multiple regex patterns for robustness
-            val patterns = listOf(
-                "file:\\s*\"(.*?m3u8.*?)\"",
-                ":\\s*\"(.*?m3u8.*?)\"",
-                "src:\\s*\"(.*?m3u8.*?)\"",
-                "\"(https?://[^\"]+?\\.m3u8[^\"]*?)\""
-            )
-            
-            var m3u8: String? = null
-            
-            for (pattern in patterns) {
-                m3u8 = Regex(pattern).find(script)?.groupValues?.getOrNull(1)
-                if (!m3u8.isNullOrEmpty()) break
-            }
-            
-            if (!m3u8.isNullOrEmpty()) {
+            // ✅ OPTIMIZED: Gunakan CompiledRegexPatterns (pre-compiled regex)
+            val m3u8 = CompiledRegexPatterns.extractAllM3u8Urls(script, mainUrl).firstOrNull()
+
+            if (m3u8 != null) {
                 callback.invoke(
                     newExtractorLink(
                         source = this.name,
@@ -717,7 +771,6 @@ open class StreamRuby : ExtractorApi() {
                 )
             }
         } catch (e: Exception) {
-            // Log error but don't crash
             throw Exception("StreamRuby: Failed to extract video from $url: ${e.message}")
         }
     }
