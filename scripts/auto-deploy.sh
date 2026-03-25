@@ -10,7 +10,7 @@
 set -e  # Exit on error
 
 # Configuration
-REPO="byimam2nd/cloudstream-ekstension"
+REPO="byimam2nd/oce"
 BRANCH="master"
 SYNC_WORKFLOW="Sync All Master Files"
 

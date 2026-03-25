@@ -75,10 +75,10 @@ jobs:
         SYNC_FILES=(
           "SyncExtractors.kt"
           "SyncUtils.kt"
-          "SyncCacheManager.kt"
-          "SyncImageCache.kt"
-          "SyncSmartCacheMonitor.kt"
-          "SyncSuperSmartPrefetchManager.kt"
+          "SyncCaches.kt"              # NEW: Combined CacheManager + ImageCache
+          "SyncMonitors.kt"            # NEW: Combined 3 monitor files
+          "SyncHttpClientFactory.kt"
+          "SyncCompiledRegexPatterns.kt"
         )
 
         for MODULE in $MODULES; do

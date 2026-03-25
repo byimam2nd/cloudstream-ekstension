@@ -4,6 +4,9 @@ concurrency:
   group: "build"
   cancel-in-progress: true
 
+# Build timeout: 15 minutes (prevent hung builds)
+timeout-minutes: 15
+
 on:
   # Trigger 1: Direct push (exclude master folder changes - handled by sync workflow)
   push:
