@@ -343,25 +343,43 @@ open class Anichin : MainAPI() {
             ).documentLarge
         }
 
+        // Try multiple selectors for video options
         val options = html.select("option[data-index]")
+            .ifEmpty { html.select("option[value]") }
+            .ifEmpty { html.select("select option") }
+        
+        logDebug("Anichin", "Found ${options.size} video options")
 
         // OPTIMIZED: Use supervisorScope for exception safety
         supervisorScope {
             options.map { option ->
                 async {
-                    val base64 = option.attr("value")
-                    if (base64.isBlank()) return@async
+                    val base64 = option.attr("value").trim()
+                    if (base64.isBlank()) {
+                        logDebug("Anichin", "Skipping empty value option")
+                        return@async
+                    }
+                    
                     val label = option.text().trim()
+                    logDebug("Anichin", "Processing server: $label")
 
                     val decodedHtml = try {
                         base64Decode(base64)
                     } catch (e: Exception) {
-                        logError("Anichin", "Base64 decode failed: $base64", e)
+                        logError("Anichin", "Base64 decode failed for $label: ${e.message}")
                         return@async
                     }
 
-                    val iframeUrl = Jsoup.parse(decodedHtml).selectFirst("iframe")?.attr("src")?.let(::httpsify)
-                    if (iframeUrl.isNullOrEmpty()) return@async
+                    val iframeUrl = Jsoup.parse(decodedHtml)
+                        .selectFirst("iframe")?.attr("src")
+                        ?.let(::httpsify)
+                    
+                    if (iframeUrl.isNullOrEmpty()) {
+                        logDebug("Anichin", "No iframe found for $label")
+                        return@async
+                    }
+                    
+                    logDebug("Anichin", "Found iframe URL for $label: ${iframeUrl.take(50)}...")
 
                     // Handle different server types
                     when {
@@ -379,13 +397,16 @@ open class Anichin : MainAPI() {
                             )
                         }
                         else -> {
-                            loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
+                            logDebug("Anichin", "Calling loadExtractor for $label")
+                            val loaded = loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
+                            logDebug("Anichin", "loadExtractor result for $label: $loaded")
                         }
                     }
                 }
             }.awaitAll()
         }
 
+        logDebug("Anichin", "loadLinks completed, found ${options.size} options")
         return true
     }
 }
