@@ -36,15 +36,13 @@ echo "📦 Sync All Master Files"
 echo "========================================"
 echo ""
 
-# List of Master files to sync
+# List of Master files to sync (OPTIMIZED v3.0)
+# Consolidated files: 9 → 6 for faster sync
 MASTER_FILES=(
     "MasterExtractors.kt:SyncExtractors.kt"
     "MasterUtils.kt:SyncUtils.kt"
-    "MasterCacheManager.kt:SyncCacheManager.kt"
-    "MasterImageCache.kt:SyncImageCache.kt"
-    "MasterSmartCacheMonitor.kt:SyncSmartCacheMonitor.kt"
-    "MasterSuperSmartPrefetchManager.kt:SyncSuperSmartPrefetchManager.kt"
-    "MasterSyncMonitor.kt:SyncMonitor.kt"
+    "MasterCaches.kt:SyncCaches.kt"              # NEW: Combined CacheManager + ImageCache
+    "MasterMonitors.kt:SyncMonitors.kt"          # NEW: Combined SmartCacheMonitor + SyncMonitor + PrefetchManager
     "MasterHttpClientFactory.kt:SyncHttpClientFactory.kt"
     "MasterCompiledRegexPatterns.kt:SyncCompiledRegexPatterns.kt"
 )
