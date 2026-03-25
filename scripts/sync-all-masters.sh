@@ -36,8 +36,8 @@ echo "📦 Sync All Master Files"
 echo "========================================"
 echo ""
 
-# List of Master files to sync (OPTIMIZED v3.2 SAFE)
-# Only non-conflicting files with MasterUtils.kt
+# List of Master files to sync (OPTIMIZED v3.3 P1)
+# P1: Request Deduplication for performance
 MASTER_FILES=(
     # Core files (v3.0)
     "MasterExtractors.kt:SyncExtractors.kt"
@@ -47,9 +47,12 @@ MASTER_FILES=(
     "MasterHttpClientFactory.kt:SyncHttpClientFactory.kt"
     "MasterCompiledRegexPatterns.kt:SyncCompiledRegexPatterns.kt"
 
-    # NEW v3.2: Non-conflicting utilities
-    "MasterConstants.kt:SyncConstants.kt"           # Centralized constants (unique names)
-    "MasterCircuitBreaker.kt:SyncCircuitBreaker.kt" # Failure isolation (public types)
+    # v3.2: Non-conflicting utilities
+    "MasterConstants.kt:SyncConstants.kt"
+    "MasterCircuitBreaker.kt:SyncCircuitBreaker.kt"
+
+    # v3.3 P1: Performance optimization
+    "MasterRequestDeduplicator.kt:SyncRequestDeduplicator.kt"
 )
 
 echo "📋 Master files to sync:"
