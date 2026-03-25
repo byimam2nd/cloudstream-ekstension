@@ -1,0 +1,386 @@
+build	Build Plugins	﻿2026-03-25T04:55:02.9120662Z ##[group]Run cd $GITHUB_WORKSPACE/src
+build	Build Plugins	2026-03-25T04:55:02.9120995Z [36;1mcd $GITHUB_WORKSPACE/src[0m
+build	Build Plugins	2026-03-25T04:55:02.9121227Z [36;1mchmod +x gradlew[0m
+build	Build Plugins	2026-03-25T04:55:02.9121463Z [36;1m./gradlew make makePluginsJson[0m
+build	Build Plugins	2026-03-25T04:55:02.9121734Z [36;1m./gradlew ensureJarCompatibility[0m
+build	Build Plugins	2026-03-25T04:55:02.9121974Z [36;1m[0m
+build	Build Plugins	2026-03-25T04:55:02.9122198Z [36;1m# Copy build artifacts with proper error handling[0m
+build	Build Plugins	2026-03-25T04:55:02.9122580Z [36;1mfind . -name "*.cs3" -exec cp {} $GITHUB_WORKSPACE/builds/ \;[0m
+build	Build Plugins	2026-03-25T04:55:02.9122968Z [36;1mfind . -name "*.jar" -exec cp {} $GITHUB_WORKSPACE/builds/ \;[0m
+build	Build Plugins	2026-03-25T04:55:02.9123362Z [36;1mcp build/plugins.json $GITHUB_WORKSPACE/builds/ || true[0m
+build	Build Plugins	2026-03-25T04:55:02.9123854Z [36;1m[0m
+build	Build Plugins	2026-03-25T04:55:02.9124037Z [36;1m# Debug: list what was copied[0m
+build	Build Plugins	2026-03-25T04:55:02.9124296Z [36;1mecho "=== Copied files ==="[0m
+build	Build Plugins	2026-03-25T04:55:02.9124554Z [36;1mls -la $GITHUB_WORKSPACE/builds/[0m
+build	Build Plugins	2026-03-25T04:55:02.9154312Z shell: /usr/bin/bash -e {0}
+build	Build Plugins	2026-03-25T04:55:02.9154614Z env:
+build	Build Plugins	2026-03-25T04:55:02.9154886Z   JAVA_HOME: /opt/hostedtoolcache/Java_Adopt_jdk/17.0.18-8/x64
+build	Build Plugins	2026-03-25T04:55:02.9155272Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Adopt_jdk/17.0.18-8/x64
+build	Build Plugins	2026-03-25T04:55:02.9155596Z   ANDROID_HOME: /usr/local/lib/android/sdk
+build	Build Plugins	2026-03-25T04:55:02.9155866Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+build	Build Plugins	2026-03-25T04:55:02.9156114Z ##[endgroup]
+build	Build Plugins	2026-03-25T04:55:03.5344266Z 
+build	Build Plugins	2026-03-25T04:55:03.5344907Z Welcome to Gradle 8.13!
+build	Build Plugins	2026-03-25T04:55:03.5345432Z 
+build	Build Plugins	2026-03-25T04:55:03.5345735Z Here are the highlights of this release:
+build	Build Plugins	2026-03-25T04:55:03.5346346Z  - Daemon JVM auto-provisioning
+build	Build Plugins	2026-03-25T04:55:03.5346980Z  - Enhancements for Scala plugin and JUnit testing
+build	Build Plugins	2026-03-25T04:55:03.5347716Z  - Improvements for build authors and plugin developers
+build	Build Plugins	2026-03-25T04:55:03.5348127Z 
+build	Build Plugins	2026-03-25T04:55:03.5349399Z For more details see https://docs.gradle.org/8.13/release-notes.html
+build	Build Plugins	2026-03-25T04:55:03.5349944Z 
+build	Build Plugins	2026-03-25T04:55:03.6297793Z Starting a Gradle Daemon (subsequent builds will be faster)
+build	Build Plugins	2026-03-25T04:55:15.5321823Z > Task :Anichin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build Plugins	2026-03-25T04:55:15.5327842Z > Task :Anichin:preBuild UP-TO-DATE
+build	Build Plugins	2026-03-25T04:55:15.5333222Z > Task :Anichin:preDebugBuild UP-TO-DATE
+build	Build Plugins	2026-03-25T04:55:15.6299739Z > Task :Anichin:generateDebugResValues FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:15.6300897Z > Task :Anichin:generateDebugResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:15.6301855Z > Task :Anichin:packageDebugResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:15.6303507Z > Task :Anichin:processDebugNavigationResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:16.3324911Z > Task :Anichin:parseDebugLocalResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:16.3338940Z > Task :Anichin:generateDebugRFile FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:16.9299532Z > Task :Animasu:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build Plugins	2026-03-25T04:55:16.9300436Z > Task :Animasu:preBuild UP-TO-DATE
+build	Build Plugins	2026-03-25T04:55:16.9300946Z > Task :Animasu:preDebugBuild UP-TO-DATE
+build	Build Plugins	2026-03-25T04:55:16.9301567Z > Task :Animasu:generateDebugResValues FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.0304052Z > Task :Animasu:generateDebugResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.0305540Z > Task :Animasu:packageDebugResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.0306516Z > Task :Animasu:processDebugNavigationResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.0307409Z > Task :Animasu:parseDebugLocalResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.0308198Z > Task :Animasu:generateDebugRFile FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.5309887Z > Task :Donghuastream:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build Plugins	2026-03-25T04:55:17.5311340Z > Task :Donghuastream:preBuild UP-TO-DATE
+build	Build Plugins	2026-03-25T04:55:17.5312174Z > Task :Donghuastream:preDebugBuild UP-TO-DATE
+build	Build Plugins	2026-03-25T04:55:17.6297642Z > Task :Donghuastream:generateDebugResValues FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.6301112Z > Task :Donghuastream:generateDebugResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.6304314Z > Task :Donghuastream:packageDebugResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.6307316Z > Task :Donghuastream:processDebugNavigationResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.6310937Z > Task :Donghuastream:parseDebugLocalResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.6314128Z > Task :Donghuastream:generateDebugRFile FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.8349061Z > Task :Funmovieslix:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build Plugins	2026-03-25T04:55:17.8359285Z > Task :Funmovieslix:preBuild UP-TO-DATE
+build	Build Plugins	2026-03-25T04:55:17.8360271Z > Task :Funmovieslix:preDebugBuild UP-TO-DATE
+build	Build Plugins	2026-03-25T04:55:17.8361793Z > Task :Funmovieslix:generateDebugResValues FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.8362543Z > Task :Funmovieslix:generateDebugResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.9304353Z > Task :Funmovieslix:packageDebugResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.9305662Z > Task :Funmovieslix:processDebugNavigationResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.9308919Z > Task :Funmovieslix:parseDebugLocalResources FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:17.9313046Z > Task :Funmovieslix:generateDebugRFile FROM-CACHE
+build	Build Plugins	2026-03-25T04:55:34.1324580Z 
+build	Build Plugins	2026-03-25T04:55:34.1325594Z > Task :Anichin:compileDebugKotlin FAILED
+build	Build Plugins	2026-03-25T04:55:34.1326251Z 
+build	Build Plugins	2026-03-25T04:55:34.1326601Z > Task :Animasu:compileDebugKotlin FAILED
+build	Build Plugins	2026-03-25T04:55:34.1345986Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCacheManager.kt:30:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1410504Z class CacheManager<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1410897Z 
+build	Build Plugins	2026-03-25T04:55:34.1424948Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCacheManager.kt:178:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1426074Z data class CachedResult<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1427172Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:50:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1428070Z class CacheManager<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1429555Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:98:15 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build Plugins	2026-03-25T04:55:34.1431890Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:118:13 Unresolved reference 'cleanupExpiredEntries'.
+build	Build Plugins	2026-03-25T04:55:34.1434041Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:139:24 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1435170Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1435572Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1436693Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:198:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1438131Z data class CachedResult<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1439274Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:220:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1440206Z class ImageCache : Any
+build	Build Plugins	2026-03-25T04:55:34.1441522Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:244:47 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1442706Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1443100Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1444692Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:271:51 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1445874Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1446272Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1447894Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncCaches.kt:423:1 Conflicting overloads:
+build	Build Plugins	2026-03-25T04:55:34.1449069Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1450648Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncHttpClientFactory.kt:273:25 Unresolved reference 'UnknownHostException'.
+build	Build Plugins	2026-03-25T04:55:34.1452793Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncImageCache.kt:26:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1554940Z class ImageCache : Any
+build	Build Plugins	2026-03-25T04:55:34.1556389Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncImageCache.kt:47:47 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1557602Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1558001Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1559383Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncImageCache.kt:74:51 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1560545Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1560940Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1562193Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncImageCache.kt:219:1 Conflicting overloads:
+build	Build Plugins	2026-03-25T04:55:34.1563248Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1564577Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncMonitor.kt:36:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1565798Z class SyncMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.1566830Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncMonitors.kt:33:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1594443Z class SmartCacheMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.1595888Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncMonitors.kt:130:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1596914Z class SyncMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.1598166Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncMonitors.kt:301:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1599313Z enum class WatchPattern : Enum<WatchPattern>
+build	Build Plugins	2026-03-25T04:55:34.1600633Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncMonitors.kt:313:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1601667Z data class UserPreference : Any
+build	Build Plugins	2026-03-25T04:55:34.1602861Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncMonitors.kt:328:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1634709Z enum class PrefetchPriority : Enum<PrefetchPriority>
+build	Build Plugins	2026-03-25T04:55:34.1636172Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncMonitors.kt:333:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1637201Z data class PrefetchPrediction : Any
+build	Build Plugins	2026-03-25T04:55:34.1638464Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncMonitors.kt:349:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1640567Z class SuperSmartPrefetchManager : Any
+build	Build Plugins	2026-03-25T04:55:34.1641949Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncSmartCacheMonitor.kt:15:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1642947Z class SmartCacheMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.1644446Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncSuperSmartPrefetchManager.kt:15:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1645635Z enum class WatchPattern : Enum<WatchPattern>
+build	Build Plugins	2026-03-25T04:55:34.1647110Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncSuperSmartPrefetchManager.kt:19:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1648248Z data class UserPreference : Any
+build	Build Plugins	2026-03-25T04:55:34.1649700Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncSuperSmartPrefetchManager.kt:31:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1650979Z enum class PrefetchPriority : Enum<PrefetchPriority>
+build	Build Plugins	2026-03-25T04:55:34.1652535Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncSuperSmartPrefetchManager.kt:33:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1653878Z data class PrefetchPrediction : Any
+build	Build Plugins	2026-03-25T04:55:34.1655644Z e: file:///home/runner/work/oce/oce/src/Anichin/src/main/kotlin/com/Anichin/generated_sync/SyncSuperSmartPrefetchManager.kt:40:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1757387Z class SuperSmartPrefetchManager : Any
+build	Build Plugins	2026-03-25T04:55:34.1759099Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCacheManager.kt:30:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1760165Z class CacheManager<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1761423Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCacheManager.kt:178:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1762489Z data class CachedResult<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1763962Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:50:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1765007Z class CacheManager<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1766544Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:98:15 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build Plugins	2026-03-25T04:55:34.1768896Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:118:13 Unresolved reference 'cleanupExpiredEntries'.
+build	Build Plugins	2026-03-25T04:55:34.1771259Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:139:24 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1772500Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1772939Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1774353Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:198:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1775416Z data class CachedResult<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1776732Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:220:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1777764Z class ImageCache : Any
+build	Build Plugins	2026-03-25T04:55:34.1779351Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:244:47 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1780616Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1781079Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1782618Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:271:51 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1829541Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1830061Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1831404Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncCaches.kt:423:1 Conflicting overloads:
+build	Build Plugins	2026-03-25T04:55:34.1832494Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1834607Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncHttpClientFactory.kt:273:25 Unresolved reference 'UnknownHostException'.
+build	Build Plugins	2026-03-25T04:55:34.1836719Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncImageCache.kt:26:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1837744Z class ImageCache : Any
+build	Build Plugins	2026-03-25T04:55:34.1839306Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncImageCache.kt:47:47 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1840529Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1840937Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1842414Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncImageCache.kt:74:51 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1843819Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1844259Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1845543Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncImageCache.kt:219:1 Conflicting overloads:
+build	Build Plugins	2026-03-25T04:55:34.1846641Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1847876Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncMonitor.kt:36:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1848868Z class SyncMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.1850097Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncMonitors.kt:33:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1851461Z class SmartCacheMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.1852707Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncMonitors.kt:130:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1885312Z class SyncMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.1886888Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncMonitors.kt:301:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1888083Z enum class WatchPattern : Enum<WatchPattern>
+build	Build Plugins	2026-03-25T04:55:34.1889481Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncMonitors.kt:313:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1890570Z data class UserPreference : Any
+build	Build Plugins	2026-03-25T04:55:34.1891911Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncMonitors.kt:328:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1893124Z enum class PrefetchPriority : Enum<PrefetchPriority>
+build	Build Plugins	2026-03-25T04:55:34.1894801Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncMonitors.kt:333:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1898440Z data class PrefetchPrediction : Any
+build	Build Plugins	2026-03-25T04:55:34.1899876Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncMonitors.kt:349:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1901069Z class SuperSmartPrefetchManager : Any
+build	Build Plugins	2026-03-25T04:55:34.1902541Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncSmartCacheMonitor.kt:15:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1914338Z class SmartCacheMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.1915644Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncSuperSmartPrefetchManager.kt:15:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1916720Z enum class WatchPattern : Enum<WatchPattern>
+build	Build Plugins	2026-03-25T04:55:34.1918164Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncSuperSmartPrefetchManager.kt:19:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1919293Z data class UserPreference : Any
+build	Build Plugins	2026-03-25T04:55:34.1920620Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncSuperSmartPrefetchManager.kt:31:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1921823Z enum class PrefetchPriority : Enum<PrefetchPriority>
+build	Build Plugins	2026-03-25T04:55:34.1923287Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncSuperSmartPrefetchManager.kt:33:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1932793Z data class PrefetchPrediction : Any
+build	Build Plugins	2026-03-25T04:55:34.1934393Z e: file:///home/runner/work/oce/oce/src/Animasu/src/main/kotlin/com/Animasu/generated_sync/SyncSuperSmartPrefetchManager.kt:40:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1935527Z class SuperSmartPrefetchManager : Any
+build	Build Plugins	2026-03-25T04:55:34.1936829Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCacheManager.kt:30:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1937919Z class CacheManager<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1939266Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCacheManager.kt:178:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1940350Z data class CachedResult<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1941672Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:50:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1942636Z class CacheManager<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1944340Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:98:15 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build Plugins	2026-03-25T04:55:34.1946693Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:118:13 Unresolved reference 'cleanupExpiredEntries'.
+build	Build Plugins	2026-03-25T04:55:34.1949045Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:139:24 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1950645Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1951085Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1952376Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:198:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1953470Z data class CachedResult<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.1985383Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:220:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1986348Z class ImageCache : Any
+build	Build Plugins	2026-03-25T04:55:34.1988083Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:244:47 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1989339Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1989744Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1991320Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:271:51 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.1992397Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1992758Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1994164Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncCaches.kt:423:1 Conflicting overloads:
+build	Build Plugins	2026-03-25T04:55:34.1995160Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.1996578Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncHttpClientFactory.kt:273:25 Unresolved reference 'UnknownHostException'.
+build	Build Plugins	2026-03-25T04:55:34.1998405Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncImageCache.kt:26:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.1999247Z class ImageCache : Any
+build	Build Plugins	2026-03-25T04:55:34.2000456Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncImageCache.kt:47:47 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.2001563Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2001929Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2003248Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncImageCache.kt:74:51 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.2004533Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2004903Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2006461Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncImageCache.kt:219:1 Conflicting overloads:
+build	Build Plugins	2026-03-25T04:55:34.2007523Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2008676Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncMonitor.kt:36:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2009615Z class SyncMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.2010763Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncMonitors.kt:33:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2011801Z class SmartCacheMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.2013021Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncMonitors.kt:130:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2029659Z class SyncMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.2031086Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncMonitors.kt:301:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2032174Z enum class WatchPattern : Enum<WatchPattern>
+build	Build Plugins	2026-03-25T04:55:34.2033536Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncMonitors.kt:313:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2034799Z data class UserPreference : Any
+build	Build Plugins	2026-03-25T04:55:34.2036203Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncMonitors.kt:328:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2037823Z enum class PrefetchPriority : Enum<PrefetchPriority>
+build	Build Plugins	2026-03-25T04:55:34.2039296Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncMonitors.kt:333:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2040437Z data class PrefetchPrediction : Any
+build	Build Plugins	2026-03-25T04:55:34.2041842Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncMonitors.kt:349:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2042998Z class SuperSmartPrefetchManager : Any
+build	Build Plugins	2026-03-25T04:55:34.2044662Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncSmartCacheMonitor.kt:15:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2045844Z class SmartCacheMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.2047334Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncSuperSmartPrefetchManager.kt:15:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2048677Z enum class WatchPattern : Enum<WatchPattern>
+build	Build Plugins	2026-03-25T04:55:34.2050318Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncSuperSmartPrefetchManager.kt:19:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2051548Z data class UserPreference : Any
+build	Build Plugins	2026-03-25T04:55:34.2053117Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncSuperSmartPrefetchManager.kt:31:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2054615Z enum class PrefetchPriority : Enum<PrefetchPriority>
+build	Build Plugins	2026-03-25T04:55:34.2056306Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncSuperSmartPrefetchManager.kt:33:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2057562Z data class PrefetchPrediction : Any
+build	Build Plugins	2026-03-25T04:55:34.2059072Z e: file:///home/runner/work/oce/oce/src/Funmovieslix/src/main/kotlin/com/Funmovieslix/generated_sync/SyncSuperSmartPrefetchManager.kt:40:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2060286Z class SuperSmartPrefetchManager : Any
+build	Build Plugins	2026-03-25T04:55:34.2061836Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCacheManager.kt:30:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2062984Z class CacheManager<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.2064534Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCacheManager.kt:178:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2065740Z data class CachedResult<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.2067106Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:50:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2068512Z class CacheManager<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.2070294Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:98:15 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build Plugins	2026-03-25T04:55:34.2072667Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:118:13 Unresolved reference 'cleanupExpiredEntries'.
+build	Build Plugins	2026-03-25T04:55:34.2075314Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:139:24 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.2076656Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2077095Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2078485Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:198:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2079622Z data class CachedResult<T> : Any
+build	Build Plugins	2026-03-25T04:55:34.2081005Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:220:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2082090Z class ImageCache : Any
+build	Build Plugins	2026-03-25T04:55:34.2083839Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:244:47 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.2085414Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2085840Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2087431Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:271:51 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.2088726Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2089151Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2090574Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncCaches.kt:423:1 Conflicting overloads:
+build	Build Plugins	2026-03-25T04:55:34.2092544Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2094443Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncHttpClientFactory.kt:273:25 Unresolved reference 'UnknownHostException'.
+build	Build Plugins	2026-03-25T04:55:34.2096769Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncImageCache.kt:26:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2097844Z class ImageCache : Any
+build	Build Plugins	2026-03-25T04:55:34.2099393Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncImageCache.kt:47:47 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.2100429Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2100849Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2102383Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncImageCache.kt:74:51 Overload resolution ambiguity between candidates:
+build	Build Plugins	2026-03-25T04:55:34.2103745Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2104109Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2105147Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncImageCache.kt:219:1 Conflicting overloads:
+build	Build Plugins	2026-03-25T04:55:34.2106122Z fun String.md5(): String
+build	Build Plugins	2026-03-25T04:55:34.2107262Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncMonitor.kt:36:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2108257Z class SyncMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.2109590Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncMonitors.kt:33:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2110619Z class SmartCacheMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.2111867Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncMonitors.kt:130:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2113117Z class SyncMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.2114621Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncMonitors.kt:301:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2115776Z enum class WatchPattern : Enum<WatchPattern>
+build	Build Plugins	2026-03-25T04:55:34.2117267Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncMonitors.kt:313:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2118447Z data class UserPreference : Any
+build	Build Plugins	2026-03-25T04:55:34.2119875Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncMonitors.kt:328:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2121222Z enum class PrefetchPriority : Enum<PrefetchPriority>
+build	Build Plugins	2026-03-25T04:55:34.2122748Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncMonitors.kt:333:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2123948Z data class PrefetchPrediction : Any
+build	Build Plugins	2026-03-25T04:55:34.2125378Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncMonitors.kt:349:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2126568Z class SuperSmartPrefetchManager : Any
+build	Build Plugins	2026-03-25T04:55:34.2128135Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncSmartCacheMonitor.kt:15:16 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2129557Z class SmartCacheMonitor : Any
+build	Build Plugins	2026-03-25T04:55:34.2131139Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncSuperSmartPrefetchManager.kt:15:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2132435Z enum class WatchPattern : Enum<WatchPattern>
+build	Build Plugins	2026-03-25T04:55:34.2134221Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncSuperSmartPrefetchManager.kt:19:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2135516Z data class UserPreference : Any
+build	Build Plugins	2026-03-25T04:55:34.2137085Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncSuperSmartPrefetchManager.kt:31:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2138408Z enum class PrefetchPriority : Enum<PrefetchPriority>
+build	Build Plugins	2026-03-25T04:55:34.2139999Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncSuperSmartPrefetchManager.kt:33:12 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2141283Z data class PrefetchPrediction : Any
+build	Build Plugins	2026-03-25T04:55:34.2142952Z e: file:///home/runner/work/oce/oce/src/Donghuastream/src/main/kotlin/com/Donghuastream/generated_sync/SyncSuperSmartPrefetchManager.kt:40:7 Redeclaration:
+build	Build Plugins	2026-03-25T04:55:34.2144491Z class SuperSmartPrefetchManager : Any
+build	Build Plugins	2026-03-25T04:55:34.2144854Z 
+build	Build Plugins	2026-03-25T04:55:34.2145177Z > Task :Funmovieslix:compileDebugKotlin FAILED
+build	Build Plugins	2026-03-25T04:55:34.2145534Z 
+build	Build Plugins	2026-03-25T04:55:34.2145828Z > Task :Donghuastream:compileDebugKotlin FAILED
+build	Build Plugins	2026-03-25T04:55:34.2146530Z FAILURE: Build completed with 4 failures.
+build	Build Plugins	2026-03-25T04:55:34.2146864Z 
+build	Build Plugins	2026-03-25T04:55:34.2147101Z 1: Task failed with an exception.
+build	Build Plugins	2026-03-25T04:55:34.2147503Z -----------
+build	Build Plugins	2026-03-25T04:55:34.2147859Z * What went wrong:
+build	Build Plugins	2026-03-25T04:55:34.2148428Z Execution failed for task ':Anichin:compileDebugKotlin'.
+build	Build Plugins	2026-03-25T04:55:34.2149894Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Build Plugins	2026-03-25T04:55:34.2151189Z    > Compilation error. See log for more details
+build	Build Plugins	2026-03-25T04:55:34.2151554Z 
+build	Build Plugins	2026-03-25T04:55:34.2151681Z * Try:
+build	Build Plugins	2026-03-25T04:55:34.2152480Z > Run with --stacktrace option to get the stack trace.
+build	Build Plugins	2026-03-25T04:55:34.2153223Z > Run with --info or --debug option to get more log output.
+build	Build Plugins	2026-03-25T04:55:34.2154378Z > Run with --scan to get full insights.
+build	Build Plugins	2026-03-25T04:55:34.2154944Z > Get more help at https://help.gradle.org.
+build	Build Plugins	2026-03-25T04:55:34.2155625Z ==============================================================================
+build	Build Plugins	2026-03-25T04:55:34.2156236Z 
+build	Build Plugins	2026-03-25T04:55:34.2156465Z 2: Task failed with an exception.
+build	Build Plugins	2026-03-25T04:55:34.2156872Z -----------
+build	Build Plugins	2026-03-25T04:55:34.2157502Z * What went wrong:
+build	Build Plugins	2026-03-25T04:55:34.2158070Z Execution failed for task ':Animasu:compileDebugKotlin'.
+build	Build Plugins	2026-03-25T04:55:34.2159729Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Build Plugins	2026-03-25T04:55:34.2161241Z    > Compilation error. See log for more details
+build	Build Plugins	2026-03-25T04:55:34.2161611Z 
+build	Build Plugins	2026-03-25T04:55:34.2161741Z * Try:
+build	Build Plugins	2026-03-25T04:55:34.2162232Z > Run with --stacktrace option to get the stack trace.
+build	Build Plugins	2026-03-25T04:55:34.2162953Z > Run with --info or --debug option to get more log output.
+build	Build Plugins	2026-03-25T04:55:34.2163722Z > Run with --scan to get full insights.
+build	Build Plugins	2026-03-25T04:55:34.2164322Z > Get more help at https://help.gradle.org.
+build	Build Plugins	2026-03-25T04:55:34.2164993Z ==============================================================================
+build	Build Plugins	2026-03-25T04:55:34.2165380Z 
+build	Build Plugins	2026-03-25T04:55:34.2165625Z 3: Task failed with an exception.
+build	Build Plugins	2026-03-25T04:55:34.2166037Z -----------
+build	Build Plugins	2026-03-25T04:55:34.2166389Z * What went wrong:
+build	Build Plugins	2026-03-25T04:55:34.2166981Z Execution failed for task ':Donghuastream:compileDebugKotlin'.
+build	Build Plugins	2026-03-25T04:55:34.2168504Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Build Plugins	2026-03-25T04:55:34.2169735Z    > Compilation error. See log for more details
+build	Build Plugins	2026-03-25T04:55:34.2170386Z 
+build	Build Plugins	2026-03-25T04:55:34.2170513Z * Try:
+build	Build Plugins	2026-03-25T04:55:34.2171000Z > Run with --stacktrace option to get the stack trace.
+build	Build Plugins	2026-03-25T04:55:34.2171712Z > Run with --info or --debug option to get more log output.
+build	Build Plugins	2026-03-25T04:55:34.2172371Z > Run with --scan to get full insights.
+build	Build Plugins	2026-03-25T04:55:34.2172963Z > Get more help at https://help.gradle.org.
+build	Build Plugins	2026-03-25T04:55:34.2173816Z ==============================================================================
+build	Build Plugins	2026-03-25T04:55:34.2174205Z 
+build	Build Plugins	2026-03-25T04:55:34.2174434Z 4: Task failed with an exception.
+build	Build Plugins	2026-03-25T04:55:34.2174850Z -----------
+build	Build Plugins	2026-03-25T04:55:34.2175197Z * What went wrong:
+build	Build Plugins	2026-03-25T04:55:34.2175799Z Execution failed for task ':Funmovieslix:compileDebugKotlin'.
+build	Build Plugins	2026-03-25T04:55:34.2177285Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Build Plugins	2026-03-25T04:55:34.2178607Z    > Compilation error. See log for more details
+build	Build Plugins	2026-03-25T04:55:34.2178969Z 
+build	Build Plugins	2026-03-25T04:55:34.2179095Z * Try:
+build	Build Plugins	2026-03-25T04:55:34.2179588Z > Run with --stacktrace option to get the stack trace.
+build	Build Plugins	2026-03-25T04:55:34.2180333Z > Run with --info or --debug option to get more log output.
+build	Build Plugins	2026-03-25T04:55:34.2180945Z > Run with --scan to get full insights.
+build	Build Plugins	2026-03-25T04:55:34.2181509Z > Get more help at https://help.gradle.org.
+build	Build Plugins	2026-03-25T04:55:34.2182180Z ==============================================================================
+build	Build Plugins	2026-03-25T04:55:34.2182558Z 
+build	Build Plugins	2026-03-25T04:55:34.2182749Z BUILD FAILED in 31s
+build	Build Plugins	2026-03-25T04:55:34.2183278Z 28 actionable tasks: 4 executed, 24 from cache
+build	Build Plugins	2026-03-25T04:55:34.6776971Z ##[error]Process completed with exit code 1.

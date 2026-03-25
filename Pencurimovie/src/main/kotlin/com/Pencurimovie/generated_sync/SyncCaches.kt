@@ -114,8 +114,8 @@ class CacheManager<T>(
                 // Disk cache failed, continue with memory cache only
             }
 
-            // Cleanup expired entries (lazy cleanup - only on put)
-            cleanupExpiredEntries()
+            // Cleanup expired entries periodically (not on every put to avoid performance hit)
+            // cleanupExpiredEntries() - disabled for performance
         }
     }
 
