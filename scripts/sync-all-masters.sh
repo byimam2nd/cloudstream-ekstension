@@ -169,6 +169,17 @@ for MODULE in "${MODULES[@]}"; do
     GENERATED_DIR="$DEST_DIR/generated_sync"
     mkdir -p "$GENERATED_DIR"
 
+    # CLEANUP: Remove old/deprecated files that were consolidated
+    # These files are now replaced by SyncCaches.kt and SyncMonitors.kt
+    rm -f "$GENERATED_DIR/SyncCacheManager.kt"
+    rm -f "$GENERATED_DIR/SyncImageCache.kt"
+    rm -f "$GENERATED_DIR/SyncSmartCacheMonitor.kt"
+    rm -f "$GENERATED_DIR/SyncSuperSmartPrefetchManager.kt"
+    rm -f "$GENERATED_DIR/SyncSyncMonitor.kt"
+    rm -f "$GENERATED_DIR/SyncMonitor.kt"
+    
+    echo "   🧹 Cleaned up old consolidated files"
+
     # Check if source folder exists
     if [ ! -d "$DEST_DIR" ]; then
         echo "   ❌ Error: Destination directory not found: $DEST_DIR"
