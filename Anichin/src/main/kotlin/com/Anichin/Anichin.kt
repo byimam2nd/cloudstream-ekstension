@@ -46,6 +46,7 @@ import com.Anichin.generated_sync.rateLimitDelay
 import com.Anichin.generated_sync.getRandomUserAgent
 import com.Anichin.generated_sync.executeWithRetry
 import com.Anichin.generated_sync.logError
+import com.Anichin.generated_sync.logDebug
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
