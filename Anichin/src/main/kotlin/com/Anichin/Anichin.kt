@@ -348,66 +348,89 @@ open class Anichin : MainAPI() {
         val options = html.select("option[data-index]")
             .ifEmpty { html.select("option[value]") }
             .ifEmpty { html.select("select option") }
-        
+
         logDebug("Anichin", "Found ${options.size} video options")
+
+        if (options.isEmpty()) {
+            logError("Anichin", "No video options found! Website structure may have changed.")
+            return false
+        }
+
+        // Track successful links
+        var successCount = 0
 
         // OPTIMIZED: Use supervisorScope for exception safety
         supervisorScope {
             options.map { option ->
                 async {
-                    val base64 = option.attr("value").trim()
-                    if (base64.isBlank()) {
-                        logDebug("Anichin", "Skipping empty value option")
-                        return@async
-                    }
-                    
-                    val label = option.text().trim()
-                    logDebug("Anichin", "Processing server: $label")
+                    try {
+                        val base64 = option.attr("value").trim()
+                        if (base64.isBlank()) {
+                            logDebug("Anichin", "Skipping empty value option")
+                            return@async
+                        }
 
-                    val decodedHtml = try {
-                        base64Decode(base64)
-                    } catch (e: Exception) {
-                        logError("Anichin", "Base64 decode failed for $label: ${e.message}")
-                        return@async
-                    }
+                        val label = option.text().trim()
+                        logDebug("Anichin", "Processing server: $label")
 
-                    val iframeUrl = Jsoup.parse(decodedHtml)
-                        .selectFirst("iframe")?.attr("src")
-                        ?.let(::httpsify)
-                    
-                    if (iframeUrl.isNullOrEmpty()) {
-                        logDebug("Anichin", "No iframe found for $label")
-                        return@async
-                    }
-                    
-                    logDebug("Anichin", "Found iframe URL for $label: ${iframeUrl.take(50)}...")
+                        val decodedHtml = try {
+                            base64Decode(base64)
+                        } catch (e: Exception) {
+                            logError("Anichin", "Base64 decode failed for $label: ${e.message}")
+                            return@async
+                        }
 
-                    // Handle different server types
-                    when {
-                        iframeUrl.endsWith(".mp4") -> {
-                            callback(
-                                newExtractorLink(
-                                    label,
-                                    label,
-                                    url = iframeUrl,
-                                    INFER_TYPE
-                                ) {
-                                    this.referer = data
-                                    this.quality = getQualityFromName(label)
+                        val iframeUrl = Jsoup.parse(decodedHtml)
+                            .selectFirst("iframe")?.attr("src")
+                            ?.let(::httpsify)
+
+                        if (iframeUrl.isNullOrEmpty()) {
+                            logDebug("Anichin", "No iframe found for $label")
+                            return@async
+                        }
+
+                        logDebug("Anichin", "Found iframe URL for $label: ${iframeUrl.take(50)}...")
+
+                        // Handle different server types
+                        when {
+                            iframeUrl.endsWith(".mp4") -> {
+                                callback(
+                                    newExtractorLink(
+                                        label,
+                                        label,
+                                        url = iframeUrl,
+                                        INFER_TYPE
+                                    ) {
+                                        this.referer = data
+                                        this.quality = getQualityFromName(label)
+                                    }
+                                )
+                                successCount++
+                            }
+                            else -> {
+                                logDebug("Anichin", "Calling loadExtractor for $label")
+                                try {
+                                    val loaded = loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
+                                    logDebug("Anichin", "loadExtractor result for $label: $loaded")
+                                    if (loaded) successCount++
+                                } catch (e: Exception) {
+                                    logError("Anichin", "loadExtractor failed for $label: ${e.message}")
+                                    logDebug("Anichin", "Will try next server...")
+                                    // DON'T return - let other servers continue
                                 }
-                            )
+                            }
                         }
-                        else -> {
-                            logDebug("Anichin", "Calling loadExtractor for $label")
-                            val loaded = loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
-                            logDebug("Anichin", "loadExtractor result for $label: $loaded")
-                        }
+                    } catch (e: Exception) {
+                        logError("Anichin", "Unexpected error processing server ${option.text()}: ${e.message}")
+                        // Continue to next server - don't fail all!
                     }
                 }
             }.awaitAll()
         }
 
-        logDebug("Anichin", "loadLinks completed, found ${options.size} options")
-        return true
+        logDebug("Anichin", "loadLinks completed: $successCount/${options.size} servers working")
+        
+        // Return true if at least 1 server works
+        return successCount > 0
     }
 }
