@@ -530,6 +530,7 @@ class Pencurimovie : MainAPI() {
                     if (!loaded) {
                         Log.e("Pencurimovie", "loadExtractorWithFallback failed for $url")
                     }
+                    loaded
                 }
             }
         } catch (e: Exception) {
