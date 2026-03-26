@@ -36,8 +36,8 @@ echo "📦 Sync All Master Files"
 echo "========================================"
 echo ""
 
-# List of Master files to sync (OPTIMIZED v3.3 P1)
-# P1: Request Deduplication for performance
+# List of Master files to sync (OPTIMIZED v3.4)
+# v3.4: Added ExtractorHelper for all modules
 MASTER_FILES=(
     # Core files (v3.0)
     "MasterExtractors.kt:SyncExtractors.kt"
@@ -51,8 +51,11 @@ MASTER_FILES=(
     "MasterConstants.kt:SyncConstants.kt"
     "MasterCircuitBreaker.kt:SyncCircuitBreaker.kt"
 
-    # v3.3 P1: Performance optimization
+    # v3.3: Performance optimization
     "MasterRequestDeduplicator.kt:SyncRequestDeduplicator.kt"
+
+    # v3.4: Extractor helper for all modules
+    "MasterExtractorHelper.kt:SyncExtractorHelper.kt"
 )
 
 echo "📋 Master files to sync:"

@@ -376,7 +376,11 @@ class Animasu : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        loadExtractor(url, referer, subtitleCallback) { link ->
+        val loaded = com.Animasu.generated_sync.loadExtractorWithFallback(
+            url = url,
+            referer = referer,
+            subtitleCallback = subtitleCallback
+        ) { link ->
             runBlocking {
                 callback.invoke(
                     newExtractorLink(
@@ -387,7 +391,7 @@ class Animasu : MainAPI() {
                     ) {
                         this.referer = link.referer
                         // Use quality from extractor name or parse from text
-                        this.quality = if (link.type == ExtractorLinkType.M3U8 || 
+                        this.quality = if (link.type == ExtractorLinkType.M3U8 ||
                                           link.name == "Uservideo") {
                             link.quality
                         } else {
@@ -398,6 +402,10 @@ class Animasu : MainAPI() {
                     }
                 )
             }
+        }
+        
+        if (!loaded) {
+            Log.e("Animasu", "loadFixedExtractor failed for $url")
         }
     }
 
