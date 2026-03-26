@@ -409,14 +409,68 @@ open class Anichin : MainAPI() {
                             }
                             else -> {
                                 logDebug("Anichin", "Calling loadExtractor for $label")
+                                var loaded = false
                                 try {
-                                    val loaded = loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
+                                    loaded = loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
                                     logDebug("Anichin", "loadExtractor result for $label: $loaded")
-                                    if (loaded) successCount++
                                 } catch (e: Exception) {
-                                    logError("Anichin", "loadExtractor failed for $label: ${e.message}")
-                                    logDebug("Anichin", "Will try next server...")
-                                    // DON'T return - let other servers continue
+                                    logError("Anichin", "loadExtractor exception for $label: ${e.message}")
+                                }
+                                
+                                // If loadExtractor failed or returned false, try direct extractor call
+                                if (!loaded) {
+                                    logDebug("Anichin", "loadExtractor failed, trying direct extractor match...")
+                                    
+                                    // Try Ok.ru extractors directly
+                                    if (iframeUrl.contains("ok.ru") || iframeUrl.contains("odnoklassniki")) {
+                                        logDebug("Anichin", "Detected Ok.ru URL, trying OkRuSSL extractor...")
+                                        try {
+                                            val extractor = com.Anichin.generated_sync.SyncExtractors.list.find { 
+                                                it.name.contains("OkRu") 
+                                            }
+                                            if (extractor != null) {
+                                                extractor.getUrl(iframeUrl, data, subtitleCallback, callback)
+                                                logDebug("Anichin", "Direct OkRu extractor called")
+                                                successCount++ // Count as success
+                                            } else {
+                                                logError("Anichin", "OkRu extractor not found in list!")
+                                            }
+                                        } catch (e: Exception) {
+                                            logError("Anichin", "Direct OkRu extractor failed: ${e.message}")
+                                        }
+                                    }
+                                    // Try Dailymotion extractor directly
+                                    else if (iframeUrl.contains("dailymotion")) {
+                                        logDebug("Anichin", "Detected Dailymotion URL, trying Dailymotion extractor...")
+                                        try {
+                                            val extractor = com.Anichin.generated_sync.SyncExtractors.list.find { 
+                                                it.name.equals("Dailymotion", ignoreCase = true) 
+                                            }
+                                            if (extractor != null) {
+                                                extractor.getUrl(iframeUrl, data, subtitleCallback, callback)
+                                                logDebug("Anichin", "Direct Dailymotion extractor called")
+                                                successCount++ // Count as success
+                                            } else {
+                                                logError("Anichin", "Dailymotion extractor not found in list!")
+                                            }
+                                        } catch (e: Exception) {
+                                            logError("Anichin", "Direct Dailymotion extractor failed: ${e.message}")
+                                        }
+                                    }
+                                    // Try Google Drive extractor
+                                    else if (iframeUrl.contains("drive.google") || iframeUrl.contains("racaty")) {
+                                        logDebug("Anichin", "Detected Google Drive/Racaty URL...")
+                                        try {
+                                            val extractor = com.Anichin.generated_sync.SyncExtractors.list.find { 
+                                                it.name.contains("Gdrive") || it.name.contains("GDFlix") || it.name.contains("Racaty")
+                                            }
+                                            extractor?.getUrl(iframeUrl, data, subtitleCallback, callback)
+                                            logDebug("Anichin", "Direct Gdrive/Racaty extractor called")
+                                            successCount++ // Count as success
+                                        } catch (e: Exception) {
+                                            logError("Anichin", "Direct Gdrive/Racaty extractor failed: ${e.message}")
+                                        }
+                                    }
                                 }
                             }
                         }
