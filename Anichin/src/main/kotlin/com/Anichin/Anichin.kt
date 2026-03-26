@@ -47,6 +47,11 @@ import com.Anichin.generated_sync.getRandomUserAgent
 import com.Anichin.generated_sync.executeWithRetry
 import com.Anichin.generated_sync.logError
 import com.Anichin.generated_sync.logDebug
+import com.lagradost.cloudstream3.utils.M3u8Helper
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.USER_AGENT
+import com.lagradost.cloudstream3.utils.AppUtils
+import java.util.regex.Pattern
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -54,6 +59,121 @@ private val mainPageCache = CacheManager<HomePageResponse>()
 
 // Smart Cache Monitor untuk fingerprint-based invalidation
 private val monitor = AnichinMonitor()
+
+// ============================================
+// OK.RU EXTRACTOR (Based on ExtCloud)
+// ============================================
+
+class OkRuExtractor {
+    private val mainUrl = "https://ok.ru"
+    
+    suspend fun getUrl(url: String, referer: String, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val headers = mapOf(
+            "Accept" to "*/*",
+            "Connection" to "keep-alive",
+            "Sec-Fetch-Dest" to "empty",
+            "Sec-Fetch-Mode" to "cors",
+            "Sec-Fetch-Site" to "cross-site",
+            "Origin" to mainUrl,
+            "User-Agent" to USER_AGENT,
+        )
+        
+        val embedUrl = url.replace("/video/", "/videoembed/")
+        val videoReq = app.get(embedUrl, headers = headers).text
+            .replace("\\&quot;", "\"")
+            .replace("\\\\", "\\")
+            .replace(Regex("""\\u([0-9A-Fa-f]{4})""")) { matchResult ->
+                Integer.parseInt(matchResult.groupValues[1], 16).toChar().toString()
+            }
+
+        val videosStr = Pattern.compile(""""videos":(\[[^]]*])""").find(videoReq)?.groupValues?.get(1) 
+            ?: throw Exception("Video not found in Ok.ru response")
+            
+        val videos = AppUtils.tryParseJson<List<OkRuVideo>>(videosStr) 
+            ?: throw Exception("Failed to parse Ok.ru video list")
+
+        for (video in videos) {
+            val videoUrl = if (video.url.startsWith("//")) "https:${video.url}" else video.url
+            
+            val quality = video.name.uppercase()
+                .replace("MOBILE", "144p")
+                .replace("LOWEST", "240p")
+                .replace("LOW", "360p")
+                .replace("SD", "480p")
+                .replace("HD", "720p")
+                .replace("FULL", "1080p")
+                .replace("QUAD", "1440p")
+                .replace("ULTRA", "4k")
+
+            callback.invoke(
+                newExtractorLink(
+                    source = "Ok.ru",
+                    name = "Ok.ru",
+                    url = videoUrl,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = getQualityFromName(quality)
+                    this.headers = headers
+                }
+            )
+        }
+    }
+    
+    data class OkRuVideo(
+        @JsonProperty("name") val name: String,
+        @JsonProperty("url") val url: String,
+    )
+}
+
+// ============================================
+// DAILYMOTION EXTRACTOR (Based on ExtCloud)
+// ============================================
+
+class DailymotionExtractor {
+    private val mainUrl = "https://www.dailymotion.com"
+    private val videoIdRegex = "^[kx][a-zA-Z0-9]+$".toRegex()
+    
+    suspend fun getUrl(url: String, referer: String, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val embedUrl = getEmbedUrl(url) ?: return
+        val id = getVideoId(embedUrl) ?: return
+        val metaDataUrl = "$mainUrl/player/metadata/video/$id"
+        val response = app.get(metaDataUrl, referer = embedUrl).text
+        
+        val qualityUrlRegex = Regex(""""url"\s*:\s*"([^"]+)"""")
+        val urls = qualityUrlRegex.findAll(response)
+            .map { it.groupValues[1] }
+            .toList()
+            .filter { it.contains(".m3u8") }
+
+        urls.forEach { videoUrl ->
+            getStream(videoUrl, "Dailymotion", callback)
+        }
+    }
+    
+    private fun getEmbedUrl(url: String): String? {
+        if (url.contains("/embed/") || url.contains("/video/")) return url
+        if (url.contains("geo.dailymotion.com")) {
+            val videoId = url.substringAfter("video=")
+            return "$mainUrl/embed/video/$videoId"
+        }
+        return null
+    }
+
+    private fun getVideoId(url: String): String? {
+        val path = java.net.URI(url).path
+        val id = path.substringAfter("/video/")
+        return if (id.matches(videoIdRegex)) id else null
+    }
+    
+    private suspend fun getStream(
+        streamLink: String,
+        name: String,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        M3u8Helper.generateM3u8(name, streamLink, "").forEach(callback)
+    }
+}
 
 open class Anichin : MainAPI() {
     override var mainUrl = "https://anichin.cafe"
@@ -425,16 +545,11 @@ open class Anichin : MainAPI() {
                                     if (iframeUrl.contains("ok.ru") || iframeUrl.contains("odnoklassniki")) {
                                         logDebug("Anichin", "Detected Ok.ru URL, trying OkRuSSL extractor...")
                                         try {
-                                            val extractor = com.Anichin.generated_sync.SyncExtractors.list.find { 
-                                                it.name.contains("OkRu") 
-                                            }
-                                            if (extractor != null) {
-                                                extractor.getUrl(iframeUrl, data, subtitleCallback, callback)
-                                                logDebug("Anichin", "Direct OkRu extractor called")
-                                                successCount++ // Count as success
-                                            } else {
-                                                logError("Anichin", "OkRu extractor not found in list!")
-                                            }
+                                            // Use Ok.ru extractor with proper headers
+                                            val okruExtractor = OkRuExtractor()
+                                            okruExtractor.getUrl(iframeUrl, data, subtitleCallback, callback)
+                                            logDebug("Anichin", "Direct OkRu extractor called successfully")
+                                            successCount++
                                         } catch (e: Exception) {
                                             logError("Anichin", "Direct OkRu extractor failed: ${e.message}")
                                         }
@@ -443,16 +558,10 @@ open class Anichin : MainAPI() {
                                     else if (iframeUrl.contains("dailymotion")) {
                                         logDebug("Anichin", "Detected Dailymotion URL, trying Dailymotion extractor...")
                                         try {
-                                            val extractor = com.Anichin.generated_sync.SyncExtractors.list.find { 
-                                                it.name.equals("Dailymotion", ignoreCase = true) 
-                                            }
-                                            if (extractor != null) {
-                                                extractor.getUrl(iframeUrl, data, subtitleCallback, callback)
-                                                logDebug("Anichin", "Direct Dailymotion extractor called")
-                                                successCount++ // Count as success
-                                            } else {
-                                                logError("Anichin", "Dailymotion extractor not found in list!")
-                                            }
+                                            val dmExtractor = DailymotionExtractor()
+                                            dmExtractor.getUrl(iframeUrl, data, subtitleCallback, callback)
+                                            logDebug("Anichin", "Direct Dailymotion extractor called")
+                                            successCount++
                                         } catch (e: Exception) {
                                             logError("Anichin", "Direct Dailymotion extractor failed: ${e.message}")
                                         }
