@@ -1072,11 +1072,16 @@ class Vidhidepro : Filesim() {
 // ========================================
 // DAILYMOTION EXTRACTOR (From ExtCloud/AnichinMoe)
 // ========================================
+// DAILYMOTION EXTRACTOR (From ExtCloud - Proven Working)
+// ========================================
 
 class Dailymotion : ExtractorApi() {
     override val name = "Dailymotion"
     override val mainUrl = "https://www.dailymotion.com"
     override val requiresReferer = false
+    private val baseUrl = "https://www.dailymotion.com"
+
+    private val videoIdRegex = "^[kx][a-zA-Z0-9]+$".toRegex()
 
     override suspend fun getUrl(
         url: String,
@@ -1084,31 +1089,53 @@ class Dailymotion : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url).text
-        val jsonData = response.substringAfter("playerConfig\\\"=").substringBefore("\\", "")
-        val json = try {
-            org.json.JSONObject(jsonData)
-        } catch (e: Exception) {
-            return
+        val embedUrl = getEmbedUrl(url) ?: return
+        val id = getVideoId(embedUrl) ?: return
+        val metaDataUrl = "$baseUrl/player/metadata/video/$id"
+        val response = app.get(metaDataUrl, referer = embedUrl).text
+        val qualityUrlRegex = Regex(""""url"\s*:\s*"([^"]+)"""")
+        val subtitlesRegex = Regex(""""subtitles"\s*:\s*\{[^}]*"data"\s*:\s*(\[[^\]]*\])""")
+
+        val urls = qualityUrlRegex.findAll(response)
+            .map { it.groupValues[1] }
+            .toList().filter { it.contains(".m3u8") }
+
+        urls.forEach { videoUrl ->
+            getStream(videoUrl, this.name, callback)
         }
 
-        val qualityArray = json.optJSONArray("qualities")
-        val autoPlay = qualityArray?.getJSONObject(0)
-        val autoUrl = autoPlay?.optString("url")
-
-        if (autoUrl != null) {
-            callback.invoke(
-                newExtractorLink(
-                    name,
-                    name,
-                    autoUrl,
-                    ExtractorLinkType.M3U8
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = Qualities.Unknown.value
-                }
-            )
+        val subtitlesMatches = subtitlesRegex.findAll(response).map { it.groupValues[1] }.toList()
+        subtitlesMatches.forEach { subtitleJson ->
+            val subRegex = Regex("""\{\s*"label"\s*:\s*"([^"]+)",\s*"urls"\s*:\s*\["([^"]+)"""")
+            subRegex.findAll(subtitleJson).forEach { match ->
+                val label = match.groupValues[1]
+                val subUrl = match.groupValues[2]
+                subtitleCallback(SubtitleFile(label, subUrl))
+            }
         }
+    }
+
+    private fun getEmbedUrl(url: String): String? {
+        if (url.contains("/embed/") || url.contains("/video/")) return url
+        if (url.contains("geo.dailymotion.com")) {
+            val videoId = url.substringAfter("video=")
+            return "$baseUrl/embed/video/$videoId"
+        }
+        return null
+    }
+
+    private fun getVideoId(url: String): String? {
+        val path = java.net.URI(url).path
+        val id = path.substringAfter("/video/")
+        return if (id.matches(videoIdRegex)) id else null
+    }
+
+    private suspend fun getStream(
+        streamLink: String,
+        name: String,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        return M3u8Helper.generateM3u8(name, streamLink, "").forEach(callback)
     }
 }
 
