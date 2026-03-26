@@ -416,31 +416,38 @@ open class Anichin : MainAPI() {
                                 } catch (e: Exception) {
                                     logError("Anichin", "loadExtractor exception for $label: ${e.message}")
                                 }
-                                
+
                                 // If loadExtractor failed or returned false, try direct extractor call from SyncExtractors
                                 if (!loaded) {
                                     logDebug("Anichin", "loadExtractor failed, trying direct extractor from SyncExtractors...")
+                                    logDebug("Anichin", "iframeUrl: $iframeUrl")
 
-                                    // Find matching extractor from SyncExtractors list
-                                    val matchingExtractor = com.Anichin.generated_sync.SyncExtractors.list.find { extractor ->
-                                        val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").split("/").first()
-                                        val iframeDomain = iframeUrl.removePrefix("http://").removePrefix("https://").split("/").first()
-                                        iframeDomain.contains(extractorDomain, ignoreCase = true) ||
-                                        iframeUrl.contains(extractor.name, ignoreCase = true)
+                                    // Find ALL matching extractors from SyncExtractors list
+                                    val iframeDomain = iframeUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+                                    logDebug("Anichin", "iframeDomain: $iframeDomain")
+
+                                    val matchingExtractors = com.Anichin.generated_sync.SyncExtractors.list.filter { extractor ->
+                                        val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+                                        val domainMatch = iframeDomain.contains(extractorDomain) || extractorDomain.contains(iframeDomain)
+                                        val nameMatch = iframeUrl.contains(extractor.name, ignoreCase = true)
+                                        domainMatch || nameMatch
                                     }
 
-                                    if (matchingExtractor != null) {
-                                        logDebug("Anichin", "Found matching extractor: ${matchingExtractor.name} (${matchingExtractor.mainUrl})")
+                                    logDebug("Anichin", "Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
+
+                                    // Try ALL matching extractors
+                                    matchingExtractors.forEach { extractor ->
                                         try {
-                                            matchingExtractor.getUrl(iframeUrl, data, subtitleCallback, callback)
-                                            logDebug("Anichin", "Direct extractor call successful for ${matchingExtractor.name}")
+                                            logDebug("Anichin", "Trying extractor: ${extractor.name} (${extractor.mainUrl})")
+                                            extractor.getUrl(iframeUrl, data, subtitleCallback, callback)
+                                            logDebug("Anichin", "SUCCESS: Extractor ${extractor.name} worked!")
                                             successCount++
                                         } catch (e: Exception) {
-                                            logError("Anichin", "Direct extractor failed for ${matchingExtractor.name}: ${e.message}")
+                                            logError("Anichin", "Extractor ${extractor.name} failed: ${e.message}")
                                         }
-                                    } else {
-                                        logError("Anichin", "No matching extractor found in SyncExtractors for URL: $iframeUrl")
                                     }
+                                } else {
+                                    successCount++
                                 }
                             }
                         }
