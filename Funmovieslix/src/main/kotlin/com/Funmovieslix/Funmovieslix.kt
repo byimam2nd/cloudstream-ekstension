@@ -304,10 +304,18 @@ class Funmovieslix : MainAPI() {
                                 else -> "https://$fixedUrl"
                             }
                         }
-                        
+
                         Log.d("Funmovieslix", "Trying to load: $fixedUrl")
-                        loadExtractor(fixedUrl, mainUrl, subtitleCallback, callback)
-                        
+                        val loaded = com.Funmovieslix.generated_sync.loadExtractorWithFallback(
+                            url = fixedUrl,
+                            referer = mainUrl,
+                            subtitleCallback = subtitleCallback,
+                            callback = callback
+                        )
+                        if (!loaded) {
+                            logError("Funmovieslix", "loadExtractorWithFallback failed for $fixedUrl")
+                        }
+
                         mutex.withLock {
                             loadedLinks.add(fixedUrl)
                         }

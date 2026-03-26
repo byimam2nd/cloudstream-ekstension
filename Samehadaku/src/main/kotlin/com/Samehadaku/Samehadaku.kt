@@ -417,7 +417,11 @@ class Samehadaku : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        loadExtractor(url, subtitleCallback = subtitleCallback) { link ->
+        val loaded = com.Samehadaku.generated_sync.loadExtractorWithFallback(
+            url = url,
+            referer = mainUrl,
+            subtitleCallback = subtitleCallback
+        ) { link ->
             runBlocking {
                 callback.invoke(
                     newExtractorLink(
@@ -433,6 +437,9 @@ class Samehadaku : MainAPI() {
                     }
                 )
             }
+        }
+        if (!loaded) {
+            Log.e("Samehadaku", "loadExtractorWithFallback failed for $url")
         }
     }
 }

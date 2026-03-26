@@ -421,8 +421,17 @@ class Idlix : MainAPI() {
                         ?: return@amap
 
                     when {
-                        !decrypted.contains("youtube") ->
-                            loadExtractor(decrypted, directUrl, subtitleCallback, callback)
+                        !decrypted.contains("youtube") -> {
+                            val loaded = com.Idlix.generated_sync.loadExtractorWithFallback(
+                                url = decrypted,
+                                referer = directUrl,
+                                subtitleCallback = subtitleCallback,
+                                callback = callback
+                            )
+                            if (!loaded) {
+                                logError("Idlix", "loadExtractorWithFallback failed for $decrypted")
+                            }
+                        }
                         else -> return@amap
                     }
                 } catch (e: Exception) {

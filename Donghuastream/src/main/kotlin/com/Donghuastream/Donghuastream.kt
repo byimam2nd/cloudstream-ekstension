@@ -288,7 +288,15 @@ open class Donghuastream : MainAPI() {
                             } else {
                                 iframeUrl
                             }
-                            loadExtractor(cleanedUrl, referer = iframeUrl, subtitleCallback, callback)
+                            val loaded = com.Donghuastream.generated_sync.loadExtractorWithFallback(
+                                url = cleanedUrl,
+                                referer = iframeUrl,
+                                subtitleCallback = subtitleCallback,
+                                callback = callback
+                            )
+                            if (!loaded) {
+                                Log.e("Donghuastream", "loadExtractorWithFallback failed for $cleanedUrl")
+                            }
                         }
                         iframeUrl.endsWith(".mp4") -> {
                             callback(
@@ -304,7 +312,15 @@ open class Donghuastream : MainAPI() {
                             )
                         }
                         else -> {
-                            loadExtractor(iframeUrl, referer = mainUrl, subtitleCallback, callback)
+                            val loaded = com.Donghuastream.generated_sync.loadExtractorWithFallback(
+                                url = iframeUrl,
+                                referer = mainUrl,
+                                subtitleCallback = subtitleCallback,
+                                callback = callback
+                            )
+                            if (!loaded) {
+                                Log.e("Donghuastream", "loadExtractorWithFallback failed for $iframeUrl")
+                            }
                         }
                     }
                 }

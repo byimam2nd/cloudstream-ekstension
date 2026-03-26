@@ -521,7 +521,15 @@ class Pencurimovie : MainAPI() {
                 }
                 // Fallback to built-in extractor
                 else -> {
-                    loadExtractor(url, referer, subtitleCallback, callback)
+                    val loaded = com.Pencurimovie.generated_sync.loadExtractorWithFallback(
+                        url = url,
+                        referer = referer,
+                        subtitleCallback = subtitleCallback,
+                        callback = callback
+                    )
+                    if (!loaded) {
+                        Log.e("Pencurimovie", "loadExtractorWithFallback failed for $url")
+                    }
                 }
             }
         } catch (e: Exception) {

@@ -303,9 +303,25 @@ class LayarKaca21 : MainAPI() {
 
             if (iframe.contains("https://short.icu")) {
                 val finalIframe = app.get(iframe, allowRedirects = true).url
-                loadExtractor(finalIframe, "$mainUrl/", subtitleCallback, callback)
+                val loaded = com.LayarKaca21.generated_sync.loadExtractorWithFallback(
+                    url = finalIframe,
+                    referer = "$mainUrl/",
+                    subtitleCallback = subtitleCallback,
+                    callback = callback
+                )
+                if (!loaded) {
+                    Log.e("LayarKaca21", "loadExtractorWithFallback failed for $finalIframe")
+                }
             } else {
-                loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
+                val loaded = com.LayarKaca21.generated_sync.loadExtractorWithFallback(
+                    url = iframe,
+                    referer = "$mainUrl/",
+                    subtitleCallback = subtitleCallback,
+                    callback = callback
+                )
+                if (!loaded) {
+                    Log.e("LayarKaca21", "loadExtractorWithFallback failed for $iframe")
+                }
             }
         }
         return true
