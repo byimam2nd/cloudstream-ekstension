@@ -39,7 +39,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
  * Flow:
  * 1. Try loadExtractor (CloudStream API)
  * 2. If failed (returns false), find matching extractor from SyncExtractors
- * 3. Try ALL matching extractors until one works
+ * 3. Try ALL matching extractors (no early stop - get max quality options)
  * 4. Return true if at least 1 extractor worked
  * 
  * @param url Video URL to extract
@@ -55,11 +55,13 @@ suspend fun loadExtractorWithFallback(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     var loaded = false
+    var successCount = 0
     
     // Step 1: Try loadExtractor (CloudStream API)
     try {
         loaded = loadExtractor(url, referer, subtitleCallback, callback)
         Log.d("ExtractorHelper", "loadExtractor result: $loaded")
+        if (loaded) successCount++
     } catch (e: Exception) {
         Log.e("ExtractorHelper", "loadExtractor exception: ${e.message}")
     }
@@ -88,17 +90,20 @@ suspend fun loadExtractorWithFallback(
         
         Log.d("ExtractorHelper", "Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
         
-        // Try ALL matching extractors
+        // Try ALL matching extractors (NO EARLY STOP - get all quality options)
         matchingExtractors.forEach { extractor ->
             try {
                 Log.d("ExtractorHelper", "Trying extractor: ${extractor.name} (${extractor.mainUrl})")
                 extractor.getUrl(url, referer, subtitleCallback, callback)
                 Log.d("ExtractorHelper", "SUCCESS: Extractor ${extractor.name} worked!")
-                loaded = true
+                successCount++
+                loaded = true  // Mark as loaded if at least 1 worked
             } catch (e: Exception) {
                 Log.e("ExtractorHelper", "Extractor ${extractor.name} failed: ${e.message}")
             }
         }
+        
+        Log.d("ExtractorHelper", "Total successful links: $successCount")
     }
     
     return loaded
