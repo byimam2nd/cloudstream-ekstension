@@ -21,6 +21,7 @@ import com.Animasu.generated_sync.getRandomUserAgent
 import com.Animasu.generated_sync.logError
 import com.Animasu.generated_sync.executeWithRetry
 import com.Animasu.generated_sync.rateLimitDelay
+import com.Animasu.generated_sync.EpisodePreFetcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
@@ -298,7 +299,10 @@ class Animasu : MainAPI() {
             val episode = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
             newEpisode(link) { this.episode = episode }
         }.reversed()
-        
+
+        // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
+        EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+
         // Tracker integration (MAL/AniList)
         val tracker = runCatching {
             APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
@@ -332,6 +336,12 @@ class Animasu : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        // 🎯 CHECK CACHE FIRST (from pre-fetch)
+        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+            return true
+        }
+        
+        // No cache → extract normally
         val document = executeWithRetry {
             animasuRateLimitDelay()
             app.get(
