@@ -1,6 +1,7 @@
 package com.Donghuastream
 
 import com.Donghuastream.generated_sync.CacheManager
+import com.Donghuastream.generated_sync.EpisodePreFetcher
 
 
 import com.lagradost.api.Log
@@ -205,7 +206,10 @@ open class Donghuastream : MainAPI() {
                     }
                 }.awaitAll()
             }.reversed()
-            
+
+            // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
+            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
             } else {
@@ -250,6 +254,12 @@ open class Donghuastream : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        // 🎯 CHECK CACHE FIRST (from pre-fetch)
+        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+            return true
+        }
+        
+        // No cache → extract normally
         val html = app.get(data, timeout = 5000L).documentLarge
         val options = html.select("option[data-index]")
 

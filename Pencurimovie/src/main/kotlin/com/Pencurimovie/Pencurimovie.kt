@@ -4,6 +4,7 @@ import com.Pencurimovie.generated_sync.Dhcplay
 import com.Pencurimovie.generated_sync.Do7go
 import com.Pencurimovie.generated_sync.Listeamed
 import com.Pencurimovie.generated_sync.Voe
+import com.Pencurimovie.generated_sync.EpisodePreFetcher
 
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
@@ -274,6 +275,9 @@ class Pencurimovie : MainAPI() {
                 }
             }
 
+            // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
+            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.plot = description
@@ -306,6 +310,12 @@ class Pencurimovie : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        // 🎯 CHECK CACHE FIRST (from pre-fetch)
+        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+            return true
+        }
+        
+        // No cache → extract normally
         try {
             val document = app.get(data).document
             val links = mutableSetOf<String>()
