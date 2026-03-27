@@ -47,6 +47,7 @@ import com.Anichin.generated_sync.getRandomUserAgent
 import com.Anichin.generated_sync.executeWithRetry
 import com.Anichin.generated_sync.logError
 import com.Anichin.generated_sync.logDebug
+import com.Anichin.generated_sync.EpisodePreFetcher
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -297,6 +298,9 @@ open class Anichin : MainAPI() {
                 }
             }.reversed()
 
+            // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
+            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
             } else {
@@ -335,6 +339,12 @@ open class Anichin : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        // 🎯 CHECK CACHE FIRST (from pre-fetch)
+        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+            return true
+        }
+        
+        // No cache → extract normally
         val html = executeWithRetry(maxRetries = 3) {
             rateLimitDelay()
             app.get(
