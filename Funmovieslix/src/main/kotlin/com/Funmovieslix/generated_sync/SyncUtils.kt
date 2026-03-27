@@ -67,30 +67,34 @@ private const val DEBUG_MODE = false
 /**
  * Object singleton untuk rate limiting
  * Thread-safe dengan Mutex
+ * Support per-module independent rate limiting
  */
 internal object RateLimiter {
     private val rateLimitMutex = Mutex()
-    private var lastRequestTime = 0L
+    private val requestTimers = ConcurrentHashMap<String, Long>()
 
     /**
      * Delay untuk rate limiting dengan random jitter
      * Mencegah bot detection dengan request timing yang tidak predictable
+     * 
+     * @param moduleName Module name for independent rate limiting
      */
-    suspend fun delay() = rateLimitMutex.withLock {
+    suspend fun delay(moduleName: String = "default") = rateLimitMutex.withLock {
         val now = System.currentTimeMillis()
-        val elapsed = now - lastRequestTime
+        val lastRequest = requestTimers[moduleName] ?: 0L
+        val elapsed = now - lastRequest
 
         if (elapsed < MIN_REQUEST_DELAY) {
             val delayNeeded = MIN_REQUEST_DELAY - elapsed + Random.nextLong(0, MAX_REQUEST_DELAY - MIN_REQUEST_DELAY)
-            delay(delayNeeded)
+            kotlinx.coroutines.delay(delayNeeded)
         }
 
-        lastRequestTime = System.currentTimeMillis()
+        requestTimers[moduleName] = System.currentTimeMillis()
     }
 }
 
 // Backward compatibility function
-internal suspend fun rateLimitDelay() = RateLimiter.delay()
+internal suspend fun rateLimitDelay(moduleName: String = "default") = RateLimiter.delay(moduleName)
 
 // ============================================
 // REGION: USER AGENT ROTATION (101-150)
