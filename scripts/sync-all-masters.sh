@@ -56,6 +56,9 @@ MASTER_FILES=(
 
     # v3.4: Extractor helper for all modules
     "MasterExtractorHelper.kt:SyncExtractorHelper.kt"
+
+    # v3.7: Centralized rate limiting
+    "MasterRateLimiter.kt:SyncRateLimiter.kt"
 )
 
 echo "📋 Master files to sync:"

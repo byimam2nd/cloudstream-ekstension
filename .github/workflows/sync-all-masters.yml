@@ -80,6 +80,7 @@ jobs:
           "SyncHttpClientFactory.kt"
           "SyncCompiledRegexPatterns.kt"
           "SyncExtractorHelper.kt"     # NEW: Extractor helper with pre-fetching
+          "SyncRateLimiter.kt"         # NEW: Centralized rate limiting
         )
 
         for MODULE in $MODULES; do

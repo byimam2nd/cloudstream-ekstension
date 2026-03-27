@@ -35,20 +35,12 @@ private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 *
 
 // ========================================
 // RATE LIMITING
-// Custom implementation for Samehadaku
+// Using centralized ModuleRateLimiter from master/
 // ========================================
-private val samehadakuMutex = Mutex()
-private var samehadakuLastRequestTime = 0L
-private const val SAMEHADAKU_MIN_REQUEST_DELAY = 500L
+private val samehadakuRateLimiter = com.Samehadaku.generated_sync.ModuleRateLimiter.create("Samehadaku", 500L)
 
-internal suspend fun samehadakuRateLimitDelay() = samehadakuMutex.withLock {
-    val now = System.currentTimeMillis()
-    val elapsed = now - samehadakuLastRequestTime
-    if (elapsed < SAMEHADAKU_MIN_REQUEST_DELAY) {
-        delay(SAMEHADAKU_MIN_REQUEST_DELAY - elapsed)
-    }
-    samehadakuLastRequestTime = System.currentTimeMillis()
-}
+// Backward compatible function (uses centralized limiter)
+internal suspend fun samehadakuRateLimitDelay() = samehadakuRateLimiter.delay()
 
 // ========================================
 // RETRY LOGIC

@@ -38,20 +38,12 @@ private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 *
 
 // ========================================
 // RATE LIMITING
-// Custom implementation for Animasu
+// Using centralized ModuleRateLimiter from master/
 // ========================================
-private val animasuMutex = kotlinx.coroutines.sync.Mutex()
-private var animasuLastRequestTime = 0L
-private const val ANIMASU_MIN_REQUEST_DELAY = 500L // 500ms between requests - Animasu specific
+private val animasuRateLimiter = com.Animasu.generated_sync.ModuleRateLimiter.create("Animasu", 500L)
 
-internal suspend fun animasuRateLimitDelay() = animasuMutex.withLock {
-    val now = System.currentTimeMillis()
-    val elapsed = now - animasuLastRequestTime
-    if (elapsed < ANIMASU_MIN_REQUEST_DELAY) {
-        delay(ANIMASU_MIN_REQUEST_DELAY - elapsed)
-    }
-    animasuLastRequestTime = System.currentTimeMillis()
-}
+// Backward compatible function (uses centralized limiter)
+internal suspend fun animasuRateLimitDelay() = animasuRateLimiter.delay()
 
 // ========================================
 // RETRY LOGIC
