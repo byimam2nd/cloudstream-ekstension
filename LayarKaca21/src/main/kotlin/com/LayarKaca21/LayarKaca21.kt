@@ -5,6 +5,7 @@ import com.LayarKaca21.generated_sync.executeWithRetry
 import com.LayarKaca21.generated_sync.rateLimitDelay
 import com.LayarKaca21.generated_sync.getRandomUserAgent
 import com.LayarKaca21.generated_sync.logError
+import com.LayarKaca21.generated_sync.EpisodePreFetcher
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
@@ -263,6 +264,9 @@ class LayarKaca21 : MainAPI() {
                     }
                 }
             }
+
+            // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
+            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.posterHeaders = posterHeaders
@@ -293,6 +297,12 @@ class LayarKaca21 : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        // 🎯 CHECK CACHE FIRST (from pre-fetch)
+        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+            return true
+        }
+        
+        // No cache → extract normally
         val document = app.get(data).document
         val videolar = document.select("ul#player-list a")
 

@@ -11,6 +11,7 @@ package com.Samehadaku
 import com.Samehadaku.generated_sync.CacheManager
 import com.Samehadaku.generated_sync.getRandomUserAgent
 import com.Samehadaku.generated_sync.logError
+import com.Samehadaku.generated_sync.EpisodePreFetcher
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
