@@ -12,7 +12,9 @@
       "Bash(gh *)",
       "Bash(set *)",
       "Bash(findstr *)",
-      "Bash(del *)"
+      "Bash(del *)",
+      "Bash(sleep *)"
     ]
-  }
+  },
+  "$version": 3
 }
