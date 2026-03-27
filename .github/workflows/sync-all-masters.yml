@@ -79,6 +79,7 @@ jobs:
           "SyncMonitors.kt"            # NEW: Combined 3 monitor files
           "SyncHttpClientFactory.kt"
           "SyncCompiledRegexPatterns.kt"
+          "SyncExtractorHelper.kt"     # NEW: Extractor helper with pre-fetching
         )
 
         for MODULE in $MODULES; do
