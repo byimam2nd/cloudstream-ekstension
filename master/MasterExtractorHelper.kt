@@ -223,7 +223,7 @@ object EpisodePreFetcher {
     
     /**
      * Pre-fetch links untuk multiple episodes
-     * 
+     *
      * @param episodes List of episodes to pre-fetch
      * @param mainUrl Main URL of the site (for referer)
      */
@@ -233,12 +233,12 @@ object EpisodePreFetcher {
                 launch {
                     try {
                         Log.d("PreFetch", "Pre-fetching: ${episode.name}")
-                        
+
                         val (links, subtitles) = preFetchExtractorLinks(
                             url = episode.data,
                             referer = mainUrl
                         )
-                        
+
                         if (links.isNotEmpty()) {
                             linkCache.put(episode.data, links, ttl = CACHE_TTL)
                             subtitleCache.put(episode.data, subtitles, ttl = CACHE_TTL)
@@ -252,6 +252,63 @@ object EpisodePreFetcher {
         }
         
         Log.d("PreFetch", "Started pre-fetching ${minOf(episodes.size, PRE_FETCH_LIMIT)} episodes")
+    }
+    
+    /**
+     * SMART PRE-FETCH: Pre-fetch NEXT episode only based on current episode
+     * 
+     * Benefits:
+     * - Less network overhead (1 episode vs 10)
+     * - More targeted pre-fetching
+     * - Better resource usage
+     * 
+     * Usage in loadLinks():
+     * ```kotlin
+     * // After successfully loading current episode
+     * EpisodePreFetcher.preFetchNextEpisode(
+     *     currentEpisodeNumber = 5,
+     *     episodes = allEpisodes,
+     *     mainUrl = mainUrl
+     * )
+     * ```
+     * 
+     * @param currentEpisodeNumber Current episode number being watched
+     * @param episodes All available episodes
+     * @param mainUrl Main URL of the site (for referer)
+     */
+    suspend fun preFetchNextEpisode(
+        currentEpisodeNumber: Int,
+        episodes: List<Episode>,
+        mainUrl: String
+    ) {
+        // Find next episode
+        val nextEpisode = episodes.find { 
+            it.episode == (currentEpisodeNumber + 1) 
+        } ?: run {
+            Log.d("PreFetch", "No next episode to pre-fetch")
+            return
+        }
+        
+        coroutineScope {
+            launch {
+                try {
+                    Log.d("PreFetch", "🎯 Smart pre-fetching next episode: ${nextEpisode.name}")
+                    
+                    val (links, subtitles) = preFetchExtractorLinks(
+                        url = nextEpisode.data,
+                        referer = mainUrl
+                    )
+                    
+                    if (links.isNotEmpty()) {
+                        linkCache.put(nextEpisode.data, links, ttl = CACHE_TTL)
+                        subtitleCache.put(nextEpisode.data, subtitles, ttl = CACHE_TTL)
+                        Log.d("PreFetch", "✅ Smart pre-fetched: ${nextEpisode.name} (${links.size} links)")
+                    }
+                } catch (e: Exception) {
+                    Log.e("PreFetch", "Smart pre-fetch failed: ${e.message}")
+                }
+            }
+        }
     }
     
     /**
