@@ -506,43 +506,21 @@ class Pencurimovie : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         return try {
-            when {
-                // Dhcplay & Do7go - StreamWish based
-                url.contains("dhcplay.com") -> {
-                    Dhcplay().getUrl(url, referer, subtitleCallback, callback)
-                    true
-                }
-                url.contains("do7go.com") -> {
-                    Do7go().getUrl(url, referer, subtitleCallback, callback)
-                    true
-                }
-                // Listeamed - VidStack based
-                url.contains("listeamed.net") -> {
-                    Listeamed().getUrl(url, referer, subtitleCallback, callback)
-                    true
-                }
-                // Voe - Custom extractor
-                url.contains("voe.sx") -> {
-                    Voe().getUrl(url, referer, subtitleCallback, callback)
-                    true
-                }
-                // Fallback to built-in extractor
-                else -> {
-                    val loaded = com.Pencurimovie.generated_sync.loadExtractorWithFallback(
-                        url = url,
-                        referer = referer,
-                        subtitleCallback = subtitleCallback,
-                        callback = callback
-                    )
-                    if (!loaded) {
-                        Log.e("Pencurimovie", "loadExtractorWithFallback failed for $url")
-                    }
-                    loaded
-                }
+            // DYNAMIC: Use loadExtractorWithFallback for ALL extractors
+            // Auto-routes to correct extractor based on URL
+            val loaded = com.Pencurimovie.generated_sync.loadExtractorWithFallback(
+                url = url,
+                referer = referer,
+                subtitleCallback = subtitleCallback,
+                callback = callback
+            )
+            if (!loaded) {
+                Log.e("Pencurimovie", "loadExtractorWithFallback failed for $url")
             }
+            return loaded
         } catch (e: Exception) {
             Log.e("Pencurimovie", "Extract error: $url - ${e.message}")
-            false
+            return false
         }
     }
     
