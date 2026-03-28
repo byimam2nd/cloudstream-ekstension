@@ -1,10 +1,7 @@
 package com.Pencurimovie
 
-import com.Pencurimovie.generated_sync.Dhcplay
-import com.Pencurimovie.generated_sync.Do7go
-import com.Pencurimovie.generated_sync.Listeamed
-import com.Pencurimovie.generated_sync.Voe
 import com.Pencurimovie.generated_sync.EpisodePreFetcher
+import com.Pencurimovie.generated_sync.loadExtractorWithFallback
 
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
