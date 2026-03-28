@@ -92,7 +92,45 @@ object CompiledRegexPatterns {
     
     /** Pattern untuk extract flv URLs */
     val FLV_DOUBLE_QUOTED = Regex("\"([^\"]*?\\.flv[^\"]*?)\"")
+
+    // =========================================================================
+    // NUMBER & DIGIT PATTERNS
+    // =========================================================================
+
+    /** Pattern untuk extract non-digit characters */
+    val NON_DIGITS = Regex("[^0-9]")
     
+    /** Pattern untuk extract digit characters only */
+    val DIGITS_ONLY = Regex("\\d+")
+    
+    /** Pattern untuk extract year in parentheses (2024), (1999), etc. */
+    val YEAR_IN_PARENS = Regex("\\((\\d{4})\\)")
+    
+    /** Pattern untuk extract year with comma ", 2024", ", 1999", etc. */
+    val YEAR_AFTER_COMMA = Regex(",\\s?(\\d{4})")
+    
+    /** Pattern untuk extract resolution like 1920x1080, 1280x720, etc. */
+    val RESOLUTION_PATTERN = Regex("(\\d+)x(\\d+)")
+    
+    /** Pattern untuk remove resolution from URL like -1920x1080 */
+    val RESOLUTION_SUFFIX = Regex("-\\d+x\\d+")
+
+    // =========================================================================
+    // EPISODE & SEASON PATTERNS
+    // =========================================================================
+
+    /** Pattern untuk extract episode number from "Episode 5", "Ep 5", etc. */
+    val EPISODE_NUMBER = Regex("(?:Episode|Ep)\\s?(\\d+)")
+    
+    /** Pattern untuk extract season number from "S1", "Season 1", etc. */
+    val SEASON_NUMBER = Regex("S(\\d+)")
+    
+    /** Pattern untuk extract episode from "Eps 5", "Episode 5", etc. */
+    val EPS_NUMBER = Regex("Eps(\\d+)")
+    
+    /** Pattern untuk extract season from title like "Anime Name -season 1" */
+    val SEASON_TITLE = Regex("(.+?)-season")
+
     // =========================================================================
     // SUBTITLE PATTERNS
     // =========================================================================
