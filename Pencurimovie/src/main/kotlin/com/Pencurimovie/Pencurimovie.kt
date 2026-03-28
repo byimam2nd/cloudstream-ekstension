@@ -169,6 +169,37 @@ class Pencurimovie : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val cacheKey = "${request.data}${page}"
+
+        // Check cache with fingerprint validation
+        val cached = mainPageCache.get(cacheKey)
+        val storedFingerprint = cacheFingerprints[cacheKey]
+        
+        if (cached != null) {
+            if (storedFingerprint != null) {
+                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
+                when (validity) {
+                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
+                        logDebug("Pencurimovie", "Cache HIT (validated) for $cacheKey")
+                        return cached
+                    }
+                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
+                        logDebug("Pencurimovie", "Cache INVALID - refetching for $cacheKey")
+                        cacheFingerprints.remove(cacheKey)
+                    }
+                    else -> {
+                        logDebug("Pencurimovie", "Cache validation failed, using cached for $cacheKey")
+                        return cached
+                    }
+                }
+            } else {
+                logDebug("Pencurimovie", "Cache HIT (no fingerprint) for $cacheKey")
+                return cached
+            }
+        }
+
+        logDebug("Pencurimovie", "Cache MISS for $cacheKey")
+
         val document = executeWithRetry {
             rateLimitDelay(moduleName = "Pencurimovie")
             app.get(
@@ -179,7 +210,7 @@ class Pencurimovie : MainAPI() {
         }
         val home = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
 
-        return newHomePageResponse(
+        val response = newHomePageResponse(
             list = HomePageList(
                 name = request.name,
                 list = home,
@@ -187,6 +218,17 @@ class Pencurimovie : MainAPI() {
             ),
             hasNext = true
         )
+
+        // Generate and store fingerprint
+        val fingerprint = monitor.generateFingerprint(mainUrl)
+        if (fingerprint != null) {
+            cacheFingerprints[cacheKey] = fingerprint
+        }
+        
+        // Cache the result
+        mainPageCache.put(cacheKey, response)
+
+        return response
     }
 
     private fun Element.toSearchResult(): SearchResponse {

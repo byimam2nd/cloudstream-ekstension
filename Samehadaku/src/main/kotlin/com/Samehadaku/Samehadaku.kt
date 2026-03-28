@@ -175,11 +175,6 @@ class Samehadaku : MainAPI() {
         }
 
         logDebug("Samehadaku", "Cache MISS for $cacheKey")
-            logDebug("Samehadaku", "Cache HIT for mainPage: $cacheKey")
-            return cached
-        }
-
-        logDebug("Samehadaku", "Cache MISS for mainPage: $cacheKey")
 
         // Fix: Handle relative URLs properly (like ExtCloud)
         val url = if (request.data.startsWith("http")) {

@@ -99,8 +99,6 @@ open class Donghuastream : MainAPI() {
         }
 
         logDebug("Donghuastream", "Cache MISS for $cacheKey")
-            return cached
-        }
 
         val document = executeWithRetry {
             rateLimitDelay()
