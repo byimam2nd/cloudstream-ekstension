@@ -48,6 +48,11 @@ import com.Anichin.generated_sync.executeWithRetry
 import com.Anichin.generated_sync.logError
 import com.Anichin.generated_sync.logDebug
 import com.Anichin.generated_sync.EpisodePreFetcher
+import com.Anichin.generated_sync.SmartCacheMonitor
+import com.Anichin.generated_sync.HttpClientFactory
+import com.Anichin.generated_sync.CompiledRegexPatterns
+import com.Anichin.generated_sync.CircuitBreaker
+import com.Anichin.generated_sync.CircuitBreakerRegistry
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
