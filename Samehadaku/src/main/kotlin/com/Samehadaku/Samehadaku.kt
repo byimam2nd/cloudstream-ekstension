@@ -250,35 +250,12 @@ class Samehadaku : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(query)
         if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Samehadaku", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Samehadaku", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Samehadaku", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Samehadaku", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
-        }
-
-        logDebug("Samehadaku", "Cache MISS for $cacheKey")
             logDebug("Samehadaku", "Cache HIT for search: $query")
             return cached
         }
 
         logDebug("Samehadaku", "Cache MISS for search: $query")
-        
+
         val searchResult = executeWithRetry {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
