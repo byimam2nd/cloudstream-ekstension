@@ -293,12 +293,6 @@ open class Donghuastream : MainAPI() {
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
         if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-import com.Donghuastream.generated_sync.SmartCacheMonitor
-import com.Donghuastream.generated_sync.HttpClientFactory
-import com.Donghuastream.generated_sync.CompiledRegexPatterns
-import com.Donghuastream.generated_sync.CircuitBreaker
-import com.Donghuastream.generated_sync.CircuitBreakerRegistry
-
             return true
         }
 
