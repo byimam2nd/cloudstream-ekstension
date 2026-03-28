@@ -5,6 +5,7 @@ import com.Donghuastream.generated_sync.EpisodePreFetcher
 import com.Donghuastream.generated_sync.rateLimitDelay
 import com.Donghuastream.generated_sync.getRandomUserAgent
 import com.Donghuastream.generated_sync.executeWithRetry
+import com.Donghuastream.generated_sync.logError
 
 
 import com.lagradost.api.Log
