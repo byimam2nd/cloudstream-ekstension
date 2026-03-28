@@ -333,12 +333,6 @@ class Pencurimovie : MainAPI() {
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
         if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-import com.Pencurimovie.generated_sync.SmartCacheMonitor
-import com.Pencurimovie.generated_sync.HttpClientFactory
-import com.Pencurimovie.generated_sync.CompiledRegexPatterns
-import com.Pencurimovie.generated_sync.CircuitBreaker
-import com.Pencurimovie.generated_sync.CircuitBreakerRegistry
-
             return true
         }
 
