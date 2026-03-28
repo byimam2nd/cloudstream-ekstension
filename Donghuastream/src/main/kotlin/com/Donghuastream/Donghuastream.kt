@@ -74,7 +74,31 @@ open class Donghuastream : MainAPI() {
         
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
+        val storedFingerprint = cacheFingerprints[cacheKey]
         if (cached != null) {
+            if (storedFingerprint != null) {
+                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
+                when (validity) {
+                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
+                        logDebug("Donghuastream", "Cache HIT (validated) for $cacheKey")
+                        return cached
+                    }
+                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
+                        logDebug("Donghuastream", "Cache INVALID - refetching for $cacheKey")
+                        cacheFingerprints.remove(cacheKey)
+                    }
+                    else -> {
+                        logDebug("Donghuastream", "Cache validation failed, using cached for $cacheKey")
+                        return cached
+                    }
+                }
+            } else {
+                logDebug("Donghuastream", "Cache HIT (no fingerprint) for $cacheKey")
+                return cached
+            }
+        }
+
+        logDebug("Donghuastream", "Cache MISS for $cacheKey")
             return cached
         }
 
@@ -97,6 +121,12 @@ open class Donghuastream : MainAPI() {
         )
 
         // Cache the result
+        // Generate and store fingerprint
+        val fingerprint = monitor.generateFingerprint(mainUrl)
+        if (fingerprint != null) {
+            cacheFingerprints[cacheKey] = fingerprint
+        }
+
         mainPageCache.put(cacheKey, response)
 
         return response
@@ -137,6 +167,29 @@ open class Donghuastream : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(cacheKey)
         if (cached != null) {
+            if (storedFingerprint != null) {
+                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
+                when (validity) {
+                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
+                        logDebug("Donghuastream", "Cache HIT (validated) for $cacheKey")
+                        return cached
+                    }
+                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
+                        logDebug("Donghuastream", "Cache INVALID - refetching for $cacheKey")
+                        cacheFingerprints.remove(cacheKey)
+                    }
+                    else -> {
+                        logDebug("Donghuastream", "Cache validation failed, using cached for $cacheKey")
+                        return cached
+                    }
+                }
+            } else {
+                logDebug("Donghuastream", "Cache HIT (no fingerprint) for $cacheKey")
+                return cached
+            }
+        }
+
+        logDebug("Donghuastream", "Cache MISS for $cacheKey")
             return cached
         }
 
