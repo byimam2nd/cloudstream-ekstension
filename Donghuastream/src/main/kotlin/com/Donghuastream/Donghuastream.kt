@@ -246,11 +246,6 @@ open class Donghuastream : MainAPI() {
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
             EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
-import com.Donghuastream.generated_sync.SmartCacheMonitor
-import com.Donghuastream.generated_sync.HttpClientFactory
-import com.Donghuastream.generated_sync.CompiledRegexPatterns
-import com.Donghuastream.generated_sync.CircuitBreaker
-import com.Donghuastream.generated_sync.CircuitBreakerRegistry
 
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
