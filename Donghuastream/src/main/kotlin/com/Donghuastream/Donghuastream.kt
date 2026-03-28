@@ -2,6 +2,8 @@ package com.Donghuastream
 
 import com.Donghuastream.generated_sync.CacheManager
 import com.Donghuastream.generated_sync.EpisodePreFetcher
+import com.Donghuastream.generated_sync.CircuitBreaker
+import com.Donghuastream.generated_sync.CircuitBreakerRegistry
 import com.Donghuastream.generated_sync.SmartCacheMonitor
 import com.Donghuastream.generated_sync.HttpClientFactory
 import com.Donghuastream.generated_sync.CompiledRegexPatterns

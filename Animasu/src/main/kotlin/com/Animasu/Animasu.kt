@@ -23,6 +23,8 @@ import com.Animasu.generated_sync.logDebug
 import com.Animasu.generated_sync.executeWithRetry
 import com.Animasu.generated_sync.rateLimitDelay
 import com.Animasu.generated_sync.EpisodePreFetcher
+import com.Animasu.generated_sync.CircuitBreaker
+import com.Animasu.generated_sync.CircuitBreakerRegistry
 import com.Animasu.generated_sync.SmartCacheMonitor
 import com.Animasu.generated_sync.HttpClientFactory
 import com.Animasu.generated_sync.CompiledRegexPatterns

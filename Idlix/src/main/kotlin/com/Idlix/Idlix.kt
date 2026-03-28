@@ -27,6 +27,8 @@ import com.Idlix.generated_sync.executeWithRetry
 import com.Idlix.generated_sync.logError
 import com.Idlix.generated_sync.logDebug
 import com.Idlix.generated_sync.EpisodePreFetcher
+import com.Idlix.generated_sync.CircuitBreaker
+import com.Idlix.generated_sync.CircuitBreakerRegistry
 import com.Idlix.generated_sync.SmartCacheMonitor
 import com.Idlix.generated_sync.HttpClientFactory
 import com.Idlix.generated_sync.CompiledRegexPatterns
