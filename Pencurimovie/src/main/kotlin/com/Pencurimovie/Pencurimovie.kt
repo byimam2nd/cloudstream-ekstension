@@ -12,6 +12,7 @@ import com.Pencurimovie.generated_sync.rateLimitDelay
 import com.Pencurimovie.generated_sync.getRandomUserAgent
 import com.Pencurimovie.generated_sync.executeWithRetry
 import com.Pencurimovie.generated_sync.logError
+import com.Pencurimovie.generated_sync.logDebug
 
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
