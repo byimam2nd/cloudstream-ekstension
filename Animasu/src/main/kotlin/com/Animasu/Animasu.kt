@@ -22,6 +22,11 @@ import com.Animasu.generated_sync.logError
 import com.Animasu.generated_sync.executeWithRetry
 import com.Animasu.generated_sync.rateLimitDelay
 import com.Animasu.generated_sync.EpisodePreFetcher
+import com.Animasu.generated_sync.SmartCacheMonitor
+import com.Animasu.generated_sync.HttpClientFactory
+import com.Animasu.generated_sync.CompiledRegexPatterns
+import com.Animasu.generated_sync.CircuitBreaker
+import com.Animasu.generated_sync.CircuitBreakerRegistry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
