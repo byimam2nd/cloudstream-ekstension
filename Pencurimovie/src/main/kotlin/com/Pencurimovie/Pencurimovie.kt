@@ -670,3 +670,7 @@ class PencurimovieMonitor : SmartCacheMonitor() {
 }
 private val monitor = PencurimovieMonitor()
 private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
+
+// Cache instances
+private val searchCache = CacheManager<List<SearchResponse>>()
+private val mainPageCache = CacheManager<HomePageResponse>()
