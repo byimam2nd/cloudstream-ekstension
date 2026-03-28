@@ -20,9 +20,6 @@ import com.LayarKaca21.generated_sync.SmartCacheMonitor
 private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
-// Smart Cache Monitor untuk fingerprint-based invalidation
-private val monitor = LayarKacaMonitor()
-
 class LayarKaca21 : MainAPI() {
 
     override var mainUrl = "https://lk21.de"

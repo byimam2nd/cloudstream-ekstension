@@ -30,9 +30,6 @@ import com.Idlix.generated_sync.EpisodePreFetcher
 private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
-// Smart Cache Monitor untuk fingerprint-based invalidation
-private val monitor = IdlixMonitor()
-
 class Idlix : MainAPI() {
     override var mainUrl = "https://idlixian.com"
     private var directUrl = mainUrl

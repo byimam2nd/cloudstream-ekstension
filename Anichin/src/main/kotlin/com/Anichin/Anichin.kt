@@ -53,9 +53,6 @@ import com.Anichin.generated_sync.EpisodePreFetcher
 private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
-// Smart Cache Monitor untuk fingerprint-based invalidation
-private val monitor = AnichinMonitor()
-
 open class Anichin : MainAPI() {
     override var mainUrl = "https://anichin.cafe"
     override var name = "Anichin"
