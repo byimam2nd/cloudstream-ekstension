@@ -70,13 +70,33 @@ class Funmovieslix : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "${request.data}${page}"
 
-        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
+        // Check cache with fingerprint validation
         val cached = mainPageCache.get(cacheKey)
+        val storedFingerprint = cacheFingerprints[cacheKey]
+        
         if (cached != null) {
-            return cached
+            if (storedFingerprint != null) {
+                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
+                when (validity) {
+                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
+                        logDebug("Funmovieslix", "Cache HIT (validated) for $cacheKey")
+                        return cached
+                    }
+                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
+                        logDebug("Funmovieslix", "Cache INVALID - refetching for $cacheKey")
+                        cacheFingerprints.remove(cacheKey)
+                    }
+                    else -> {
+                        logDebug("Funmovieslix", "Cache validation failed, using cached for $cacheKey")
+                        return cached
+                    }
+                }
+            } else {
+                logDebug("Funmovieslix", "Cache HIT (no fingerprint) for $cacheKey")
+                return cached
+            }
         }
 
         val document = executeWithRetry {
@@ -97,6 +117,12 @@ class Funmovieslix : MainAPI() {
             hasNext = true
         )
 
+        // Generate and store fingerprint
+        val fingerprint = monitor.generateFingerprint(mainUrl)
+        if (fingerprint != null) {
+            cacheFingerprints[cacheKey] = fingerprint
+        }
+        
         // Cache the result
         mainPageCache.put(cacheKey, response)
 
