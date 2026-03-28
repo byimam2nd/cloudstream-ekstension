@@ -81,9 +81,28 @@ class Idlix : MainAPI() {
 
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
+        val storedFingerprint = cacheFingerprints[cacheKey]
         if (cached != null) {
-            logDebug("Idlix", "Cache HIT for $cacheKey")
-            return cached
+            if (storedFingerprint != null) {
+                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
+                when (validity) {
+                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
+                        logDebug("Idlix", "Cache HIT (validated) for $cacheKey")
+                        return cached
+                    }
+                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
+                        logDebug("Idlix", "Cache INVALID - refetching for $cacheKey")
+                        cacheFingerprints.remove(cacheKey)
+                    }
+                    else -> {
+                        logDebug("Idlix", "Cache validation failed, using cached for $cacheKey")
+                        return cached
+                    }
+                }
+            } else {
+                logDebug("Idlix", "Cache HIT (no fingerprint) for $cacheKey")
+                return cached
+            }
         }
 
         logDebug("Idlix", "Cache MISS for $cacheKey")
@@ -121,6 +140,12 @@ class Idlix : MainAPI() {
 
         val response = newHomePageResponse(request.name, home)
 
+        // Generate and store fingerprint
+        val fingerprint = monitor.generateFingerprint(mainUrl)
+        if (fingerprint != null) {
+            cacheFingerprints[cacheKey] = fingerprint
+        }
+        
         // Cache the result
         mainPageCache.put(cacheKey, response)
 
