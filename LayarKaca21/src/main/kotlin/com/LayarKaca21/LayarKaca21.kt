@@ -268,11 +268,7 @@ class LayarKaca21 : MainAPI() {
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
             EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
-import com.LayarKaca21.generated_sync.SmartCacheMonitor
-import com.LayarKaca21.generated_sync.HttpClientFactory
-import com.LayarKaca21.generated_sync.CompiledRegexPatterns
-import com.LayarKaca21.generated_sync.CircuitBreaker
-import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
+
 
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
