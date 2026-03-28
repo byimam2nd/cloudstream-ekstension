@@ -193,15 +193,35 @@ class Animasu : MainAPI() {
     // ========================================
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
-        
-        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
+
+        // Check cache with fingerprint validation
         val cached = mainPageCache.get(cacheKey)
-        if (cached != null) {
-            Log.d("Animasu", "Cache HIT for mainPage: $cacheKey")
-            return cached
-        }
+        val storedFingerprint = cacheFingerprints[cacheKey]
         
-        Log.d("Animasu", "Cache MISS for mainPage: $cacheKey")
+        if (cached != null) {
+            if (storedFingerprint != null) {
+                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
+                when (validity) {
+                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
+                        logDebug("Animasu", "Cache HIT (validated) for $cacheKey")
+                        return cached
+                    }
+                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
+                        logDebug("Animasu", "Cache INVALID - refetching for $cacheKey")
+                        cacheFingerprints.remove(cacheKey)
+                    }
+                    else -> {
+                        logDebug("Animasu", "Cache validation failed, using cached for $cacheKey")
+                        return cached
+                    }
+                }
+            } else {
+                logDebug("Animasu", "Cache HIT (no fingerprint) for $cacheKey")
+                return cached
+            }
+        }
+
+        logDebug("Animasu", "Cache MISS for $cacheKey")
         
         // Fetch dengan retry logic dan rate limiting
         val document = executeWithRetry {
@@ -218,10 +238,16 @@ class Animasu : MainAPI() {
         }
         
         val response = newHomePageResponse(request.name, home)
+
+        // Generate and store fingerprint
+        val fingerprint = monitor.generateFingerprint(mainUrl)
+        if (fingerprint != null) {
+            cacheFingerprints[cacheKey] = fingerprint
+        }
         
         // Save to cache
         mainPageCache.put(cacheKey, response)
-        
+
         return response
     }
 
