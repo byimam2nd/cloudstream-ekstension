@@ -314,7 +314,7 @@ open class Donghuastream : MainAPI() {
                     val decodedHtml = try {
                         base64Decode(base64)
                     } catch (_: Exception) {
-                        Log.w("Donghuastream", "Base64 decode failed: $base64")
+                        logError("Donghuastream", "Base64 decode failed")
                         return@async
                     }
 
@@ -344,7 +344,7 @@ open class Donghuastream : MainAPI() {
                                 callback = callback
                             )
                             if (!loaded) {
-                                Log.e("Donghuastream", "loadExtractorWithFallback failed for $cleanedUrl")
+                                logError("Donghuastream", "loadExtractorWithFallback failed for $cleanedUrl")
                             }
                         }
                         iframeUrl.endsWith(".mp4") -> {
@@ -368,7 +368,7 @@ open class Donghuastream : MainAPI() {
                                 callback = callback
                             )
                             if (!loaded) {
-                                Log.e("Donghuastream", "loadExtractorWithFallback failed for $iframeUrl")
+                                logError("Donghuastream", "loadExtractorWithFallback failed for $iframeUrl")
                             }
                         }
                     }

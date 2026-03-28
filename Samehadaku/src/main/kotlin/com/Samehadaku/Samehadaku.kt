@@ -145,11 +145,11 @@ class Samehadaku : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
-            Log.d("Samehadaku", "Cache HIT for mainPage: $cacheKey")
+            logDebug("Samehadaku", "Cache HIT for mainPage: $cacheKey")
             return cached
         }
-        
-        Log.d("Samehadaku", "Cache MISS for mainPage: $cacheKey")
+
+        logDebug("Samehadaku", "Cache MISS for mainPage: $cacheKey")
 
         // Fix: Handle relative URLs properly (like ExtCloud)
         val url = if (request.data.startsWith("http")) {
@@ -219,11 +219,11 @@ class Samehadaku : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(query)
         if (cached != null) {
-            Log.d("Samehadaku", "Cache HIT for search: $query")
+            logDebug("Samehadaku", "Cache HIT for search: $query")
             return cached
         }
-        
-        Log.d("Samehadaku", "Cache MISS for search: $query")
+
+        logDebug("Samehadaku", "Cache MISS for search: $query")
         
         val searchResult = executeWithRetry {
             rateLimitDelay(moduleName = "Samehadaku")
@@ -251,11 +251,11 @@ class Samehadaku : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = loadCache.get(url)
         if (cached != null) {
-            Log.d("Samehadaku", "Cache HIT for load: $url")
+            logDebug("Samehadaku", "Cache HIT for load: $url")
             return cached
         }
-        
-        Log.d("Samehadaku", "Cache MISS for load: $url")
+
+        logDebug("Samehadaku", "Cache MISS for load: $url")
         
         val loadResult = executeWithRetry {
             rateLimitDelay(moduleName = "Samehadaku")
@@ -413,7 +413,7 @@ class Samehadaku : MainAPI() {
             }
         }
         if (!loaded) {
-            Log.e("Samehadaku", "loadExtractorWithFallback failed for $url")
+            logError("Samehadaku", "loadExtractorWithFallback failed for $url")
         }
     }
 }

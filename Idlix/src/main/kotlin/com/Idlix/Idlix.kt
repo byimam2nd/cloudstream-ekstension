@@ -76,11 +76,11 @@ class Idlix : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
-            Log.d("Idlix", "Cache HIT for $cacheKey")
+            logDebug("Idlix", "Cache HIT for $cacheKey")
             return cached
         }
 
-        Log.d("Idlix", "Cache MISS for $cacheKey")
+        logDebug("Idlix", "Cache MISS for $cacheKey")
 
         val url = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1

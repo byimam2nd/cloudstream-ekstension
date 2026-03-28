@@ -330,7 +330,7 @@ class Funmovieslix : MainAPI() {
                             }
                         }
 
-                        Log.d("Funmovieslix", "Trying to load: $fixedUrl")
+                        logDebug("Funmovieslix", "Trying to load: $fixedUrl")
                         val loaded = com.Funmovieslix.generated_sync.loadExtractorWithFallback(
                             url = fixedUrl,
                             referer = mainUrl,
@@ -356,7 +356,7 @@ class Funmovieslix : MainAPI() {
             return false
         }
 
-        Log.d("Funmovieslix", "Successfully loaded ${loadedLinks.size} links")
+        logDebug("Funmovieslix", "Successfully loaded ${loadedLinks.size} links")
         return true
     }
 
