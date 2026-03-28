@@ -63,14 +63,34 @@ class LayarKaca21 : MainAPI() {
     ): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
+        // Check cache with fingerprint validation
         val cached = mainPageCache.get(cacheKey)
+        val storedFingerprint = cacheFingerprints[cacheKey]
+        
         if (cached != null) {
-            Log.d("LayarKaca", "Cache HIT for $cacheKey - INSTANT LOAD!")
-            return cached
+            if (storedFingerprint != null) {
+                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
+                when (validity) {
+                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
+                        logDebug("LayarKaca", "Cache HIT (validated) for $cacheKey")
+                        return cached
+                    }
+                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
+                        logDebug("LayarKaca", "Cache INVALID - refetching for $cacheKey")
+                        cacheFingerprints.remove(cacheKey)
+                    }
+                    else -> {
+                        logDebug("LayarKaca", "Cache validation failed, using cached for $cacheKey")
+                        return cached
+                    }
+                }
+            } else {
+                logDebug("LayarKaca", "Cache HIT (no fingerprint) for $cacheKey")
+                return cached
+            }
         }
 
-        Log.d("LayarKaca", "Cache MISS for $cacheKey - fetching from network...")
+        logDebug("LayarKaca", "Cache MISS for $cacheKey - fetching from network...")
 
         // Only apply rate limit and retry for network requests (cache miss)
         val response = executeWithRetry(maxRetries = 3) {
@@ -88,9 +108,15 @@ class LayarKaca21 : MainAPI() {
 
         val result = newHomePageResponse(request.name, home)
 
+        // Generate and store fingerprint
+        val fingerprint = monitor.generateFingerprint(mainUrl)
+        if (fingerprint != null) {
+            cacheFingerprints[cacheKey] = fingerprint
+        }
+        
         // Cache the result
         mainPageCache.put(cacheKey, result)
-        Log.d("LayarKaca", "Cached result for $cacheKey")
+        logDebug("LayarKaca", "Cached result for $cacheKey")
 
         return result
     }
