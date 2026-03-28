@@ -47,11 +47,8 @@ MASTER_FILES=(
     "MasterHttpClientFactory.kt:SyncHttpClientFactory.kt"
     "MasterCompiledRegexPatterns.kt:SyncCompiledRegexPatterns.kt"
 
-    # v3.2: Non-conflicting utilities
-    "MasterConstants.kt:SyncConstants.kt"
+    # v3.3: Performance optimization (kept for future use)
     "MasterCircuitBreaker.kt:SyncCircuitBreaker.kt"
-
-    # v3.3: Performance optimization
     "MasterRequestDeduplicator.kt:SyncRequestDeduplicator.kt"
 
     # v3.4: Extractor helper for all modules

@@ -223,11 +223,14 @@ class Pencurimovie : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(
-            url,
-            timeout = requestTimeout,
-            headers = mapOf("User-Agent" to "Mozilla/5.0")
-        ).document
+        val document = executeWithRetry {
+            rateLimitDelay(moduleName = "Pencurimovie")
+            app.get(
+                url,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).document
+        }
         
         // FIXED: Fallback strategy untuk title (3-layer)
         val title = document.selectFirst("div.mvic-desc h3")?.text()?.trim()
@@ -442,7 +445,7 @@ class Pencurimovie : MainAPI() {
             )
             
             // Step 1: Initial request (get cookies) - WITH TIMEOUT
-            val res = app.get(url, headers = headers, allowRedirects = true, timeout = 20L)
+            val res = app.get(url, headers = headers, allowRedirects = true, timeout = requestTimeout)
             val text = res.text
             val finalUrl = res.url
             
