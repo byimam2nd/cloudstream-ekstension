@@ -161,35 +161,15 @@ open class Donghuastream : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "search_${query}"
-        
+
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(cacheKey)
         if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Donghuastream", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Donghuastream", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Donghuastream", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Donghuastream", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+            logDebug("Donghuastream", "Cache HIT for $cacheKey")
+            return cached
         }
 
         logDebug("Donghuastream", "Cache MISS for $cacheKey")
-            return cached
-        }
 
         // OPTIMIZED: Parallel search with timeout (3x faster)
         val results = coroutineScope {

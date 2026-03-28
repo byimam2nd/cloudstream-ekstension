@@ -19,6 +19,7 @@ import com.Animasu.generated_sync.CacheManager
 import com.Animasu.generated_sync.getImageAttr
 import com.Animasu.generated_sync.getRandomUserAgent
 import com.Animasu.generated_sync.logError
+import com.Animasu.generated_sync.logDebug
 import com.Animasu.generated_sync.executeWithRetry
 import com.Animasu.generated_sync.rateLimitDelay
 import com.Animasu.generated_sync.EpisodePreFetcher
