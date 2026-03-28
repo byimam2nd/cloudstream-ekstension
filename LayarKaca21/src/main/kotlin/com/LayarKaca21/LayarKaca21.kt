@@ -6,6 +6,11 @@ import com.LayarKaca21.generated_sync.rateLimitDelay
 import com.LayarKaca21.generated_sync.getRandomUserAgent
 import com.LayarKaca21.generated_sync.logError
 import com.LayarKaca21.generated_sync.EpisodePreFetcher
+import com.LayarKaca21.generated_sync.SmartCacheMonitor
+import com.LayarKaca21.generated_sync.HttpClientFactory
+import com.LayarKaca21.generated_sync.CompiledRegexPatterns
+import com.LayarKaca21.generated_sync.CircuitBreaker
+import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
@@ -264,6 +269,11 @@ class LayarKaca21 : MainAPI() {
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
             EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+import com.LayarKaca21.generated_sync.SmartCacheMonitor
+import com.LayarKaca21.generated_sync.HttpClientFactory
+import com.LayarKaca21.generated_sync.CompiledRegexPatterns
+import com.LayarKaca21.generated_sync.CircuitBreaker
+import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.posterHeaders = posterHeaders
@@ -296,6 +306,11 @@ class LayarKaca21 : MainAPI() {
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
         if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+import com.LayarKaca21.generated_sync.SmartCacheMonitor
+import com.LayarKaca21.generated_sync.HttpClientFactory
+import com.LayarKaca21.generated_sync.CompiledRegexPatterns
+import com.LayarKaca21.generated_sync.CircuitBreaker
+import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
             return true
         }
         

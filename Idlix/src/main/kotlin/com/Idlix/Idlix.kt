@@ -26,6 +26,11 @@ import com.Idlix.generated_sync.executeWithRetry
 import com.Idlix.generated_sync.logError
 import com.Idlix.generated_sync.logDebug
 import com.Idlix.generated_sync.EpisodePreFetcher
+import com.Idlix.generated_sync.SmartCacheMonitor
+import com.Idlix.generated_sync.HttpClientFactory
+import com.Idlix.generated_sync.CompiledRegexPatterns
+import com.Idlix.generated_sync.CircuitBreaker
+import com.Idlix.generated_sync.CircuitBreakerRegistry
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -343,6 +348,11 @@ class Idlix : MainAPI() {
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
             EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+import com.Idlix.generated_sync.SmartCacheMonitor
+import com.Idlix.generated_sync.HttpClientFactory
+import com.Idlix.generated_sync.CompiledRegexPatterns
+import com.Idlix.generated_sync.CircuitBreaker
+import com.Idlix.generated_sync.CircuitBreakerRegistry
 
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
@@ -376,6 +386,11 @@ class Idlix : MainAPI() {
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
         if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+import com.Idlix.generated_sync.SmartCacheMonitor
+import com.Idlix.generated_sync.HttpClientFactory
+import com.Idlix.generated_sync.CompiledRegexPatterns
+import com.Idlix.generated_sync.CircuitBreaker
+import com.Idlix.generated_sync.CircuitBreakerRegistry
             return true
         }
         

@@ -2,6 +2,11 @@ package com.Pencurimovie
 
 import com.Pencurimovie.generated_sync.CacheManager
 import com.Pencurimovie.generated_sync.EpisodePreFetcher
+import com.Pencurimovie.generated_sync.SmartCacheMonitor
+import com.Pencurimovie.generated_sync.HttpClientFactory
+import com.Pencurimovie.generated_sync.CompiledRegexPatterns
+import com.Pencurimovie.generated_sync.CircuitBreaker
+import com.Pencurimovie.generated_sync.CircuitBreakerRegistry
 import com.Pencurimovie.generated_sync.loadExtractorWithFallback
 import com.Pencurimovie.generated_sync.rateLimitDelay
 import com.Pencurimovie.generated_sync.getRandomUserAgent
@@ -292,6 +297,11 @@ class Pencurimovie : MainAPI() {
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
             EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+import com.Pencurimovie.generated_sync.SmartCacheMonitor
+import com.Pencurimovie.generated_sync.HttpClientFactory
+import com.Pencurimovie.generated_sync.CompiledRegexPatterns
+import com.Pencurimovie.generated_sync.CircuitBreaker
+import com.Pencurimovie.generated_sync.CircuitBreakerRegistry
 
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
@@ -327,6 +337,11 @@ class Pencurimovie : MainAPI() {
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
         if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+import com.Pencurimovie.generated_sync.SmartCacheMonitor
+import com.Pencurimovie.generated_sync.HttpClientFactory
+import com.Pencurimovie.generated_sync.CompiledRegexPatterns
+import com.Pencurimovie.generated_sync.CircuitBreaker
+import com.Pencurimovie.generated_sync.CircuitBreakerRegistry
             return true
         }
         

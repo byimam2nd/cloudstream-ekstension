@@ -2,6 +2,11 @@ package com.Donghuastream
 
 import com.Donghuastream.generated_sync.CacheManager
 import com.Donghuastream.generated_sync.EpisodePreFetcher
+import com.Donghuastream.generated_sync.SmartCacheMonitor
+import com.Donghuastream.generated_sync.HttpClientFactory
+import com.Donghuastream.generated_sync.CompiledRegexPatterns
+import com.Donghuastream.generated_sync.CircuitBreaker
+import com.Donghuastream.generated_sync.CircuitBreakerRegistry
 import com.Donghuastream.generated_sync.rateLimitDelay
 import com.Donghuastream.generated_sync.getRandomUserAgent
 import com.Donghuastream.generated_sync.executeWithRetry
@@ -241,6 +246,11 @@ open class Donghuastream : MainAPI() {
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
             EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+import com.Donghuastream.generated_sync.SmartCacheMonitor
+import com.Donghuastream.generated_sync.HttpClientFactory
+import com.Donghuastream.generated_sync.CompiledRegexPatterns
+import com.Donghuastream.generated_sync.CircuitBreaker
+import com.Donghuastream.generated_sync.CircuitBreakerRegistry
 
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
@@ -288,6 +298,11 @@ open class Donghuastream : MainAPI() {
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
         if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
+import com.Donghuastream.generated_sync.SmartCacheMonitor
+import com.Donghuastream.generated_sync.HttpClientFactory
+import com.Donghuastream.generated_sync.CompiledRegexPatterns
+import com.Donghuastream.generated_sync.CircuitBreaker
+import com.Donghuastream.generated_sync.CircuitBreakerRegistry
             return true
         }
         
