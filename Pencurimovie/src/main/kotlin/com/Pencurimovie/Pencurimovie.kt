@@ -2,8 +2,6 @@ package com.Pencurimovie
 
 import com.Pencurimovie.generated_sync.CacheManager
 import com.Pencurimovie.generated_sync.EpisodePreFetcher
-import com.Pencurimovie.generated_sync.CircuitBreaker
-import com.Pencurimovie.generated_sync.CircuitBreakerRegistry
 import com.Pencurimovie.generated_sync.SmartCacheMonitor
 import com.Pencurimovie.generated_sync.HttpClientFactory
 import com.Pencurimovie.generated_sync.CompiledRegexPatterns

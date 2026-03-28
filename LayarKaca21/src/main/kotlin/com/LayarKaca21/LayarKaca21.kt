@@ -7,8 +7,6 @@ import com.LayarKaca21.generated_sync.getRandomUserAgent
 import com.LayarKaca21.generated_sync.logError
 import com.LayarKaca21.generated_sync.logDebug
 import com.LayarKaca21.generated_sync.EpisodePreFetcher
-import com.LayarKaca21.generated_sync.CircuitBreaker
-import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
 import com.LayarKaca21.generated_sync.SmartCacheMonitor
 import com.LayarKaca21.generated_sync.HttpClientFactory
 import com.LayarKaca21.generated_sync.CompiledRegexPatterns
