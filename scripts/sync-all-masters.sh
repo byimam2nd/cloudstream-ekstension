@@ -47,12 +47,16 @@ MASTER_FILES=(
     "MasterHttpClientFactory.kt:SyncHttpClientFactory.kt"
     "MasterCompiledRegexPatterns.kt:SyncCompiledRegexPatterns.kt"
 
-    # v3.3: Performance optimization (kept for future use)
+    # v3.3: Performance optimization (consolidated into AutoUsed)
     "MasterCircuitBreaker.kt:SyncCircuitBreaker.kt"
-    "MasterRequestDeduplicator.kt:SyncRequestDeduplicator.kt"
 
     # v3.4: Extractor helper for all modules
     "MasterExtractorHelper.kt:SyncExtractorHelper.kt"
+)
+
+# v3.9: Auto-used optimizations (consolidated)
+MASTER_FILES+=(
+    "MasterAutoUsed.kt:SyncAutoUsed.kt"
 )
 
 echo "📋 Master files to sync:"
