@@ -118,8 +118,7 @@ suspend fun loadExtractorWithFallback(
                             // Get CircuitBreaker for this extractor
                             val breaker = CircuitBreakerRegistry.getOrCreate(
                                 extractor.name,
-                                failureThreshold = 3,
-                                resetTimeoutMs = 60_000L
+                                failureThreshold = 3
                             )
                             
                             Log.d("ExtractorHelper", "Trying extractor: ${extractor.name} (${extractor.mainUrl})")
