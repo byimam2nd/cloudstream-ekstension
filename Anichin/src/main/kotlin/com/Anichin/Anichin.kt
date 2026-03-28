@@ -59,13 +59,13 @@ private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
 // Smart Cache Monitor for fingerprint-based cache validation
-private val monitor = SmartCacheMonitor(object : SmartCacheMonitor.TitleFetcher {
+class AnichinMonitor : SmartCacheMonitor() {
     override suspend fun fetchTitles(url: String): List<String> {
         val document = executeWithRetry {
             rateLimitDelay(moduleName = "Anichin")
             app.get(
                 url,
-                timeout = 5000L,
+                timeout = CHECK_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -73,7 +73,10 @@ private val monitor = SmartCacheMonitor(object : SmartCacheMonitor.TitleFetcher 
             .mapNotNull { it.attr("title").trim() }
             .filter { it.isNotEmpty() }
     }
-})
+}
+
+private val monitor = AnichinMonitor()
+private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
 
 open class Anichin : MainAPI() {
     override var mainUrl = "https://anichin.cafe"
@@ -98,19 +101,30 @@ open class Anichin : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache first
+        // Check cache with fingerprint validation
         val cached = mainPageCache.get(cacheKey)
+        val storedFingerprint = cacheFingerprints[cacheKey]
+        
         if (cached != null) {
-            // Validate cache with fingerprint
-            val validity = monitor.checkCacheValidity(mainUrl, cached.fingerprint)
-            if (validity == SmartCacheMonitor.CacheValidationResult.CACHE_VALID) {
-                logDebug("Anichin", "Cache HIT (validated) for $cacheKey")
-                return cached
-            } else if (validity == SmartCacheMonitor.CacheValidationResult.CACHE_INVALID) {
-                logDebug("Anichin", "Cache INVALID - refetching for $cacheKey")
-                mainPageCache.remove(cacheKey)
+            if (storedFingerprint != null) {
+                // Validate cache with fingerprint
+                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
+                when (validity) {
+                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
+                        logDebug("Anichin", "Cache HIT (validated) for $cacheKey")
+                        return cached
+                    }
+                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
+                        logDebug("Anichin", "Cache INVALID - refetching for $cacheKey")
+                        mainPageCache.remove(cacheKey)
+                    }
+                    else -> {
+                        logDebug("Anichin", "Cache validation failed, using cached for $cacheKey")
+                        return cached
+                    }
+                }
             } else {
-                logDebug("Anichin", "Cache HIT (validation failed, using cached) for $cacheKey")
+                logDebug("Anichin", "Cache HIT (no fingerprint) for $cacheKey")
                 return cached
             }
         }
@@ -140,10 +154,10 @@ open class Anichin : MainAPI() {
             hasNext = true
         )
 
-        // Generate fingerprint and cache with fingerprint
+        // Generate and store fingerprint
         val fingerprint = monitor.generateFingerprint(mainUrl)
         if (fingerprint != null) {
-            response.fingerprint = fingerprint
+            cacheFingerprints[cacheKey] = fingerprint
         }
         
         // Cache the result
