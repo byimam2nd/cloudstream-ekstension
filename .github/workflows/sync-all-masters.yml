@@ -75,12 +75,13 @@ jobs:
         SYNC_FILES=(
           "SyncExtractors.kt"
           "SyncUtils.kt"
-          "SyncCaches.kt"              # NEW: Combined CacheManager + ImageCache
+          "SyncCaches.kt"              # NEW: Combined CacheManager + ImageCache + PersistentCacheManager
           "SyncMonitors.kt"            # NEW: Combined 3 monitor files
           "SyncHttpClientFactory.kt"
           "SyncCompiledRegexPatterns.kt"
-          "SyncExtractorHelper.kt"     # NEW: Extractor helper with pre-fetching
-          "SyncRateLimiter.kt"         # NEW: Centralized rate limiting
+          "SyncExtractorHelper.kt"     # NEW: Extractor helper with pre-fetching + CircuitBreaker
+          "SyncCircuitBreaker.kt"      # Failure isolation
+          "SyncRequestDeduplicator.kt" # Request deduplication (future use)
         )
 
         for MODULE in $MODULES; do
