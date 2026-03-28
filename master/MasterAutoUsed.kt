@@ -13,6 +13,7 @@
 // FEATURES (ALL AUTO-USED):
 // - CompiledRegexPatterns (auto-use common patterns)
 // - RequestDeduplicator (auto-wrap requests)
+// - HttpClientFactory (auto-use optimized client)
 // - Constants (centralized values)
 // ========================================
 
@@ -287,4 +288,78 @@ fun cleanDisplayText(text: String): String {
         .replace(CompiledRegexPatterns.YEAR_IN_PARENS, "")  // Remove (2024)
         .replace(CompiledRegexPatterns.RESOLUTION_SUFFIX, "")  // Remove -1920x1080
         .trim()
+}
+
+// ============================================
+// REGION: HTTPCLIENTFACTORY AUTO-USED
+// ============================================
+
+/**
+ * Optimized HTTP GET with auto-optimizations
+ * 
+ * This function AUTO-USES HttpClientFactory:
+ * - HTTP/2 support
+ * - DNS cache
+ * - Connection pooling
+ * - Session-based User-Agent
+ * - Default headers
+ * 
+ * Providers call this instead of app.get() for better performance!
+ * 
+ * Usage:
+ * ```kotlin
+ * // Instead of: app.get(url).document
+ * // Use: optimizedHttpGet(url).document
+ * // Auto-gets: HTTP/2, DNS cache, connection pooling!
+ * ```
+ */
+suspend fun optimizedHttpGet(
+    url: String,
+    timeout: Long = AutoUsedConstants.DEFAULT_TIMEOUT
+): String {
+    val client = HttpClientFactory.getClient()
+    val headers = HttpClientFactory.getDefaultHeaders(url)
+    
+    val request = okhttp3.Request.Builder()
+        .url(url)
+        .headers(okhttp3.Headers.Builder().apply {
+            headers.forEach { (key, value) -> add(key, value) }
+        }.build())
+        .build()
+    
+    return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw Exception("HTTP error: ${response.code}")
+            }
+            response.body?.string() ?: ""
+        }
+    }
+}
+
+/**
+ * Get optimized HTTP client (auto-uses HttpClientFactory)
+ * 
+ * Providers can use this directly for advanced usage!
+ */
+fun getOptimizedHttpClient(): okhttp3.OkHttpClient {
+    return HttpClientFactory.getClient()
+}
+
+/**
+ * Get default headers (auto-uses HttpClientFactory)
+ * 
+ * Providers can use this for custom requests!
+ */
+fun getDefaultHttpHeaders(domain: String? = null): Map<String, String> {
+    return HttpClientFactory.getDefaultHeaders(domain)
+}
+
+/**
+ * Get session-based User-Agent (auto-uses HttpClientFactory)
+ * 
+ * Providers can use this for consistent User-Agent per domain!
+ */
+fun getSessionUserAgent(domain: String): String {
+    return HttpClientFactory.getUserAgentForDomain(domain)
 }
