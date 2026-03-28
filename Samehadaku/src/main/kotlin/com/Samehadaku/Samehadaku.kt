@@ -150,31 +150,12 @@ class Samehadaku : MainAPI() {
         
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
-        val storedFingerprint = cacheFingerprints[cacheKey]
         if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Samehadaku", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Samehadaku", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Samehadaku", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Samehadaku", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+            logDebug("Samehadaku", "Cache HIT for mainPage: $cacheKey")
+            return cached
         }
 
-        logDebug("Samehadaku", "Cache MISS for $cacheKey")
+        logDebug("Samehadaku", "Cache MISS for mainPage: $cacheKey")
 
         // Fix: Handle relative URLs properly (like ExtCloud)
         val url = if (request.data.startsWith("http")) {
@@ -232,12 +213,6 @@ class Samehadaku : MainAPI() {
         )
         
         // Save to cache
-        // Generate and store fingerprint
-        val fingerprint = monitor.generateFingerprint(mainUrl)
-        if (fingerprint != null) {
-            cacheFingerprints[cacheKey] = fingerprint
-        }
-
         mainPageCache.put(cacheKey, responseObj)
         
         return responseObj
@@ -255,7 +230,7 @@ class Samehadaku : MainAPI() {
         }
 
         logDebug("Samehadaku", "Cache MISS for search: $query")
-
+        
         val searchResult = executeWithRetry {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
@@ -282,29 +257,6 @@ class Samehadaku : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = loadCache.get(url)
         if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Samehadaku", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Samehadaku", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Samehadaku", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Samehadaku", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
-        }
-
-        logDebug("Samehadaku", "Cache MISS for $cacheKey")
             logDebug("Samehadaku", "Cache HIT for load: $url")
             return cached
         }
