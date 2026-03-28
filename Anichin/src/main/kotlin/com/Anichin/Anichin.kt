@@ -38,6 +38,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.supervisorScope
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.util.concurrent.ConcurrentHashMap
 
 // ============================================
 // OPTIMIZED: Import shared utilities from generated_sync
@@ -116,7 +117,8 @@ open class Anichin : MainAPI() {
                     }
                     SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
                         logDebug("Anichin", "Cache INVALID - refetching for $cacheKey")
-                        mainPageCache.remove(cacheKey)
+                        // Invalidate by putting null
+                        cacheFingerprints.remove(cacheKey)
                     }
                     else -> {
                         logDebug("Anichin", "Cache validation failed, using cached for $cacheKey")
