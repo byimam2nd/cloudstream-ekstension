@@ -24,6 +24,7 @@ import com.Idlix.generated_sync.rateLimitDelay
 import com.Idlix.generated_sync.getRandomUserAgent
 import com.Idlix.generated_sync.executeWithRetry
 import com.Idlix.generated_sync.logError
+import com.Idlix.generated_sync.logDebug
 import com.Idlix.generated_sync.EpisodePreFetcher
 
 // Cache instances

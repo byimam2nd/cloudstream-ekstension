@@ -6,6 +6,7 @@ import com.Donghuastream.generated_sync.rateLimitDelay
 import com.Donghuastream.generated_sync.getRandomUserAgent
 import com.Donghuastream.generated_sync.executeWithRetry
 import com.Donghuastream.generated_sync.logError
+import com.Donghuastream.generated_sync.logDebug
 
 
 import com.lagradost.api.Log

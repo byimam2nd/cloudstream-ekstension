@@ -6,6 +6,7 @@ import com.Funmovieslix.generated_sync.EpisodePreFetcher
 import com.Funmovieslix.generated_sync.rateLimitDelay
 import com.Funmovieslix.generated_sync.getRandomUserAgent
 import com.Funmovieslix.generated_sync.executeWithRetry
+import com.Funmovieslix.generated_sync.logDebug
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.Episode

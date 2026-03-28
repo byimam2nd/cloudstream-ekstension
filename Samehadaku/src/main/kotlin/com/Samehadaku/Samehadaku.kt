@@ -14,6 +14,7 @@ import com.Samehadaku.generated_sync.logError
 import com.Samehadaku.generated_sync.EpisodePreFetcher
 import com.Samehadaku.generated_sync.rateLimitDelay
 import com.Samehadaku.generated_sync.executeWithRetry
+import com.Samehadaku.generated_sync.logDebug
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
