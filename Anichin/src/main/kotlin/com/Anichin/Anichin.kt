@@ -58,6 +58,23 @@ import com.Anichin.generated_sync.CircuitBreakerRegistry
 private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
+// Smart Cache Monitor for fingerprint-based cache validation
+private val monitor = SmartCacheMonitor(object : SmartCacheMonitor.TitleFetcher {
+    override suspend fun fetchTitles(url: String): List<String> {
+        val document = executeWithRetry {
+            rateLimitDelay(moduleName = "Anichin")
+            app.get(
+                url,
+                timeout = 5000L,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
+        return document.select("div.listupd > article div.bsx > a")
+            .mapNotNull { it.attr("title").trim() }
+            .filter { it.isNotEmpty() }
+    }
+})
+
 open class Anichin : MainAPI() {
     override var mainUrl = "https://anichin.cafe"
     override var name = "Anichin"
@@ -81,14 +98,24 @@ open class Anichin : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
+        // Check cache first
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
-            Log.d("Anichin", "Cache HIT for $cacheKey")
-            return cached
+            // Validate cache with fingerprint
+            val validity = monitor.checkCacheValidity(mainUrl, cached.fingerprint)
+            if (validity == SmartCacheMonitor.CacheValidationResult.CACHE_VALID) {
+                logDebug("Anichin", "Cache HIT (validated) for $cacheKey")
+                return cached
+            } else if (validity == SmartCacheMonitor.CacheValidationResult.CACHE_INVALID) {
+                logDebug("Anichin", "Cache INVALID - refetching for $cacheKey")
+                mainPageCache.remove(cacheKey)
+            } else {
+                logDebug("Anichin", "Cache HIT (validation failed, using cached) for $cacheKey")
+                return cached
+            }
         }
 
-        Log.d("Anichin", "Cache MISS for $cacheKey")
+        logDebug("Anichin", "Cache MISS for $cacheKey")
 
         // Fetch dengan retry logic dan rate limiting
         val document = executeWithRetry(maxRetries = 3) {
@@ -113,6 +140,12 @@ open class Anichin : MainAPI() {
             hasNext = true
         )
 
+        // Generate fingerprint and cache with fingerprint
+        val fingerprint = monitor.generateFingerprint(mainUrl)
+        if (fingerprint != null) {
+            response.fingerprint = fingerprint
+        }
+        
         // Cache the result
         mainPageCache.put(cacheKey, response)
 
