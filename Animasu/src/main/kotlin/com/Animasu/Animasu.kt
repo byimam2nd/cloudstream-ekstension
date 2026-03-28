@@ -32,6 +32,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.util.concurrent.ConcurrentHashMap
 
 // ========================================
 // CACHE INSTANCES
@@ -40,6 +41,26 @@ import org.jsoup.nodes.Element
 private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 5 * 60 * 1000L)
 private val loadCache = CacheManager<LoadResponse>(defaultTtl = 10 * 60 * 1000L)
 private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 * 1000L)
+
+// Smart Cache Monitor for fingerprint-based cache validation
+class AnimasuMonitor : SmartCacheMonitor() {
+    override suspend fun fetchTitles(url: String): List<String> {
+        val document = executeWithRetry {
+            animasuRateLimitDelay()
+            app.get(
+                url,
+                timeout = CHECK_TIMEOUT,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
+        return document.select("div.listupd article div.bsx a")
+            .mapNotNull { it.attr("title").trim() }
+            .filter { it.isNotEmpty() }
+    }
+}
+
+private val monitor = AnimasuMonitor()
+private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
 
 // ========================================
 // RATE LIMITING
