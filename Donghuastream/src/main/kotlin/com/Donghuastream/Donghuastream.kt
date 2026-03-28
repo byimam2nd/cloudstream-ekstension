@@ -2,6 +2,9 @@ package com.Donghuastream
 
 import com.Donghuastream.generated_sync.CacheManager
 import com.Donghuastream.generated_sync.EpisodePreFetcher
+import com.Donghuastream.generated_sync.rateLimitDelay
+import com.Donghuastream.generated_sync.getRandomUserAgent
+import com.Donghuastream.generated_sync.executeWithRetry
 
 
 import com.lagradost.api.Log
@@ -67,7 +70,14 @@ open class Donghuastream : MainAPI() {
             return cached
         }
 
-        val document = app.get("$mainUrl/${request.data}$page", timeout = 5000L).documentLarge
+        val document = executeWithRetry {
+            rateLimitDelay()
+            app.get(
+                "$mainUrl/${request.data}$page",
+                timeout = 5000L,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
         val home = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
         val response = newHomePageResponse(
             list = HomePageList(
@@ -127,8 +137,14 @@ open class Donghuastream : MainAPI() {
             (1..3).map { page ->
                 async {
                     try {
-                        val document = app.get("${mainUrl}/pagg/$page/?s=$query", timeout = 5000L)
-                            .documentLarge
+                        val document = executeWithRetry {
+                            rateLimitDelay()
+                            app.get(
+                                "${mainUrl}/pagg/$page/?s=$query",
+                                timeout = 5000L,
+                                headers = mapOf("User-Agent" to getRandomUserAgent())
+                            ).documentLarge
+                        }
                         document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
                     } catch (e: Exception) {
                         emptyList<SearchResponse>()
@@ -144,7 +160,14 @@ open class Donghuastream : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url, timeout = 5000L).documentLarge
+        val document = executeWithRetry {
+            rateLimitDelay()
+            app.get(
+                url,
+                timeout = 5000L,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
         
         // FIXED: Fallback strategy untuk title (3-layer)
         val title = document.selectFirst("h1.entry-title")?.text()?.trim()
@@ -176,7 +199,14 @@ open class Donghuastream : MainAPI() {
         val tvtag = if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
         return if (tvtag == TvType.TvSeries) {
             val Eppage= fixUrl(document.selectFirst(".eplister li > a")?.attr("href") ?:"")
-            val doc= app.get(Eppage, timeout = 5000L).documentLarge
+            val doc= executeWithRetry {
+                rateLimitDelay()
+                app.get(
+                    Eppage,
+                    timeout = 5000L,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                ).documentLarge
+            }
             
             // OPTIMIZED: Parallel episode loading (all episodes at once)
             // 5-10x faster for anime with many episodes
@@ -260,7 +290,14 @@ open class Donghuastream : MainAPI() {
         }
         
         // No cache → extract normally
-        val html = app.get(data, timeout = 5000L).documentLarge
+        val html = executeWithRetry {
+            rateLimitDelay()
+            app.get(
+                data,
+                timeout = 5000L,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
         val options = html.select("option[data-index]")
 
         // OPTIMIZED: Parallel link extraction (extract 5 servers simultaneously)

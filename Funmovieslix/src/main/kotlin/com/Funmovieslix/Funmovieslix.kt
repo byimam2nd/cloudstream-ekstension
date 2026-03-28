@@ -3,6 +3,9 @@ package com.Funmovieslix
 import com.Funmovieslix.generated_sync.CacheManager
 import com.Funmovieslix.generated_sync.logError
 import com.Funmovieslix.generated_sync.EpisodePreFetcher
+import com.Funmovieslix.generated_sync.rateLimitDelay
+import com.Funmovieslix.generated_sync.getRandomUserAgent
+import com.Funmovieslix.generated_sync.executeWithRetry
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.Episode
@@ -62,14 +65,21 @@ class Funmovieslix : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "${request.data}${page}"
-        
+
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = mainPageCache.get(cacheKey)
         if (cached != null) {
             return cached
         }
 
-        val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 5000L).documentLarge
+        val document = executeWithRetry {
+            rateLimitDelay()
+            app.get(
+                "$mainUrl/${request.data}/page/$page",
+                timeout = 5000L,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
         val home = document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
         val response = newHomePageResponse(
             list = HomePageList(
@@ -134,11 +144,14 @@ class Funmovieslix : MainAPI() {
             (1..3).map { page ->
                 async {
                     try {
-                        val document = app.get(
-                            "${mainUrl}?s=$query&page=$page",
-                            timeout = requestTimeout,
-                            headers = mapOf("User-Agent" to "Mozilla/5.0")
-                        ).documentLarge
+                        val document = executeWithRetry {
+                            rateLimitDelay()
+                            app.get(
+                                "${mainUrl}?s=$query&page=$page",
+                                timeout = requestTimeout,
+                                headers = mapOf("User-Agent" to getRandomUserAgent())
+                            ).documentLarge
+                        }
                         document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
                     } catch (e: Exception) {
                         emptyList<SearchResponse>()
@@ -154,11 +167,14 @@ class Funmovieslix : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(
-            url,
-            timeout = requestTimeout,
-            headers = mapOf("User-Agent" to "Mozilla/5.0")
-        ).documentLarge
+        val document = executeWithRetry {
+            rateLimitDelay()
+            app.get(
+                url,
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
         
         // FIXED: Fallback strategy untuk title (3-layer)
         val title = document.select("meta[property=og:title]").attr("content")
@@ -249,7 +265,14 @@ class Funmovieslix : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data, timeout = 5000L).documentLarge
+        val document = executeWithRetry {
+            rateLimitDelay()
+            app.get(
+                data,
+                timeout = 5000L,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).documentLarge
+        }
 
         // FIXED: Multiple strategies untuk extract embed URLs
         var urls = emptyList<String>()
