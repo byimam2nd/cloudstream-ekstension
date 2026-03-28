@@ -297,11 +297,7 @@ class Pencurimovie : MainAPI() {
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
             EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
-import com.Pencurimovie.generated_sync.SmartCacheMonitor
-import com.Pencurimovie.generated_sync.HttpClientFactory
-import com.Pencurimovie.generated_sync.CompiledRegexPatterns
-import com.Pencurimovie.generated_sync.CircuitBreaker
-import com.Pencurimovie.generated_sync.CircuitBreakerRegistry
+
 
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
