@@ -33,6 +33,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
+import java.util.concurrent.ConcurrentHashMap
 
 // ========================================
 // CACHE INSTANCES
@@ -422,3 +423,13 @@ class Samehadaku : MainAPI() {
         }
     }
 }
+
+// Smart Cache Monitor for fingerprint-based cache validation
+class SamehadakuMonitor : SmartCacheMonitor() {
+    override suspend fun fetchTitles(url: String): List<String> {
+        val document = executeWithRetry { rateLimitDelay(moduleName = "Samehadaku"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
+    }
+}
+private val monitor = SamehadakuMonitor()
+private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()

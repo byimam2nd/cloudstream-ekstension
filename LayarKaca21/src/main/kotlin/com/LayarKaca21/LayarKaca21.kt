@@ -18,6 +18,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
+import java.util.concurrent.ConcurrentHashMap
 import java.net.URI
 
 // Cache instances
@@ -418,3 +419,13 @@ class LayarKaca21 : MainAPI() {
         }
     }
 }
+
+// Smart Cache Monitor for fingerprint-based cache validation
+class LayarKaca21Monitor : SmartCacheMonitor() {
+    override suspend fun fetchTitles(url: String): List<String> {
+        val document = executeWithRetry { rateLimitDelay(moduleName = "LayarKaca21"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
+    }
+}
+private val monitor = LayarKaca21Monitor()
+private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()

@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import org.jsoup.nodes.Element
+import java.util.concurrent.ConcurrentHashMap
 import java.net.URI
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
@@ -509,3 +510,16 @@ class Idlix : MainAPI() {
         @JsonProperty("m") val m: String,
     )
 }
+
+// Smart Cache Monitor for fingerprint-based cache validation
+class IdlixMonitor : SmartCacheMonitor() {
+    override suspend fun fetchTitles(url: String): List<String> {
+        val document = executeWithRetry {
+            rateLimitDelay(moduleName = "Idlix")
+            app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge
+        }
+        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
+    }
+}
+private val monitor = IdlixMonitor()
+private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()

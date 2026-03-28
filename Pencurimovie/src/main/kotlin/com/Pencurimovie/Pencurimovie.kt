@@ -15,6 +15,7 @@ import com.Pencurimovie.generated_sync.logError
 
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
+import java.util.concurrent.ConcurrentHashMap
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
@@ -617,3 +618,13 @@ class Pencurimovie : MainAPI() {
         }
     }
 }
+
+// Smart Cache Monitor for fingerprint-based cache validation
+class PencurimovieMonitor : SmartCacheMonitor() {
+    override suspend fun fetchTitles(url: String): List<String> {
+        val document = executeWithRetry { rateLimitDelay(moduleName = "Pencurimovie"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
+    }
+}
+private val monitor = PencurimovieMonitor()
+private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()

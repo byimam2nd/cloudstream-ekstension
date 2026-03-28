@@ -48,6 +48,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.util.concurrent.ConcurrentHashMap
 
 // Caching using shared CacheManager from CacheManager.kt
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -384,3 +385,13 @@ open class Donghuastream : MainAPI() {
         return true
     }
 }
+
+// Smart Cache Monitor for fingerprint-based cache validation
+class DonghuastreamMonitor : SmartCacheMonitor() {
+    override suspend fun fetchTitles(url: String): List<String> {
+        val document = executeWithRetry { rateLimitDelay(moduleName = "Donghuastream"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
+    }
+}
+private val monitor = DonghuastreamMonitor()
+private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()

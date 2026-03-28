@@ -44,6 +44,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
+import java.util.concurrent.ConcurrentHashMap
 
 // Caching using shared CacheManager from CacheManager.kt
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -384,3 +385,13 @@ class Funmovieslix : MainAPI() {
 
 }
 
+
+// Smart Cache Monitor for fingerprint-based cache validation
+class FunmovieslixMonitor : SmartCacheMonitor() {
+    override suspend fun fetchTitles(url: String): List<String> {
+        val document = executeWithRetry { rateLimitDelay(moduleName = "Funmovieslix"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
+    }
+}
+private val monitor = FunmovieslixMonitor()
+private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
