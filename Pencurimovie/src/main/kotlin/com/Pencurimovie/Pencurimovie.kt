@@ -1,7 +1,12 @@
 package com.Pencurimovie
 
+import com.Pencurimovie.generated_sync.CacheManager
 import com.Pencurimovie.generated_sync.EpisodePreFetcher
 import com.Pencurimovie.generated_sync.loadExtractorWithFallback
+import com.Pencurimovie.generated_sync.rateLimitDelay
+import com.Pencurimovie.generated_sync.getRandomUserAgent
+import com.Pencurimovie.generated_sync.executeWithRetry
+import com.Pencurimovie.generated_sync.logError
 
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
@@ -159,7 +164,14 @@ class Pencurimovie : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 50L).document
+        val document = executeWithRetry {
+            rateLimitDelay(moduleName = "Pencurimovie")
+            app.get(
+                "$mainUrl/${request.data}/page/$page",
+                timeout = 5000L,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).document
+        }
         val home = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
@@ -198,11 +210,14 @@ class Pencurimovie : MainAPI() {
     private val requestTimeout = 10000L
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get(
-            "${mainUrl}?s=$query",
-            timeout = requestTimeout,
-            headers = mapOf("User-Agent" to "Mozilla/5.0")
-        ).document
+        val document = executeWithRetry {
+            rateLimitDelay(moduleName = "Pencurimovie")
+            app.get(
+                "${mainUrl}?s=$query",
+                timeout = requestTimeout,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            ).document
+        }
         val results = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
         return results
     }
@@ -314,7 +329,14 @@ class Pencurimovie : MainAPI() {
         
         // No cache → extract normally
         try {
-            val document = app.get(data).document
+            val document = executeWithRetry {
+                rateLimitDelay(moduleName = "Pencurimovie")
+                app.get(
+                    data,
+                    timeout = requestTimeout,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                ).document
+            }
             val links = mutableSetOf<String>()
             
             // =========================
