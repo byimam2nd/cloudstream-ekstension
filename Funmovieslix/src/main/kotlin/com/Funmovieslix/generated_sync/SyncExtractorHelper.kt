@@ -38,23 +38,30 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 // ============================================
-// REGION 1: LOAD EXTRACTOR WITH FALLBACK
+// REGION 1: LOAD EXTRACTOR WITH FALLBACK + CIRCUIT BREAKER
 // ============================================
 
 /**
  * Load extractor dengan fallback ke direct extractor call
+ * PLUS CircuitBreaker untuk failure isolation!
  *
  * Flow:
  * 1. Try loadExtractor (CloudStream API)
  * 2. If failed (returns false), find matching extractor from SyncExtractors
- * 3. Try ALL matching extractors IN PARALLEL (optimized for speed)
- * 4. Return true if at least 1 extractor worked
+ * 3. Wrap extractor call with CircuitBreaker
+ * 4. CircuitBreaker auto-skip extractor yang gagal 3x berturut-turut
+ * 5. Return true if at least 1 extractor worked
+ *
+ * CIRCUIT BREAKER BENEFITS:
+ * - Auto-skip failing extractors (no long timeouts)
+ * - Auto-recovery setelah 1 menit
+ * - Prevent cascade failures
+ * - Better user experience
  *
  * OPTIMIZATION:
  * - Parallel execution dengan coroutine async
- * - Semua extractor dijalankan bersamaan, bukan sequential
- * - Speed improvement: 3-5x faster than sequential
- * - Tetap dapat semua quality options dari semua extractor
+ * - CircuitBreaker per extractor (independent failure tracking)
+ * - Speed improvement: 3-5x faster + failure isolation
  *
  * @param url Video URL to extract
  * @param referer Referer URL
@@ -69,7 +76,7 @@ suspend fun loadExtractorWithFallback(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     var loaded = false
-    
+
     // Step 1: Try loadExtractor (CloudStream API)
     try {
         loaded = loadExtractor(url, referer, subtitleCallback, callback)
@@ -77,21 +84,21 @@ suspend fun loadExtractorWithFallback(
     } catch (e: Exception) {
         Log.e("ExtractorHelper", "loadExtractor exception: ${e.message}")
     }
-    
-    // Step 2: If failed, try direct extractor call from SyncExtractors
+
+    // Step 2: If failed, try direct extractor call from SyncExtractors WITH CIRCUIT BREAKER
     if (!loaded) {
-        Log.d("ExtractorHelper", "loadExtractor failed, trying direct extractors...")
+        Log.d("ExtractorHelper", "loadExtractor failed, trying direct extractors with CircuitBreaker...")
         Log.d("ExtractorHelper", "URL: $url")
-        
+
         val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
         Log.d("ExtractorHelper", "URL Domain: $urlDomain")
-        
+
         // Get SyncExtractors list dynamically
         val syncExtractorsClass = Class.forName("com.master.generated_sync.SyncExtractors")
         val listField = syncExtractorsClass.getDeclaredField("list")
         @Suppress("UNCHECKED_CAST")
         val extractors = listField.get(null) as List<com.lagradost.cloudstream3.utils.ExtractorApi>
-        
+
         // Find ALL matching extractors
         val matchingExtractors = extractors.filter { extractor ->
             val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
@@ -99,18 +106,34 @@ suspend fun loadExtractorWithFallback(
             val nameMatch = url.contains(extractor.name, ignoreCase = true)
             domainMatch || nameMatch
         }
-        
+
         Log.d("ExtractorHelper", "Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
-        
-        // Try ALL matching extractors IN PARALLEL
+
+        // Try ALL matching extractors IN PARALLEL WITH CIRCUIT BREAKER
         try {
             coroutineScope {
                 matchingExtractors.forEach { extractor ->
                     launch {
                         try {
+                            // Get CircuitBreaker for this extractor
+                            val breaker = CircuitBreakerRegistry.getOrCreate(
+                                extractor.name,
+                                failureThreshold = 3,
+                                resetTimeoutMs = 60_000L
+                            )
+                            
                             Log.d("ExtractorHelper", "Trying extractor: ${extractor.name} (${extractor.mainUrl})")
-                            extractor.getUrl(url, referer, subtitleCallback, callback)
-                            Log.d("ExtractorHelper", "SUCCESS: Extractor ${extractor.name} worked!")
+                            
+                            // Wrap extractor call with CircuitBreaker
+                            val result = breaker.execute {
+                                extractor.getUrl(url, referer, subtitleCallback, callback)
+                            }
+                            
+                            if (result != null) {
+                                Log.d("ExtractorHelper", "SUCCESS: Extractor ${extractor.name} worked!")
+                            } else {
+                                Log.w("ExtractorHelper", "CircuitBreaker OPEN for ${extractor.name} - skipping")
+                            }
                         } catch (e: Exception) {
                             Log.e("ExtractorHelper", "Extractor ${extractor.name} failed: ${e.message}")
                         }
