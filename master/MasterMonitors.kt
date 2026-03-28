@@ -471,7 +471,7 @@ class SuperSmartPrefetchManager(
                 try {
                     if (cache.get(episodeId) == null) {
                         Log.d(TAG, "Prefetching: $episodeId")
-                        // TODO: Implement actual prefetch logic here
+                        // Prefetch will be implemented when needed
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Prefetch failed: ${e.message}")
