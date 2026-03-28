@@ -342,9 +342,10 @@ import com.Pencurimovie.generated_sync.HttpClientFactory
 import com.Pencurimovie.generated_sync.CompiledRegexPatterns
 import com.Pencurimovie.generated_sync.CircuitBreaker
 import com.Pencurimovie.generated_sync.CircuitBreakerRegistry
+
             return true
         }
-        
+
         // No cache → extract normally
         try {
             val document = executeWithRetry {

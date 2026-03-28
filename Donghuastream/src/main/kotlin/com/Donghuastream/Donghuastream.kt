@@ -303,9 +303,10 @@ import com.Donghuastream.generated_sync.HttpClientFactory
 import com.Donghuastream.generated_sync.CompiledRegexPatterns
 import com.Donghuastream.generated_sync.CircuitBreaker
 import com.Donghuastream.generated_sync.CircuitBreakerRegistry
+
             return true
         }
-        
+
         // No cache → extract normally
         val html = executeWithRetry {
             rateLimitDelay()

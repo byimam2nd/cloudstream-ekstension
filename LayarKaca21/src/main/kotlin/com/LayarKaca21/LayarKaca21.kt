@@ -19,7 +19,6 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import com.LayarKaca21.generated_sync.SmartCacheMonitor
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -274,6 +273,7 @@ import com.LayarKaca21.generated_sync.HttpClientFactory
 import com.LayarKaca21.generated_sync.CompiledRegexPatterns
 import com.LayarKaca21.generated_sync.CircuitBreaker
 import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
+
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.posterHeaders = posterHeaders
@@ -306,14 +306,9 @@ import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
         if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-import com.LayarKaca21.generated_sync.SmartCacheMonitor
-import com.LayarKaca21.generated_sync.HttpClientFactory
-import com.LayarKaca21.generated_sync.CompiledRegexPatterns
-import com.LayarKaca21.generated_sync.CircuitBreaker
-import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
             return true
         }
-        
+
         // No cache → extract normally
         val document = app.get(data).document
         val videolar = document.select("ul#player-list a")
