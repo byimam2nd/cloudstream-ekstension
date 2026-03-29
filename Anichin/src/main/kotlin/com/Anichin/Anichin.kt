@@ -54,6 +54,7 @@ import com.Anichin.generated_sync.HttpClientFactory
 import com.Anichin.generated_sync.CompiledRegexPatterns
 import com.Anichin.generated_sync.CircuitBreaker
 import com.Anichin.generated_sync.CircuitBreakerRegistry
+import com.Anichin.generated_sync.MasterLinkGenerator
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -455,18 +456,15 @@ open class Anichin : MainAPI() {
                         // Handle different server types
                         when {
                             iframeUrl.endsWith(".mp4") -> {
-                                callback(
-                                    newExtractorLink(
-                                        label,
-                                        label,
-                                        url = iframeUrl,
-                                        INFER_TYPE
-                                    ) {
-                                        this.referer = data
-                                        this.quality = getQualityFromName(label)
-                                    }
-                                )
-                                successCount++
+                                MasterLinkGenerator.createLink(
+                                    source = label,
+                                    url = iframeUrl,
+                                    referer = data,
+                                    quality = getQualityFromName(label)
+                                )?.let { 
+                                    callback(it)
+                                    successCount++
+                                }
                             }
                             else -> {
                                 logDebug("Anichin", "Calling loadExtractor for $label")

@@ -13,6 +13,7 @@ import com.Pencurimovie.generated_sync.getRandomUserAgent
 import com.Pencurimovie.generated_sync.executeWithRetry
 import com.Pencurimovie.generated_sync.logError
 import com.Pencurimovie.generated_sync.logDebug
+import com.Pencurimovie.generated_sync.MasterLinkGenerator
 
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
@@ -614,45 +615,33 @@ class Pencurimovie : MainAPI() {
             ))
             
             val text = getAndUnpack(res.text) ?: res.text
-            
-            // Priority 1: M3U8 (use generateM3u8 for HLS)
+
+            // Priority 1: M3U8 (use P1 MasterLinkGenerator for auto-detection)
             val m3u8 = Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""")
                 .find(text)?.value
-            
+
             if (m3u8 != null) {
-                callback.invoke(
-                    newExtractorLink(
-                        "Universal",
-                        "Universal",
-                        m3u8,
-                        ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = referer ?: url
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
+                MasterLinkGenerator.createLink(
+                    source = "Universal",
+                    url = m3u8,
+                    referer = referer ?: url
+                )?.let { callback.invoke(it) }
                 return true
             }
-            
-            // Priority 2: MP4 fallback
+
+            // Priority 2: MP4 fallback (use P1 MasterLinkGenerator)
             val mp4 = Regex("""https?://[^\s'"]+\.mp4[^\s'"]*""")
                 .find(text)?.value
-            
+
             if (mp4 != null) {
-                callback.invoke(
-                    newExtractorLink(
-                        "Universal",
-                        "Universal",
-                        mp4,
-                        ExtractorLinkType.VIDEO
-                    ) {
-                        this.referer = referer ?: url
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
+                MasterLinkGenerator.createLink(
+                    source = "Universal",
+                    url = mp4,
+                    referer = referer ?: url
+                )?.let { callback.invoke(it) }
                 return true
             }
-            
+
             false
         } catch (e: Exception) {
             Log.e("Pencurimovie", "Universal extract error: $url")

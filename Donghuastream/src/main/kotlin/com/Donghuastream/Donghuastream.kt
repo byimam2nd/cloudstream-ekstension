@@ -12,6 +12,7 @@ import com.Donghuastream.generated_sync.getRandomUserAgent
 import com.Donghuastream.generated_sync.executeWithRetry
 import com.Donghuastream.generated_sync.logError
 import com.Donghuastream.generated_sync.logDebug
+import com.Donghuastream.generated_sync.MasterLinkGenerator
 
 
 import com.lagradost.api.Log
@@ -385,17 +386,12 @@ open class Donghuastream : MainAPI() {
                             }
                         }
                         iframeUrl.endsWith(".mp4") -> {
-                            callback(
-                                newExtractorLink(
-                                    label,
-                                    label,
-                                    url = iframeUrl,
-                                    INFER_TYPE
-                                ) {
-                                    this.referer = mainUrl
-                                    this.quality = getQualityFromName(label)
-                                }
-                            )
+                            MasterLinkGenerator.createLink(
+                                source = label,
+                                url = iframeUrl,
+                                referer = mainUrl,
+                                quality = getQualityFromName(label)
+                            )?.let { callback(it) }
                         }
                         else -> {
                             val loaded = com.Donghuastream.generated_sync.loadExtractorWithFallback(
