@@ -2077,3 +2077,229 @@ data class M3U8QualityVariant(
     val url: String,            // Direct stream URL
     val resolution: Pair<Int, Int>  // Width x Height (contoh: 1920 x 1080)
 )
+
+// ========================================
+// REGION: SMART M3U8 PARSER (P2)
+// ========================================
+// Advanced M3U8 parser dengan quality selection & bandwidth testing
+// ========================================
+
+/**
+ * SmartM3U8Parser — Advanced M3U8 Playlist Parser
+ * 
+ * Fitur:
+ * - Parse M3U8 master playlist dengan multiple quality variants
+ * - Auto-select best quality berdasarkan bandwidth/network
+ * - Test stream accessibility sebelum return
+ * - Support adaptive bitrate streaming
+ * 
+ * Usage:
+ *   // Parse playlist manual
+ *   val variants = SmartM3U8Parser.parsePlaylist(m3u8Url, referer)
+ *   
+ *   // Auto-select best quality
+ *   val bestUrl = SmartM3U8Parser.selectBestQuality(
+ *       m3u8Url = m3u8Url,
+ *       referer = referer,
+ *       maxQuality = 1080  // Cap di 1080p
+ *   )
+ *   
+ *   // Test stream accessibility
+ *   val isAccessible = SmartM3U8Parser.testStreamUrl(url, referer)
+ */
+object SmartM3U8Parser {
+    
+    // ========================================
+    // PUBLIC API
+    // ========================================
+    
+    /**
+     * Parse M3U8 master playlist, extract semua quality variants
+     * 
+     * @param m3u8Url URL M3U8 master playlist
+     * @param referer Referer header
+     * @return List quality variants sorted by quality (descending)
+     */
+    suspend fun parsePlaylist(
+        m3u8Url: String,
+        referer: String?
+    ): List<M3U8QualityVariant> {
+        val headers = buildHeaders(referer)
+        
+        // Fetch master playlist
+        val response = app.get(
+            m3u8Url,
+            headers = headers,
+            timeout = 10_000
+        )
+        
+        return parseM3U8Variants(response.text, m3u8Url)
+    }
+    
+    /**
+     * Auto-select best quality variant dari M3U8 playlist
+     * 
+     * @param m3u8Url URL M3U8 master playlist
+     * @param referer Referer header
+     * @param maxQuality Maximum quality yang diinginkan (default: 1080)
+     * @param minQuality Minimum quality yang acceptable (default: 240)
+     * @return Best quality URL atau null jika playlist invalid
+     */
+    suspend fun selectBestQuality(
+        m3u8Url: String,
+        referer: String?,
+        maxQuality: Int = 1080,
+        minQuality: Int = 240
+    ): String? {
+        val variants = parsePlaylist(m3u8Url, referer)
+        
+        if (variants.isEmpty()) {
+            return null
+        }
+        
+        // Filter variants yang sesuai dengan quality range
+        val filtered = variants.filter { 
+            it.quality in minQuality..maxQuality 
+        }
+        
+        // Pilih yang paling tinggi dalam range
+        return filtered.maxByOrNull { it.quality }?.url
+            ?: variants.minByOrNull { it.quality }?.url  // Fallback ke terendah
+    }
+    
+    /**
+     * Test accessibility dari stream URL dengan HEAD request
+     * 
+     * @param url Stream URL untuk ditest
+     * @param referer Referer header
+     * @param timeoutMs Timeout dalam milliseconds (default: 5s)
+     * @return true jika stream accessible, false jika timeout/error
+     */
+    suspend fun testStreamUrl(
+        url: String,
+        referer: String?,
+        timeoutMs: Long = 5000L
+    ): Boolean {
+        return try {
+            val headers = buildHeaders(referer)
+            
+            // HEAD request untuk test accessibility (lebih ringan dari GET)
+            val response = app.head(
+                url,
+                headers = headers,
+                timeout = timeoutMs.toInt()
+            )
+            
+            // Check status code
+            response.code in 200..299
+        } catch (e: Exception) {
+            false  // Timeout atau error
+        }
+    }
+    
+    /**
+     * Get bandwidth estimate dari stream URL
+     * Menggunakan Content-Length header jika tersedia
+     * 
+     * @param url Stream URL
+     * @param referer Referer header
+     * @return Estimated bandwidth dalam bps, atau 0 jika tidak tersedia
+     */
+    suspend fun getBandwidthEstimate(
+        url: String,
+        referer: String?
+    ): Long {
+        return try {
+            val headers = buildHeaders(referer)
+            
+            val response = app.head(
+                url,
+                headers = headers,
+                timeout = 5000
+            )
+            
+            val contentLength = response.headers["Content-Length"]?.toLongOrNull()
+                ?: return 0L
+            
+            // Estimate: content length * 8 / duration (assume 10s segment)
+            contentLength * 8 / 10
+        } catch (e: Exception) {
+            0L
+        }
+    }
+    
+    /**
+     * Parse M3U8 variant playlist (child playlist) untuk get exact URLs
+     * 
+     * @param variantUrl URL variant playlist
+     * @param referer Referer header
+     * @return List of exact stream URLs dari variant playlist
+     */
+    suspend fun parseVariantPlaylist(
+        variantUrl: String,
+        referer: String?
+    ): List<String> {
+        return try {
+            val headers = buildHeaders(referer)
+            
+            val response = app.get(
+                variantUrl,
+                headers = headers,
+                timeout = 10_000
+            )
+            
+            // Extract .ts segment URLs dari variant playlist
+            val lines = response.text.lines()
+            lines.filter { 
+                it.isNotBlank() && 
+                !it.startsWith("#") &&
+                (it.endsWith(".ts") || it.endsWith(".m4s"))
+            }.map { line ->
+                resolveRelativeUrl(line, variantUrl)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+    
+    // ========================================
+    // INTERNAL HELPERS
+    // ========================================
+    
+    /**
+     * Build headers untuk M3U8 requests
+     */
+    private fun buildHeaders(referer: String?): Map<String, String> {
+        val defaultHeaders = mapOf(
+            "Accept" to "*/*",
+            "Accept-Encoding" to "gzip, deflate, br",
+            "Accept-Language" to "en-US,en;q=0.9",
+            "Connection" to "keep-alive",
+            "Sec-Fetch-Dest" to "empty",
+            "Sec-Fetch-Mode" to "cors",
+            "Sec-Fetch-Site" to "cross-site"
+        )
+        
+        return referer?.let {
+            defaultHeaders + ("Referer" to it)
+        } ?: defaultHeaders
+    }
+    
+    /**
+     * Resolve relative URL ke absolute
+     */
+    private fun resolveRelativeUrl(url: String, baseUrl: String): String {
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return url
+        }
+        
+        return try {
+            val baseUri = java.net.URI(baseUrl)
+            baseUri.resolve(url).toString()
+        } catch (e: Exception) {
+            // Fallback: manual concat
+            val basePath = baseUrl.substringBeforeLast("/")
+            "$basePath/$url"
+        }
+    }
+}
