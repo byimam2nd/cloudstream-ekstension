@@ -41,19 +41,20 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object AutoUsedConstants {
     // Timeouts
-    const val DEFAULT_TIMEOUT = 10000L  // 10 seconds
-    const val FAST_TIMEOUT = 5000L      // 5 seconds
-    const val SLOW_TIMEOUT = 30000L     // 30 seconds
-    
+    const val DEFAULT_TIMEOUT = 10000L  // 10 seconds (main requests)
+    const val FAST_TIMEOUT = 5000L      // 5 seconds (quick checks)
+    const val SLOW_TIMEOUT = 30000L     // 30 seconds (heavy operations)
+    const val CHECK_TIMEOUT = 5000L     // 5 seconds (cache fingerprint checks)
+
     // Cache TTL
     const val CACHE_TTL_SHORT = 5 * 60 * 1000L      // 5 minutes
     const val CACHE_TTL_MEDIUM = 30 * 60 * 1000L    // 30 minutes
     const val CACHE_TTL_LONG = 24 * 60 * 60 * 1000L // 24 hours
-    
+
     // Retry
     const val MAX_RETRIES = 3
     const val RETRY_DELAY = 1000L
-    
+
     // Image optimization
     const val IMAGE_WIDTH_POSTER = 300
     const val IMAGE_WIDTH_BACKDROP = 780
