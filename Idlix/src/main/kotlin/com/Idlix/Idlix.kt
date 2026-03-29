@@ -32,6 +32,7 @@ import com.Idlix.generated_sync.HttpClientFactory
 import com.Idlix.generated_sync.CompiledRegexPatterns
 import com.Idlix.generated_sync.CircuitBreaker
 import com.Idlix.generated_sync.CircuitBreakerRegistry
+import com.Idlix.generated_sync.MasterLinkGenerator
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -469,6 +470,12 @@ class Idlix : MainAPI() {
                             )
                             if (!loaded) {
                                 logError("Idlix", "loadExtractorWithFallback failed for $decrypted")
+                                // P1 Fallback: Try direct link extraction as last resort
+                                MasterLinkGenerator.createLink(
+                                    source = "Idlix",
+                                    url = decrypted,
+                                    referer = directUrl
+                                )?.let { callback(it) }
                             }
                         }
                         else -> return@amap

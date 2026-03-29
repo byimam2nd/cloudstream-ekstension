@@ -12,6 +12,7 @@ import com.LayarKaca21.generated_sync.HttpClientFactory
 import com.LayarKaca21.generated_sync.CompiledRegexPatterns
 import com.LayarKaca21.generated_sync.CircuitBreaker
 import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
+import com.LayarKaca21.generated_sync.MasterLinkGenerator
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
@@ -352,6 +353,12 @@ class LayarKaca21 : MainAPI() {
                 )
                 if (!loaded) {
                     Log.e("LayarKaca21", "loadExtractorWithFallback failed for $finalIframe")
+                    // P1 Fallback: Try direct link extraction as last resort
+                    MasterLinkGenerator.createLink(
+                        source = "LayarKaca",
+                        url = finalIframe,
+                        referer = "$mainUrl/"
+                    )?.let { callback(it) }
                 }
             } else {
                 val loaded = com.LayarKaca21.generated_sync.loadExtractorWithFallback(
@@ -362,6 +369,12 @@ class LayarKaca21 : MainAPI() {
                 )
                 if (!loaded) {
                     Log.e("LayarKaca21", "loadExtractorWithFallback failed for $iframe")
+                    // P1 Fallback: Try direct link extraction as last resort
+                    MasterLinkGenerator.createLink(
+                        source = "LayarKaca",
+                        url = iframe,
+                        referer = "$mainUrl/"
+                    )?.let { callback(it) }
                 }
             }
         }

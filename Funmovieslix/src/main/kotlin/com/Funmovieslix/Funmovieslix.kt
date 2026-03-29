@@ -12,6 +12,7 @@ import com.Funmovieslix.generated_sync.rateLimitDelay
 import com.Funmovieslix.generated_sync.getRandomUserAgent
 import com.Funmovieslix.generated_sync.executeWithRetry
 import com.Funmovieslix.generated_sync.logDebug
+import com.Funmovieslix.generated_sync.MasterLinkGenerator
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.Episode
@@ -371,6 +372,12 @@ class Funmovieslix : MainAPI() {
                         )
                         if (!loaded) {
                             logError("Funmovieslix", "loadExtractorWithFallback failed for $fixedUrl")
+                            // P1 Fallback: Try direct link extraction as last resort
+                            MasterLinkGenerator.createLink(
+                                source = "Funmovieslix",
+                                url = fixedUrl,
+                                referer = mainUrl
+                            )?.let { callback(it) }
                         }
 
                         mutex.withLock {
