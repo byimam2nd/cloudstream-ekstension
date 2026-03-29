@@ -1,6 +1,7 @@
 package com.Anichin
 
 import com.Anichin.generated_sync.CacheManager
+import com.Anichin.generated_sync.AutoUsedConstants
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.HomePageList
@@ -89,9 +90,6 @@ open class Anichin : MainAPI() {
     override val usesWebView = true
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.TvSeries)
 
-    // Standard timeout untuk semua request (10 detik)
-    private val requestTimeout = 10000L
-
     override val mainPage = mainPageOf(
         "seri/?status=&type=&order=popular&page=" to "Popular Donghua",
         "seri/?status=&type=&order=update&page=" to "Recently Updated",
@@ -139,7 +137,7 @@ open class Anichin : MainAPI() {
             rateLimitDelay()
             app.get(
                 "$mainUrl/${request.data}$page",
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -191,7 +189,7 @@ open class Anichin : MainAPI() {
         val episodeCount = runCatching {
             val doc = app.get(
                 href,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
             doc.select(".eplister li[data-index]").mapNotNull { ep ->
@@ -245,7 +243,7 @@ open class Anichin : MainAPI() {
 
                         val document = app.get(
                             searchUrl,
-                            timeout = requestTimeout,
+                            timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                             headers = mapOf("User-Agent" to getRandomUserAgent())
                         ).documentLarge
 
@@ -271,7 +269,7 @@ open class Anichin : MainAPI() {
             rateLimitDelay()
             app.get(
                 url,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -401,7 +399,7 @@ open class Anichin : MainAPI() {
             rateLimitDelay()
             app.get(
                 data,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }

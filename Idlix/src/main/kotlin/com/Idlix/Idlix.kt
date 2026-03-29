@@ -1,6 +1,7 @@
 package com.Idlix
 
 import com.Idlix.generated_sync.CacheManager
+import com.Idlix.generated_sync.AutoUsedConstants
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
