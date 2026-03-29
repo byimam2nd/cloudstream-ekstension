@@ -1771,7 +1771,7 @@ object MasterLinkGenerator {
      * @param headers Custom headers (optional, akan di-merge dengan default)
      * @return ExtractorLink atau null jika URL invalid
      */
-    fun createLink(
+    suspend fun createLink(
         source: String,
         url: String,
         referer: String?,
@@ -1798,7 +1798,9 @@ object MasterLinkGenerator {
             type = INFER_TYPE
         ) {
             this.quality = detectedQuality
-            this.referer = referer
+            if (referer != null) {
+                this.referer = referer
+            }
             this.headers = finalHeaders
         }
     }
@@ -1810,7 +1812,7 @@ object MasterLinkGenerator {
     /**
      * Create multiple ExtractorLink dari M3U8 playlist
      * Auto-parse semua quality variants dari master playlist
-     * 
+     *
      * @param source Nama extractor
      * @param m3u8Url URL M3U8 playlist (master playlist)
      * @param referer Referer header
@@ -1840,7 +1842,9 @@ object MasterLinkGenerator {
                         type = INFER_TYPE  // Auto-detect dari URL
                     ) {
                         this.quality = variant.quality
-                        this.referer = referer
+                        if (referer != null) {
+                            this.referer = referer
+                        }
                         this.headers = buildHeaders(referer)
                     }
                 )
