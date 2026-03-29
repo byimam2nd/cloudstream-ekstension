@@ -1719,3 +1719,362 @@ object SyncExtractors {
 // TOTAL: 60 EXTRACTOR CLASSES
 // ========================================
 // Build fix test
+
+// ========================================
+// REGION: MASTER LINK GENERATOR (P1)
+// ========================================
+// Enhanced ExtractorLink builder dengan auto-detection
+// Fitur: Auto-detect quality, smart headers, M3U8 parsing
+// ========================================
+
+/**
+ * MasterLinkGenerator — Centralized ExtractorLink Builder
+ * 
+ * Tujuan:
+ * - Auto-detect quality dari URL/filename
+ * - Auto-detect type (HLS/MP4) menggunakan INFER_TYPE
+ * - Auto-generate optimal headers per domain
+ * - Reduce boilerplate di setiap extractor
+ * - Support M3U8 playlist parsing untuk multiple qualities
+ * 
+ * Usage:
+ *   // Single URL dengan auto-detection
+ *   val link = MasterLinkGenerator.createLink(
+ *       source = "Dingtezuni",
+ *       url = "https://dingtezuni.com/video.m3u8",
+ *       referer = "https://dingtezuni.com/"
+ *   )
+ *   callback(link)
+ *   
+ *   // M3U8 playlist dengan multiple qualities
+ *   MasterLinkGenerator.createLinksFromM3U8(
+ *       source = "Dingtezuni",
+ *       m3u8Url = "https://dingtezuni.com/playlist.m3u8",
+ *       referer = "https://dingtezuni.com/",
+ *       callback = callback
+ *   )
+ */
+object MasterLinkGenerator {
+    
+    // ========================================
+    // PUBLIC API - SINGLE LINK
+    // ========================================
+    
+    /**
+     * Create ExtractorLink dengan auto-detection quality
+     * Menggunakan INFER_TYPE untuk auto-detect type dari URL extension
+     * 
+     * @param source Nama extractor (contoh: "Dingtezuni")
+     * @param url URL video stream
+     * @param referer Referer header (optional)
+     * @param quality Quality manual override (null = auto-detect)
+     * @param headers Custom headers (optional, akan di-merge dengan default)
+     * @return ExtractorLink atau null jika URL invalid
+     */
+    fun createLink(
+        source: String,
+        url: String,
+        referer: String?,
+        quality: Int? = null,
+        headers: Map<String, String>? = null
+    ): ExtractorLink? {
+        // Validate URL
+        if (!isValidVideoUrl(url)) {
+            return null
+        }
+        
+        // Auto-detect quality jika tidak di-override
+        val detectedQuality = quality ?: detectQualityFromUrl(url)
+        
+        // Build headers (default + custom merge)
+        val finalHeaders = buildHeaders(referer, headers)
+        
+        // Gunakan INFER_TYPE untuk auto-detect type dari URL extension
+        // INFER_TYPE akan detect M3U8 vs VIDEO berdasarkan file extension
+        return newExtractorLink(
+            source = source,
+            name = source,
+            url = url,
+            type = INFER_TYPE
+        ) {
+            this.quality = detectedQuality
+            this.referer = referer
+            this.headers = finalHeaders
+        }
+    }
+    
+    // ========================================
+    // PUBLIC API - M3U8 PLAYLIST
+    // ========================================
+    
+    /**
+     * Create multiple ExtractorLink dari M3U8 playlist
+     * Auto-parse semua quality variants dari master playlist
+     * 
+     * @param source Nama extractor
+     * @param m3u8Url URL M3U8 playlist (master playlist)
+     * @param referer Referer header
+     * @param callback Callback untuk setiap ExtractorLink
+     * @return Jumlah variants yang berhasil di-extract
+     */
+    suspend fun createLinksFromM3U8(
+        source: String,
+        m3u8Url: String,
+        referer: String?,
+        callback: (ExtractorLink) -> Unit
+    ): Int {
+        try {
+            // Fetch playlist content
+            val playlistContent = fetchM3U8Playlist(m3u8Url, referer)
+            
+            // Parse variants
+            val variants = parseM3U8Variants(playlistContent, m3u8Url)
+            
+            // Generate ExtractorLink untuk setiap variant
+            variants.forEach { variant ->
+                callback(
+                    newExtractorLink(
+                        source = source,
+                        name = "${source} ${variant.quality}p",
+                        url = variant.url,
+                        type = INFER_TYPE  // Auto-detect dari URL
+                    ) {
+                        this.quality = variant.quality
+                        this.referer = referer
+                        this.headers = buildHeaders(referer)
+                    }
+                )
+            }
+            
+            return variants.size
+        } catch (e: Exception) {
+            // Fallback: return single link dengan quality default
+            createLink(
+                source = source,
+                url = m3u8Url,
+                referer = referer
+            )?.let { callback(it) }
+            return 1
+        }
+    }
+    
+    // ========================================
+    // AUTO-DETECTION LOGIC
+    // ========================================
+    
+    /**
+     * Auto-detect quality dari URL/filename
+     * 
+     * Patterns:
+     * - .../video_1080p.m3u8 → 1080
+     * - .../720/stream.mp4 → 720
+     * - .../FHD/video.m3u8 → 1080
+     * - .../HD/video.m3u8 → 720
+     * - .../SD/video.m3u8 → 480
+     * - No match → 480 (safe default)
+     */
+    fun detectQualityFromUrl(url: String): Int {
+        val urlLower = url.lowercase()
+        
+        // Pattern 1: Explicit resolution (1080, 720, 360, etc.)
+        if (Regex("(1080|p1080|fhd|fullhd)").containsMatchIn(urlLower)) return 1080
+        if (Regex("(720|p720|hd)").containsMatchIn(urlLower)) return 720
+        if (Regex("(480|p480|sd)").containsMatchIn(urlLower)) return 480
+        if (Regex("(360|p360)").containsMatchIn(urlLower)) return 360
+        if (Regex("(240|p240|mobile|lowest)").containsMatchIn(urlLower)) return 240
+        if (Regex("(144|p144)").containsMatchIn(urlLower)) return 144
+        
+        // Pattern 2: Path-based detection (contoh: .../1080p/stream.m3u8)
+        val pathPattern = Regex("/(\\d{3,4})p?/")
+        pathPattern.find(urlLower)?.groupValues?.getOrNull(1)?.let {
+            return it.toIntOrNull() ?: 480
+        }
+        
+        // Pattern 3: Quality suffix (contoh: video_1080.m3u8)
+        val suffixPattern = Regex("_(\\d{3,4})")
+        suffixPattern.find(urlLower)?.groupValues?.getOrNull(1)?.let {
+            return it.toIntOrNull() ?: 480
+        }
+        
+        // Default: 480 (safe untuk kebanyakan kasus)
+        return 480
+    }
+    
+    // ========================================
+    // HEADERS BUILDING
+    // ========================================
+    
+    /**
+     * Build optimal headers untuk streaming
+     * Merge default headers dengan custom headers
+     */
+    private fun buildHeaders(
+        referer: String?,
+        customHeaders: Map<String, String>? = null
+    ): Map<String, String> {
+        val defaultHeaders = mapOf(
+            "Accept" to "*/*",
+            "Accept-Encoding" to "gzip, deflate, br",
+            "Accept-Language" to "en-US,en;q=0.9",
+            "Connection" to "keep-alive",
+            "Sec-Fetch-Dest" to "empty",
+            "Sec-Fetch-Mode" to "cors",
+            "Sec-Fetch-Site" to "cross-site"
+        )
+        
+        val refererHeader = referer?.let { mapOf("Referer" to it) } ?: emptyMap()
+        val originHeader = referer?.let { 
+            val origin = extractOrigin(it)
+            if (origin != null) mapOf("Origin" to origin) else emptyMap()
+        } ?: emptyMap()
+        
+        return defaultHeaders + refererHeader + originHeader + (customHeaders ?: emptyMap())
+    }
+    
+    private fun extractOrigin(url: String): String? {
+        return try {
+            val uri = java.net.URI(url)
+            "${uri.scheme}://${uri.host}"
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    // ========================================
+    // URL VALIDATION
+    // ========================================
+    
+    /**
+     * Validate URL sebagai video stream yang valid
+     */
+    fun isValidVideoUrl(url: String): Boolean {
+        // Must be HTTP(S)
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            return false
+        }
+        
+        // Must not be obvious HTML page
+        if (url.endsWith(".html") || url.endsWith(".php")) {
+            return false
+        }
+        
+        // Must have video extension OR HLS indicator
+        val validExtensions = listOf(
+            ".m3u8", ".m3u", ".mp4", ".webm", ".mkv", 
+            ".mov", ".avi", ".flv", ".wmv"
+        )
+        
+        val hasValidExtension = validExtensions.any { url.lowercase().endsWith(it) }
+        val hasHlsIndicator = url.lowercase().contains("hls") || 
+                              url.lowercase().contains("m3u8")
+        
+        return hasValidExtension || hasHlsIndicator
+    }
+    
+    // ========================================
+    // M3U8 PARSING HELPERS
+    // ========================================
+    
+    /**
+     * Fetch M3U8 playlist content
+     */
+    private suspend fun fetchM3U8Playlist(
+        m3u8Url: String,
+        referer: String?
+    ): String {
+        val headers = buildHeaders(referer)
+        val response = app.get(
+            m3u8Url,
+            headers = headers,
+            timeout = 10_000
+        )
+        return response.text
+    }
+    
+    /**
+     * Parse M3U8 playlist, extract semua quality variants
+     */
+    private fun parseM3U8Variants(
+        playlistContent: String,
+        baseUrl: String
+    ): List<M3U8QualityVariant> {
+        val variants = mutableListOf<M3U8QualityVariant>()
+        val lines = playlistContent.lines()
+        
+        var currentQuality: Int? = null
+        var currentBandwidth: Int? = null
+        var currentResolution: Pair<Int, Int>? = null
+        
+        for (i in lines.indices) {
+            val line = lines[i].trim()
+            
+            // Parse #EXT-X-STREAM-INF line
+            if (line.startsWith("#EXT-X-STREAM-INF:")) {
+                // Extract bandwidth
+                val bandwidthMatch = Regex("BANDWIDTH=(\\d+)").find(line)
+                currentBandwidth = bandwidthMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+                
+                // Extract resolution
+                val resolutionMatch = Regex("RESOLUTION=(\\d+)x(\\d+)").find(line)
+                currentResolution = resolutionMatch?.let {
+                    Pair(it.groupValues[1].toInt(), it.groupValues[2].toInt())
+                }
+                
+                // Extract quality dari RESOLUTION
+                val qualityMatch = Regex("RESOLUTION=\\d+x(\\d+)").find(line)
+                currentQuality = qualityMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+            }
+            
+            // Parse URL line (setelah #EXT-X-STREAM-INF)
+            else if (line.isNotEmpty() && !line.startsWith("#")) {
+                currentQuality?.let { quality ->
+                    val variantUrl = resolveRelativeUrl(line, baseUrl)
+                    variants.add(
+                        M3U8QualityVariant(
+                            quality = quality,
+                            bandwidth = currentBandwidth ?: 0,
+                            url = variantUrl,
+                            resolution = currentResolution ?: Pair(0, 0)
+                        )
+                    )
+                }
+                
+                // Reset untuk variant berikutnya
+                currentQuality = null
+                currentBandwidth = null
+                currentResolution = null
+            }
+        }
+        
+        return variants.sortedByDescending { it.quality }
+    }
+    
+    /**
+     * Resolve relative URL ke absolute
+     */
+    private fun resolveRelativeUrl(url: String, baseUrl: String): String {
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return url
+        }
+        
+        return try {
+            val baseUri = java.net.URI(baseUrl)
+            val resolved = baseUri.resolve(url)
+            resolved.toString()
+        } catch (e: Exception) {
+            // Fallback: manual concat
+            val basePath = baseUrl.substringBeforeLast("/")
+            "$basePath/$url"
+        }
+    }
+}
+
+/**
+ * Data class untuk M3U8 quality variant
+ */
+data class M3U8QualityVariant(
+    val quality: Int,           // 1080, 720, 480, etc.
+    val bandwidth: Int,         // Bitrate (contoh: 2500000 = 2.5 Mbps)
+    val url: String,            // Direct stream URL
+    val resolution: Pair<Int, Int>  // Width x Height (contoh: 1920 x 1080)
+)
