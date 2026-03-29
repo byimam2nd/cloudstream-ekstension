@@ -2133,7 +2133,66 @@ object SmartM3U8Parser {
             timeout = 10_000
         )
         
-        return parseM3U8Variants(response.text, m3u8Url)
+        // Inline parsing logic (same as MasterLinkGenerator.parseM3U8Variants)
+        return parseM3U8VariantsInline(response.text, m3u8Url)
+    }
+    
+    /**
+     * Inline M3U8 variants parser untuk SmartM3U8Parser
+     */
+    private fun parseM3U8VariantsInline(
+        playlistContent: String,
+        baseUrl: String
+    ): List<M3U8QualityVariant> {
+        val variants = mutableListOf<M3U8QualityVariant>()
+        val lines = playlistContent.lines()
+        
+        var currentQuality: Int? = null
+        var currentBandwidth: Int? = null
+        var currentResolution: Pair<Int, Int>? = null
+        
+        for (i in lines.indices) {
+            val line = lines[i].trim()
+            
+            // Parse #EXT-X-STREAM-INF line
+            if (line.startsWith("#EXT-X-STREAM-INF:")) {
+                // Extract bandwidth
+                val bandwidthMatch = Regex("BANDWIDTH=(\\d+)").find(line)
+                currentBandwidth = bandwidthMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+                
+                // Extract resolution
+                val resolutionMatch = Regex("RESOLUTION=(\\d+)x(\\d+)").find(line)
+                currentResolution = resolutionMatch?.let {
+                    Pair(it.groupValues[1].toInt(), it.groupValues[2].toInt())
+                }
+                
+                // Extract quality dari RESOLUTION
+                val qualityMatch = Regex("RESOLUTION=\\d+x(\\d+)").find(line)
+                currentQuality = qualityMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+            }
+            
+            // Parse URL line (setelah #EXT-X-STREAM-INF)
+            else if (line.isNotEmpty() && !line.startsWith("#")) {
+                currentQuality?.let { quality ->
+                    val variantUrl = resolveRelativeUrl(line, baseUrl)
+                    variants.add(
+                        M3U8QualityVariant(
+                            quality = quality,
+                            bandwidth = currentBandwidth ?: 0,
+                            url = variantUrl,
+                            resolution = currentResolution ?: Pair(0, 0)
+                        )
+                    )
+                }
+                
+                // Reset untuk variant berikutnya
+                currentQuality = null
+                currentBandwidth = null
+                currentResolution = null
+            }
+        }
+        
+        return variants.sortedByDescending { it.quality }
     }
     
     /**
@@ -2187,7 +2246,7 @@ object SmartM3U8Parser {
             val response = app.head(
                 url,
                 headers = headers,
-                timeout = timeoutMs.toInt()
+                timeout = timeoutMs
             )
             
             // Check status code
@@ -2196,7 +2255,7 @@ object SmartM3U8Parser {
             false  // Timeout atau error
         }
     }
-    
+
     /**
      * Get bandwidth estimate dari stream URL
      * Menggunakan Content-Length header jika tersedia
@@ -2215,7 +2274,7 @@ object SmartM3U8Parser {
             val response = app.head(
                 url,
                 headers = headers,
-                timeout = 5000
+                timeout = 5000L
             )
             
             val contentLength = response.headers["Content-Length"]?.toLongOrNull()
