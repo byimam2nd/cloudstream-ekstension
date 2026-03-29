@@ -20,6 +20,7 @@ import com.Samehadaku.generated_sync.CircuitBreakerRegistry
 import com.Samehadaku.generated_sync.rateLimitDelay
 import com.Samehadaku.generated_sync.executeWithRetry
 import com.Samehadaku.generated_sync.logDebug
+import com.Samehadaku.generated_sync.MasterLinkGenerator
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
@@ -417,6 +418,9 @@ class Samehadaku : MainAPI() {
     // ========================================
     // LOAD FIXED EXTRACTOR (with quality)
     // ========================================
+    // ========================================
+    // LOAD FIXED EXTRACTOR (UPDATED WITH P1)
+    // ========================================
     private suspend fun loadFixedExtractor(
         url: String,
         quality: String,
@@ -429,19 +433,18 @@ class Samehadaku : MainAPI() {
             subtitleCallback = subtitleCallback
         ) { link ->
             runBlocking {
-                callback.invoke(
-                    newExtractorLink(
-                        link.name,
-                        link.name,
-                        link.url,
-                        link.type
-                    ) {
-                        this.referer = link.referer
-                        this.quality = quality.fixQuality()
-                        this.headers = link.headers
-                        this.extractorData = link.extractorData
-                    }
-                )
+                // Use P1 MasterLinkGenerator for simplified ExtractorLink creation
+                MasterLinkGenerator.createLink(
+                    source = link.name,
+                    url = link.url,
+                    referer = link.referer,
+                    quality = quality.fixQuality(),  // Keep custom Samehadaku quality logic
+                    headers = link.headers
+                )?.let { extractorLink ->
+                    // Copy extractorData from original link
+                    extractorLink.extractorData = link.extractorData
+                    callback.invoke(extractorLink)
+                }
             }
         }
         if (!loaded) {

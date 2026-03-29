@@ -28,6 +28,7 @@ import com.Animasu.generated_sync.HttpClientFactory
 import com.Animasu.generated_sync.CompiledRegexPatterns
 import com.Animasu.generated_sync.CircuitBreaker
 import com.Animasu.generated_sync.CircuitBreakerRegistry
+import com.Animasu.generated_sync.MasterLinkGenerator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
@@ -424,6 +425,8 @@ class Animasu : MainAPI() {
     // ========================================
     // LOAD FIXED EXTRACTOR (with quality)
     // ========================================
+    // LOAD FIXED EXTRACTOR (UPDATED WITH P1)
+    // ========================================
     private suspend fun loadFixedExtractor(
         url: String,
         quality: String?,
@@ -437,28 +440,25 @@ class Animasu : MainAPI() {
             subtitleCallback = subtitleCallback
         ) { link ->
             runBlocking {
-                callback.invoke(
-                    newExtractorLink(
-                        link.name,
-                        link.name,
-                        link.url,
-                        link.type
-                    ) {
-                        this.referer = link.referer
-                        // Use quality from extractor name or parse from text
-                        this.quality = if (link.type == ExtractorLinkType.M3U8 ||
-                                          link.name == "Uservideo") {
-                            link.quality
-                        } else {
-                            getIndexQuality(quality)
-                        }
-                        this.headers = link.headers
-                        this.extractorData = link.extractorData
-                    }
-                )
+                // Use P1 MasterLinkGenerator for simplified ExtractorLink creation
+                MasterLinkGenerator.createLink(
+                    source = link.name,
+                    url = link.url,
+                    referer = link.referer,
+                    quality = if (link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo") {
+                        link.quality  // Keep existing quality for M3U8/Uservideo
+                    } else {
+                        getIndexQuality(quality) ?: MasterLinkGenerator.detectQualityFromUrl(link.url)  // Auto-detect from URL
+                    },
+                    headers = link.headers
+                )?.let { extractorLink ->
+                    // Copy extractorData from original link
+                    extractorLink.extractorData = link.extractorData
+                    callback.invoke(extractorLink)
+                }
             }
         }
-        
+
         if (!loaded) {
             Log.e("Animasu", "loadFixedExtractor failed for $url")
         }
