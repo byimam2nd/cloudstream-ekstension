@@ -74,30 +74,10 @@ open class Donghuastream : MainAPI() {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "${request.data}${page}"
         
-        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
-        val cached = mainPageCache.get(cacheKey)
-        val storedFingerprint = cacheFingerprints[cacheKey]
-        if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Donghuastream", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Donghuastream", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Donghuastream", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Donghuastream", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+        // Simple cache check (no fingerprint overhead)
+        mainPageCache.get(cacheKey)?.let { cached ->
+            logDebug("Donghuastream", "Cache HIT for $cacheKey")
+            return cached
         }
 
         logDebug("Donghuastream", "Cache MISS for $cacheKey")
@@ -121,12 +101,6 @@ open class Donghuastream : MainAPI() {
         )
 
         // Cache the result
-        // Generate and store fingerprint
-        val fingerprint = monitor.generateFingerprint(mainUrl)
-        if (fingerprint != null) {
-            cacheFingerprints[cacheKey] = fingerprint
-        }
-
         mainPageCache.put(cacheKey, response)
 
         return response
@@ -413,13 +387,3 @@ open class Donghuastream : MainAPI() {
         return true
     }
 }
-
-// Smart Cache Monitor for fingerprint-based cache validation
-class DonghuastreamMonitor : SmartCacheMonitor() {
-    override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "Donghuastream"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
-        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
-    }
-}
-private val monitor = DonghuastreamMonitor()
-private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
