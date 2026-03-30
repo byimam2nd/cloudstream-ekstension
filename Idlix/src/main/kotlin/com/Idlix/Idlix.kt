@@ -81,30 +81,10 @@ class Idlix : MainAPI() {
     ): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
-        val cached = mainPageCache.get(cacheKey)
-        val storedFingerprint = cacheFingerprints[cacheKey]
-        if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Idlix", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Idlix", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Idlix", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Idlix", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+        // Simple cache check (no fingerprint overhead)
+        mainPageCache.get(cacheKey)?.let { cached ->
+            logDebug("Idlix", "Cache HIT for $cacheKey")
+            return cached
         }
 
         logDebug("Idlix", "Cache MISS for $cacheKey")
@@ -142,12 +122,6 @@ class Idlix : MainAPI() {
 
         val response = newHomePageResponse(request.name, home)
 
-        // Generate and store fingerprint
-        val fingerprint = monitor.generateFingerprint(mainUrl)
-        if (fingerprint != null) {
-            cacheFingerprints[cacheKey] = fingerprint
-        }
-        
         // Cache the result
         mainPageCache.put(cacheKey, response)
 
@@ -544,15 +518,3 @@ class Idlix : MainAPI() {
     )
 }
 
-// Smart Cache Monitor for fingerprint-based cache validation
-class IdlixMonitor : SmartCacheMonitor() {
-    override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry {
-            rateLimitDelay(moduleName = "Idlix")
-            app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge
-        }
-        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
-    }
-}
-private val monitor = IdlixMonitor()
-private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
