@@ -150,31 +150,10 @@ class Samehadaku : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache with fingerprint validation
-        val cached = mainPageCache.get(cacheKey)
-        val storedFingerprint = cacheFingerprints[cacheKey]
-        
-        if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Samehadaku", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Samehadaku", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Samehadaku", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Samehadaku", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+        // Simple cache check (no fingerprint overhead)
+        mainPageCache.get(cacheKey)?.let { cached ->
+            logDebug("Samehadaku", "Cache HIT for $cacheKey")
+            return cached
         }
 
         logDebug("Samehadaku", "Cache MISS for $cacheKey")
@@ -454,12 +433,3 @@ class Samehadaku : MainAPI() {
     }
 }
 
-// Smart Cache Monitor for fingerprint-based cache validation
-class SamehadakuMonitor : SmartCacheMonitor() {
-    override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "Samehadaku"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
-        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
-    }
-}
-private val monitor = SamehadakuMonitor()
-private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
