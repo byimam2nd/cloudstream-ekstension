@@ -72,6 +72,7 @@ object HttpClientFactory {
 
     // DNS cache configuration
     private const val DNS_CACHE_TTL_MINUTES = 5L
+    private const val DNS_CACHE_TTL_MS = DNS_CACHE_TTL_MINUTES * 60 * 1000L // Convert to milliseconds
 
     // Debug mode
     private const val DEBUG_MODE = false
@@ -97,10 +98,17 @@ object HttpClientFactory {
     private val sessionUserAgents = ConcurrentHashMap<String, String>()
 
     /**
-     * DNS Cache untuk mengurangi lookup latency
-     * Format: hostname → List<InetAddress>
+     * DNS Cache entry dengan timestamp untuk TTL
+     * Format: hostname → DnsCacheEntry (addresses + timestamp)
      */
-    private val dnsCache = ConcurrentHashMap<String, List<InetAddress>>()
+    data class DnsCacheEntry(
+        val addresses: List<InetAddress>,
+        val timestamp: Long = System.currentTimeMillis()
+    ) {
+        fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > DNS_CACHE_TTL_MS
+    }
+    
+    private val dnsCache = ConcurrentHashMap<String, DnsCacheEntry>()
 
     /**
      * User-Agent pool dengan browser modern (Chrome, Firefox, Safari)
@@ -150,6 +158,16 @@ object HttpClientFactory {
             dnsCache.clear()
             sessionUserAgents.clear()
         }
+    }
+    
+    /**
+     * Get DNS cache statistics (untuk monitoring/debugging)
+     * @return Map dengan total entries dan expired entries count
+     */
+    fun getDnsCacheStats(): Map<String, Int> {
+        val total = dnsCache.size
+        val expired = dnsCache.values.count { it.isExpired() }
+        return mapOf("total" to total, "expired" to expired, "valid" to (total - expired))
     }
 
     /**
@@ -254,22 +272,27 @@ object HttpClientFactory {
     // ============================================
 
     /**
-     * Custom DNS implementation dengan caching.
+     * Custom DNS implementation dengan caching + TTL.
      * Mengurangi DNS lookup latency dengan cache TTL 5 menit.
+     * Auto-expire stale DNS entries untuk prevent stale DNS.
      */
     private object CachedDns : Dns {
         override fun lookup(hostname: String): List<InetAddress> {
             // Check cache first
             dnsCache[hostname]?.let { cached ->
-                // Verify cache is not expired (simple TTL check)
-                return cached
+                // Verify cache is not expired (TTL check)
+                if (!cached.isExpired()) {
+                    return cached.addresses
+                }
+                // Cache expired, remove it
+                dnsCache.remove(hostname)
             }
 
             // Perform actual DNS lookup
             return try {
                 val addresses = InetAddress.getAllByName(hostname).toList()
-                // Cache the result
-                dnsCache[hostname] = addresses
+                // Cache the result with timestamp
+                dnsCache[hostname] = DnsCacheEntry(addresses)
                 addresses
             } catch (e: UnknownHostException) {
                 // Fallback to system DNS
