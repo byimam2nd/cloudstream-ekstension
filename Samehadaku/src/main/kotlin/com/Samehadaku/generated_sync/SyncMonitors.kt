@@ -62,9 +62,27 @@ abstract class SmartCacheMonitor {
         CACHE_MISS, CACHE_VALID, CACHE_INVALID, FETCH_ERROR
     }
 
+    /**
+     * Performance Mode Flag
+     * Set to true untuk disable fingerprint validation (faster)
+     * Set to false untuk enable fingerprint validation (more accurate)
+     *
+     * Default: true (performance first)
+     */
+    var ENABLE_FINGERPRINT_VALIDATION = false
+
     abstract suspend fun fetchTitles(url: String): List<String>
 
     suspend fun checkCacheValidity(cacheKey: String, currentFingerprint: CacheFingerprint?): CacheValidationResult {
+        // PERFORMANCE MODE: Skip fingerprint validation for faster response
+        if (!ENABLE_FINGERPRINT_VALIDATION) {
+            return if (currentFingerprint == null) {
+                CacheValidationResult.CACHE_MISS
+            } else {
+                CacheValidationResult.CACHE_VALID  // Assume valid
+            }
+        }
+
         if (currentFingerprint == null) return CacheValidationResult.CACHE_MISS
 
         try {
