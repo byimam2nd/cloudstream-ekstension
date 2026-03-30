@@ -174,31 +174,10 @@ class Pencurimovie : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache with fingerprint validation
-        val cached = mainPageCache.get(cacheKey)
-        val storedFingerprint = cacheFingerprints[cacheKey]
-        
-        if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Pencurimovie", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Pencurimovie", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Pencurimovie", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Pencurimovie", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+        // Simple cache check (no fingerprint overhead)
+        mainPageCache.get(cacheKey)?.let { cached ->
+            logDebug("Pencurimovie", "Cache HIT for $cacheKey")
+            return cached
         }
 
         logDebug("Pencurimovie", "Cache MISS for $cacheKey")
@@ -222,12 +201,6 @@ class Pencurimovie : MainAPI() {
             hasNext = true
         )
 
-        // Generate and store fingerprint
-        val fingerprint = monitor.generateFingerprint(mainUrl)
-        if (fingerprint != null) {
-            cacheFingerprints[cacheKey] = fingerprint
-        }
-        
         // Cache the result
         mainPageCache.put(cacheKey, response)
 
@@ -650,16 +623,6 @@ class Pencurimovie : MainAPI() {
         }
     }
 }
-
-// Smart Cache Monitor for fingerprint-based cache validation
-class PencurimovieMonitor : SmartCacheMonitor() {
-    override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "Pencurimovie"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
-        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
-    }
-}
-private val monitor = PencurimovieMonitor()
-private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
