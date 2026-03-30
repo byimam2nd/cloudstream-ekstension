@@ -213,12 +213,6 @@ class Samehadaku : MainAPI() {
             hasNext = homeList.isNotEmpty()
         )
 
-        // Generate and store fingerprint
-        val fingerprint = monitor.generateFingerprint(mainUrl)
-        if (fingerprint != null) {
-            cacheFingerprints[cacheKey] = fingerprint
-        }
-        
         // Save to cache
         mainPageCache.put(cacheKey, responseObj)
 
