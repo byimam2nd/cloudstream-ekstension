@@ -1,6 +1,7 @@
 package com.Donghuastream
 
 import com.Donghuastream.generated_sync.CacheManager
+import com.Donghuastream.generated_sync.AutoUsedConstants
 import com.Donghuastream.generated_sync.EpisodePreFetcher
 import com.Donghuastream.generated_sync.SmartCacheMonitor
 import com.Donghuastream.generated_sync.HttpClientFactory
@@ -416,7 +417,7 @@ open class Donghuastream : MainAPI() {
 // Smart Cache Monitor for fingerprint-based cache validation
 class DonghuastreamMonitor : SmartCacheMonitor() {
     override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "Donghuastream"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        val document = executeWithRetry { rateLimitDelay(moduleName = "Donghuastream"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
         return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
     }
 }

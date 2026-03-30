@@ -1,6 +1,7 @@
 package com.Funmovieslix
 
 import com.Funmovieslix.generated_sync.CacheManager
+import com.Funmovieslix.generated_sync.AutoUsedConstants
 import com.Funmovieslix.generated_sync.logError
 import com.Funmovieslix.generated_sync.EpisodePreFetcher
 import com.Funmovieslix.generated_sync.SmartCacheMonitor
@@ -182,7 +183,7 @@ class Funmovieslix : MainAPI() {
                             rateLimitDelay()
                             app.get(
                                 "${mainUrl}?s=$query&page=$page",
-                                timeout = requestTimeout,
+                                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                                 headers = mapOf("User-Agent" to getRandomUserAgent())
                             ).documentLarge
                         }
@@ -205,7 +206,7 @@ class Funmovieslix : MainAPI() {
             rateLimitDelay()
             app.get(
                 url,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -422,7 +423,7 @@ class Funmovieslix : MainAPI() {
 // Smart Cache Monitor for fingerprint-based cache validation
 class FunmovieslixMonitor : SmartCacheMonitor() {
     override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "Funmovieslix"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        val document = executeWithRetry { rateLimitDelay(moduleName = "Funmovieslix"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
         return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
     }
 }

@@ -16,6 +16,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.*
 import com.Animasu.generated_sync.CacheManager
+import com.Animasu.generated_sync.AutoUsedConstants
 import com.Animasu.generated_sync.getImageAttr
 import com.Animasu.generated_sync.getRandomUserAgent
 import com.Animasu.generated_sync.logError
@@ -230,7 +231,7 @@ class Animasu : MainAPI() {
             animasuRateLimitDelay()
             app.get(
                 "$mainUrl/pencarian/?${request.data}&halaman=$page",
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -271,7 +272,7 @@ class Animasu : MainAPI() {
             animasuRateLimitDelay()
             app.get(
                 "$mainUrl/?s=$query",
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -304,7 +305,7 @@ class Animasu : MainAPI() {
             animasuRateLimitDelay()
             app.get(
                 url,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -392,7 +393,7 @@ class Animasu : MainAPI() {
             animasuRateLimitDelay()
             app.get(
                 data,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }

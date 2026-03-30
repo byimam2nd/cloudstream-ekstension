@@ -1,6 +1,7 @@
 package com.LayarKaca21
 
 import com.LayarKaca21.generated_sync.CacheManager
+import com.LayarKaca21.generated_sync.AutoUsedConstants
 import com.LayarKaca21.generated_sync.executeWithRetry
 import com.LayarKaca21.generated_sync.rateLimitDelay
 import com.LayarKaca21.generated_sync.getRandomUserAgent
@@ -99,7 +100,7 @@ class LayarKaca21 : MainAPI() {
             rateLimitDelay() // Only delay for network requests
             app.get(
                 "${request.data}$page",
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -130,7 +131,7 @@ class LayarKaca21 : MainAPI() {
             rateLimitDelay()
             val res = app.get(
                 url,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
 
@@ -225,7 +226,7 @@ class LayarKaca21 : MainAPI() {
             rateLimitDelay()
             app.get(
                 fixUrl,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -387,7 +388,7 @@ class LayarKaca21 : MainAPI() {
             val response = app.get(
                 this,
                 referer = "$seriesUrl/",
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             )
             val document = response.documentLarge
@@ -424,7 +425,7 @@ class LayarKaca21 : MainAPI() {
             val res = app.get(
                 url,
                 allowRedirects = false,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             )
             val href = res.headers["location"]
@@ -463,7 +464,7 @@ class LayarKaca21 : MainAPI() {
 // Smart Cache Monitor for fingerprint-based cache validation
 class LayarKaca21Monitor : SmartCacheMonitor() {
     override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "LayarKaca21"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        val document = executeWithRetry { rateLimitDelay(moduleName = "LayarKaca21"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
         return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
     }
 }

@@ -9,6 +9,7 @@
 package com.Samehadaku
 
 import com.Samehadaku.generated_sync.CacheManager
+import com.Samehadaku.generated_sync.AutoUsedConstants
 import com.Samehadaku.generated_sync.getRandomUserAgent
 import com.Samehadaku.generated_sync.logError
 import com.Samehadaku.generated_sync.EpisodePreFetcher
@@ -189,7 +190,7 @@ class Samehadaku : MainAPI() {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
                 url,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             )
         }
@@ -262,7 +263,7 @@ class Samehadaku : MainAPI() {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
                 "$mainUrl/?s=$query",
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -294,7 +295,7 @@ class Samehadaku : MainAPI() {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
                 url,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -385,7 +386,7 @@ class Samehadaku : MainAPI() {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
                 data,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -456,7 +457,7 @@ class Samehadaku : MainAPI() {
 // Smart Cache Monitor for fingerprint-based cache validation
 class SamehadakuMonitor : SmartCacheMonitor() {
     override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "Samehadaku"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        val document = executeWithRetry { rateLimitDelay(moduleName = "Samehadaku"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
         return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
     }
 }

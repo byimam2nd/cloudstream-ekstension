@@ -1,6 +1,7 @@
 package com.Pencurimovie
 
 import com.Pencurimovie.generated_sync.CacheManager
+import com.Pencurimovie.generated_sync.AutoUsedConstants
 import com.Pencurimovie.generated_sync.EpisodePreFetcher
 import com.Pencurimovie.generated_sync.SmartCacheMonitor
 import com.Pencurimovie.generated_sync.HttpClientFactory
@@ -263,7 +264,7 @@ class Pencurimovie : MainAPI() {
             rateLimitDelay(moduleName = "Pencurimovie")
             app.get(
                 "${mainUrl}?s=$query",
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -276,7 +277,7 @@ class Pencurimovie : MainAPI() {
             rateLimitDelay(moduleName = "Pencurimovie")
             app.get(
                 url,
-                timeout = requestTimeout,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -386,7 +387,7 @@ class Pencurimovie : MainAPI() {
                 rateLimitDelay(moduleName = "Pencurimovie")
                 app.get(
                     data,
-                    timeout = requestTimeout,
+                    timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                     headers = mapOf("User-Agent" to getRandomUserAgent())
                 ).document
             }
@@ -495,7 +496,7 @@ class Pencurimovie : MainAPI() {
             )
             
             // Step 1: Initial request (get cookies) - WITH TIMEOUT
-            val res = app.get(url, headers = headers, allowRedirects = true, timeout = requestTimeout)
+            val res = app.get(url, headers = headers, allowRedirects = true, timeout = AutoUsedConstants.DEFAULT_TIMEOUT)
             val text = res.text
             val finalUrl = res.url
             
@@ -653,7 +654,7 @@ class Pencurimovie : MainAPI() {
 // Smart Cache Monitor for fingerprint-based cache validation
 class PencurimovieMonitor : SmartCacheMonitor() {
     override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "Pencurimovie"); app.get(url, timeout = CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
+        val document = executeWithRetry { rateLimitDelay(moduleName = "Pencurimovie"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
         return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
     }
 }
