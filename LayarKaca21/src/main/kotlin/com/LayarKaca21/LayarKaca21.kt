@@ -66,31 +66,10 @@ class LayarKaca21 : MainAPI() {
     ): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache with fingerprint validation
-        val cached = mainPageCache.get(cacheKey)
-        val storedFingerprint = cacheFingerprints[cacheKey]
-        
-        if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("LayarKaca", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("LayarKaca", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("LayarKaca", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("LayarKaca", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+        // Simple cache check (no fingerprint overhead)
+        mainPageCache.get(cacheKey)?.let { cached ->
+            logDebug("LayarKaca", "Cache HIT for $cacheKey")
+            return cached
         }
 
         logDebug("LayarKaca", "Cache MISS for $cacheKey - fetching from network...")
@@ -111,12 +90,6 @@ class LayarKaca21 : MainAPI() {
 
         val result = newHomePageResponse(request.name, home)
 
-        // Generate and store fingerprint
-        val fingerprint = monitor.generateFingerprint(mainUrl)
-        if (fingerprint != null) {
-            cacheFingerprints[cacheKey] = fingerprint
-        }
-        
         // Cache the result
         mainPageCache.put(cacheKey, result)
         logDebug("LayarKaca", "Cached result for $cacheKey")
@@ -461,12 +434,3 @@ class LayarKaca21 : MainAPI() {
     }
 }
 
-// Smart Cache Monitor for fingerprint-based cache validation
-class LayarKaca21Monitor : SmartCacheMonitor() {
-    override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry { rateLimitDelay(moduleName = "LayarKaca21"); app.get(url, timeout = AutoUsedConstants.CHECK_TIMEOUT, headers = mapOf("User-Agent" to getRandomUserAgent())).documentLarge }
-        return document.select("div.listupd article div.bsx a").mapNotNull { it.attr("title").trim() }.filter { it.isNotEmpty() }
-    }
-}
-private val monitor = LayarKaca21Monitor()
-private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
