@@ -45,26 +45,6 @@ private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 5 * 60
 private val loadCache = CacheManager<LoadResponse>(defaultTtl = 10 * 60 * 1000L)
 private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 * 1000L)
 
-// Smart Cache Monitor for fingerprint-based cache validation
-class AnimasuMonitor : SmartCacheMonitor() {
-    override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry {
-            animasuRateLimitDelay()
-            app.get(
-                url,
-                timeout = CHECK_TIMEOUT,
-                headers = mapOf("User-Agent" to getRandomUserAgent())
-            ).documentLarge
-        }
-        return document.select("div.listupd article div.bsx a")
-            .mapNotNull { it.attr("title").trim() }
-            .filter { it.isNotEmpty() }
-    }
-}
-
-private val monitor = AnimasuMonitor()
-private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
-
 // ========================================
 // RATE LIMITING
 // Using centralized ModuleRateLimiter from master/
@@ -197,35 +177,14 @@ class Animasu : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache with fingerprint validation
-        val cached = mainPageCache.get(cacheKey)
-        val storedFingerprint = cacheFingerprints[cacheKey]
-        
-        if (cached != null) {
-            if (storedFingerprint != null) {
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Animasu", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Animasu", "Cache INVALID - refetching for $cacheKey")
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Animasu", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Animasu", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+        // Simple cache check (no fingerprint overhead)
+        mainPageCache.get(cacheKey)?.let { cached ->
+            logDebug("Animasu", "Cache HIT for $cacheKey")
+            return cached
         }
 
         logDebug("Animasu", "Cache MISS for $cacheKey")
-        
+
         // Fetch dengan retry logic dan rate limiting
         val document = executeWithRetry {
             animasuRateLimitDelay()
@@ -235,20 +194,14 @@ class Animasu : MainAPI() {
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
-        
+
         val home = document.select("div.listupd div.bs").mapNotNull {
             runCatching { it.toSearchResult() }.getOrElse { null }
         }
-        
+
         val response = newHomePageResponse(request.name, home)
 
-        // Generate and store fingerprint
-        val fingerprint = monitor.generateFingerprint(mainUrl)
-        if (fingerprint != null) {
-            cacheFingerprints[cacheKey] = fingerprint
-        }
-        
-        // Save to cache
+        // Cache the result
         mainPageCache.put(cacheKey, response)
 
         return response
