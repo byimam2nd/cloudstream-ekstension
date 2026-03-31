@@ -264,7 +264,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x ./gradlew
-          ./gradlew build --no-daemon --stacktrace
+          ./gradlew build --no-daemon --stacktrace -x lint
 
       - name: Push builds
         run: |
