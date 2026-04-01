@@ -47,12 +47,9 @@ private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 *
 
 // ========================================
 // RATE LIMITING
-// Using centralized ModuleRateLimiter from master/
+// Using centralized rateLimitDelay from master/MasterUtils.kt
 // ========================================
-private val animasuRateLimiter = com.Animasu.generated_sync.ModuleRateLimiter.create("Animasu", 500L)
-
-// Backward compatible function (uses centralized limiter)
-internal suspend fun animasuRateLimitDelay() = animasuRateLimiter.delay()
+// Note: Use rateLimitDelay(moduleName = "Animasu") directly in functions
 
 // ========================================
 // RETRY LOGIC
@@ -187,7 +184,7 @@ class Animasu : MainAPI() {
 
         // Fetch dengan retry logic dan rate limiting
         val document = executeWithRetry {
-            animasuRateLimitDelay()
+            rateLimitDelay(moduleName = "Animasu")
             app.get(
                 "$mainUrl/pencarian/?${request.data}&halaman=$page",
                 timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
@@ -222,7 +219,7 @@ class Animasu : MainAPI() {
         
         // Fetch dengan retry logic
         val document = executeWithRetry {
-            animasuRateLimitDelay()
+            rateLimitDelay(moduleName = "Animasu")
             app.get(
                 "$mainUrl/?s=$query",
                 timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
@@ -255,7 +252,7 @@ class Animasu : MainAPI() {
         
         // Fetch dengan retry logic
         val document = executeWithRetry {
-            animasuRateLimitDelay()
+            rateLimitDelay(moduleName = "Animasu")
             app.get(
                 url,
                 timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
@@ -343,7 +340,7 @@ class Animasu : MainAPI() {
         
         // No cache → extract normally
         val document = executeWithRetry {
-            animasuRateLimitDelay()
+            rateLimitDelay(moduleName = "Animasu")
             app.get(
                 data,
                 timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
