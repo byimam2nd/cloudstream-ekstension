@@ -1,17 +1,17 @@
 package com.Donghuastream
 
+import com.Donghuastream.generated_sync.loadExtractorWithFallback
 import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
+import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.httpsify
-import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.Jsoup
 
@@ -52,24 +52,22 @@ open class SeaTV : Donghuastream() {
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         val document = app.get(data).documentLarge
+        
         document.select(".mobius option").amap { server ->
             val base64 = server.attr("value").takeIf { it.isNotEmpty() }
             val doc = base64?.let { base64Decode(it).let(Jsoup::parse) }
             val iframeUrl = doc?.select("iframe")?.attr("src")?.let(::httpsify)
             val metaUrl = doc?.select("meta[itemprop=embedUrl]")?.attr("content")?.let(::httpsify)
             val url = iframeUrl?.takeIf { it.isNotEmpty() } ?: metaUrl.orEmpty()
+            
             if (url.isNotEmpty()) {
                 when {
-                    url.contains("vidmoly") -> {
-                        val newUrl = url.substringAfter("=\"").substringBefore("\"")
-                        val link = "http:$newUrl"
-                        loadExtractor(link, referer = url, subtitleCallback, callback)
-                    }
                     url.endsWith("mp4") -> {
+                        // Direct MP4 - no extractor needed
                         callback.invoke(
                             newExtractorLink(
-                                "All Sub Player",
-                                "All Sub Player",
+                                "SeaTV MP4",
+                                "SeaTV",
                                 url = url,
                                 INFER_TYPE
                             ) {
@@ -79,7 +77,27 @@ open class SeaTV : Donghuastream() {
                         )
                     }
                     else -> {
-                        loadExtractor(url, referer = url, subtitleCallback, callback)
+                        // ✅ USE loadExtractorWithFallback dengan CircuitBreaker
+                        val loaded = loadExtractorWithFallback(
+                            url = url,
+                            referer = mainUrl,
+                            subtitleCallback = subtitleCallback,
+                            callback = callback
+                        )
+                        
+                        if (!loaded) {
+                            // Fallback untuk vidmoly (special case)
+                            if (url.contains("vidmoly")) {
+                                val newUrl = url.substringAfter("=\"").substringBefore("\"")
+                                val link = "http:$newUrl"
+                                loadExtractorWithFallback(
+                                    url = link,
+                                    referer = url,
+                                    subtitleCallback = subtitleCallback,
+                                    callback = callback
+                                )
+                            }
+                        }
                     }
                 }
             }
