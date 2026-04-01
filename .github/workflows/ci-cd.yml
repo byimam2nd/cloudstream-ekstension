@@ -279,6 +279,13 @@ jobs:
           echo "🔍 Finding .cs3 files..."
           find . -name "*.cs3" -type f || true
           
+          # Debug: List all build outputs
+          echo "📋 Listing build output directories..."
+          for dir in */build/outputs/apk/debug */build/outputs/apk/release */build/libs; do
+            echo "  Checking $dir:"
+            ls -la "$dir" 2>/dev/null || echo "    Directory not found"
+          done
+          
           # Copy new builds to builds branch
           cp */build/outputs/apk/debug/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
           cp */build/outputs/apk/release/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
