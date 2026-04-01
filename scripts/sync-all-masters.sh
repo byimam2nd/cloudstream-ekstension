@@ -218,6 +218,7 @@ for MODULE in "${MODULES[@]}"; do
 
         # Copy master file with correct package name (com.{package}.generated-sync)
         # Handle files that start with package declaration
+        # Also replace {MODULE} placeholders with actual package name
         awk -v pkg="$PACKAGE" '
             BEGIN { printed_header = 0 }
             /^package / {
@@ -238,7 +239,8 @@ for MODULE in "${MODULES[@]}"; do
                 print
                 next
             }
-            { print }
+            # Replace com.{MODULE}. with com.{package}. for internal references
+            { gsub(/com\.\{MODULE\}\./, "com." pkg "."); print }
         ' "$MASTER_SOURCE" > "$DEST_FILE"
 
         # Count lines (excluding comments)

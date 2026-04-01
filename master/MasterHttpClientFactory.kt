@@ -13,7 +13,7 @@
 // - ✅ Thread-safe session management
 // ========================================
 
-package master
+package com.{MODULE}
 
 import okhttp3.ConnectionPool
 import okhttp3.Dns

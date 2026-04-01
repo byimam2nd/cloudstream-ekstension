@@ -2,18 +2,21 @@
 
 ## 📖 Active Documentation
 
-### Main Documentation
-- **[EXTRACTOR_DOCUMENTATION.md](EXTRACTOR_DOCUMENTATION.md)** - Complete guide to extractor system (START HERE!)
-- **[EXTRACTOR_ARCHITECTURE.md](EXTRACTOR_ARCHITECTURE.md)** - Architecture overview and design decisions
-- **[BUGFIX_EXTRACTOR_2026-03-18.md](BUGFIX_EXTRACTOR_2026-03-18.md)** - Bug fix history and lessons learned
+### Core Documentation
+- **[PHILOSOPHY_AND_ARCHITECTURE.md](PHILOSOPHY_AND_ARCHITECTURE.md)** - System architecture & design philosophy (START HERE!)
+- **[QUICK_START.md](QUICK_START.md)** - 5-minute quick start guide
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference for common operations
+- **[CODE_EXAMPLES.md](CODE_EXAMPLES.md)** - Copy-paste ready code examples
+- **[FUNCTION_INDEX.md](FUNCTION_INDEX.md)** - Alphabetical function lookup
+- **[CONTEXT.md](CONTEXT.md)** - Complete project documentation
 
 ### Source Code
-- **[MasterExtractors.kt](MasterExtractors.kt)** - Central extractor repository (50 extractor classes)
+- **[MasterExtractors.kt](MasterExtractors.kt)** - Central extractor repository (75+ extractors)
 
-### Modules (9 Total)
+### Modules (8 Total)
 - **Anichin** - Anime China Indonesia
 - **Animasu** - Anime Indonesia
-- **Samehadaku** 🆕 - Anime Indonesia (Popular)
+- **Samehadaku** - Anime Indonesia (Popular)
 - **Donghuastream** - Donghua Indonesia
 - **Pencurimovie** - Movies & TV Indonesia
 - **LayarKaca21** - Movies & TV Indonesia
@@ -26,7 +29,9 @@
 - **[ULTIMA_SYNC_SETUP.md](ULTIMA_SYNC_SETUP.md)** - Ultima cross-device sync setup
 
 ### Development
-- **[CLEANUP_PLAN.md](CLEANUP_PLAN.md)** - Repository cleanup plan and roadmap
+- **[DEVELOPMENT_REPLANNING.md](DEVELOPMENT_REPLANNING.md)** - Development roadmap & strategy
+- **[IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md)** - Development improvement plan
+- **[SYNC_WORKFLOW.md](SYNC_WORKFLOW.md)** - Auto-sync workflow documentation
 
 ---
 
@@ -46,16 +51,20 @@ Old research and planning documents are stored in [`archive-old/2026-03-research
 
 ```
 docs/
-├── 📘 EXTRACTOR_DOCUMENTATION.md    # Main documentation (3,500+ words)
-├── 🏗️ EXTRACTOR_ARCHITECTURE.md     # Architecture reference
-├── 🐛 BUGFIX_EXTRACTOR_2026-03-18.md # Bug fix history
-├── 🔧 CLEANUP_PLAN.md               # Cleanup roadmap
-├── 📄 MasterExtractors.kt           # Extractor source code
-├── 📖 README-StremioAddon.md        # User guide
-├── 📖 README-StremioX.md            # User guide
-├── 📖 ULTIMA_SYNC_SETUP.md          # User guide
-└── 🗄️ archive-old/                  # Archived docs
-    └── 2026-03-research/            # Research phase docs
+├── 📘 PHILOSOPHY_AND_ARCHITECTURE.md  # System architecture & philosophy
+├── 🚀 QUICK_START.md                  # 5-minute quick start
+├── ⚡ QUICK_REFERENCE.md              # Quick reference guide
+├── 📝 CODE_EXAMPLES.md                # Copy-paste examples
+├── 📚 FUNCTION_INDEX.md               # Function lookup
+├── 📖 CONTEXT.md                      # Complete documentation
+├── 📄 MasterExtractors.kt             # Extractor source code
+├── 📖 README-StremioAddon.md          # User guide
+├── 📖 README-StremioX.md              # User guide
+├── 🔄 SYNC_WORKFLOW.md                # Sync workflow guide
+├── 📋 DEVELOPMENT_REPLANNING.md       # Development roadmap
+├── 📋 IMPROVEMENT_PLAN.md             # Improvement plan
+└── 🗄️ archive-old/                    # Archived docs
+    └── 2026-03-research/              # Research phase docs
 ```
 
 ---
@@ -67,15 +76,16 @@ docs/
 2. Check [ULTIMA_SYNC_SETUP.md](ULTIMA_SYNC_SETUP.md) for sync setup
 
 **For Developers:**
-1. Read [EXTRACTOR_DOCUMENTATION.md](EXTRACTOR_DOCUMENTATION.md) (comprehensive guide)
-2. Review [EXTRACTOR_ARCHITECTURE.md](EXTRACTOR_ARCHITECTURE.md) (architecture)
-3. Check [MasterExtractors.kt](MasterExtractors.kt) (source code)
+1. Read [QUICK_START.md](QUICK_START.md) (5-minute onboarding)
+2. Review [PHILOSOPHY_AND_ARCHITECTURE.md](PHILOSOPHY_AND_ARCHITECTURE.md) (architecture)
+3. Check [CODE_EXAMPLES.md](CODE_EXAMPLES.md) (copy-paste examples)
+4. Use [FUNCTION_INDEX.md](FUNCTION_INDEX.md) (function lookup)
 
 **For Contributors:**
-1. Read [CLEANUP_PLAN.md](CLEANUP_PLAN.md) (current roadmap)
-2. Review [BUGFIX_EXTRACTOR_2026-03-18.md](BUGFIX_EXTRACTOR_2026-03-18.md) (known issues)
+1. Read [DEVELOPMENT_REPLANNING.md](DEVELOPMENT_REPLANNING.md) (current roadmap)
+2. Review [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) (improvement plans)
 
 ---
 
-**Last Updated:** 2026-03-18  
+**Last Updated:** 2026-04-01
 **Status:** ✅ Active & Maintained

@@ -4,14 +4,14 @@
 // ========================================
 // Last Updated: 2026-03-25
 // Sync Target: generated_sync/SyncCircuitBreaker.kt
-// 
+//
 // DESIGN PRINCIPLES:
 // - All types are PUBLIC (no private enum)
 // - No conflicting constants with MasterUtils
 // - Self-contained functionality
 // ========================================
 
-package master
+package com.{MODULE}
 
 import com.lagradost.api.Log
 import kotlinx.coroutines.sync.Mutex

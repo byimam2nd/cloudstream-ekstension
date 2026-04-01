@@ -1,32 +1,32 @@
 // ========================================
+// MASTER COMPILED REGEX PATTERNS - v3.0
+// Pre-compiled regex untuk optimal performance
+// ========================================
+// Last Updated: 2026-03-25
+// Sync Target: generated_sync/SyncCompiledRegexPatterns.kt
+//
+// PERFORMANCE BENEFITS:
+// - 319+ regex patterns di-compile sekali saat class load
+// - Mengurangi CPU usage hingga 30-50%
+// - Mengurangi delay 200-500ms sebelum video load
+//
+// @author CloudStream Extension Team
+// @since 2026-03-24
+// ========================================
+
+// ========================================
 // AUTO-GENERATED - DO NOT EDIT MANUALLY
 // Synced from common/MasterCompiledRegexPatterns.kt
 // File: SyncCompiledRegexPatterns.kt
 // ========================================
 package com.Donghuastream.generated_sync
 
-/**
- * Kumpulan regex patterns yang di-compile sekali untuk performa optimal.
- * 
- * Masalah yang diperbaiki:
- * - 319+ regex patterns di-compile ulang setiap kali extract dipanggil
- * - Setiap Regex(pattern) melakukan kompilasi → CPU intensive
- * - Delay 200-500ms sebelum video mulai load
- * 
- * Solusi:
- * - Semua patterns di-compile sekali saat class load
- * - Reuse patterns untuk semua extractor
- * - Mengurangi CPU usage hingga 30-50%
- * 
- * @author CloudStream Extension Team
- * @since 2026-03-24
- */
 object CompiledRegexPatterns {
-    
+
     // =========================================================================
     // M3U8 URL PATTERNS
     // =========================================================================
-    
+
     /** Pattern untuk extract m3u8 URLs dari JavaScript/HTML */
     val M3U8_COLON_QUOTED = Regex(":\\s*\"(.*?m3u8.*?)\"")
     val M3U8_FILE_QUOTED = Regex("file:\\s*\"(.*?m3u8.*?)\"")

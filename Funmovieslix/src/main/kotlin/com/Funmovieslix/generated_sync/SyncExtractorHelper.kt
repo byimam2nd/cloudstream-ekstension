@@ -94,7 +94,8 @@ suspend fun loadExtractorWithFallback(
         Log.d("ExtractorHelper", "URL Domain: $urlDomain")
 
         // Get SyncExtractors list dynamically
-        val syncExtractorsClass = Class.forName("com.master.generated_sync.SyncExtractors")
+        // Use current package context (com.{module}.generated_sync) instead of hardcoded package
+        val syncExtractorsClass = Class.forName("${javaClass.`package`.name}.SyncExtractors")
         val listField = syncExtractorsClass.getDeclaredField("list")
         @Suppress("UNCHECKED_CAST")
         val extractors = listField.get(null) as List<com.lagradost.cloudstream3.utils.ExtractorApi>
@@ -184,15 +185,13 @@ suspend fun preFetchExtractorLinks(
     // Step 2: If no links, try direct extractors
     if (links.isEmpty()) {
         Log.d("PreFetch", "loadExtractor failed, trying direct extractors...")
-        
+
         val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
-        
-        // Get SyncExtractors list dynamically
-        val syncExtractorsClass = Class.forName("com.master.generated_sync.SyncExtractors")
-        val listField = syncExtractorsClass.getDeclaredField("list")
-        @Suppress("UNCHECKED_CAST")
-        val extractors = listField.get(null) as List<com.lagradost.cloudstream3.utils.ExtractorApi>
-        
+
+        // Get SyncExtractors list from generated_sync package
+        // Using direct object reference instead of reflection for reliability
+        val extractors = com.Funmovieslix.generated_sync.SyncExtractors.list
+
         // Find matching extractors
         val matchingExtractors = extractors.filter { extractor ->
             val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
@@ -200,7 +199,7 @@ suspend fun preFetchExtractorLinks(
             val nameMatch = url.contains(extractor.name, ignoreCase = true)
             domainMatch || nameMatch
         }
-        
+
         Log.d("PreFetch", "Found ${matchingExtractors.size} matching extractors")
         
         // Try all matching extractors

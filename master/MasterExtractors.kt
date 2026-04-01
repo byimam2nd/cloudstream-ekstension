@@ -35,7 +35,7 @@
 //   MasterLinkGenerator.createLink(source, url, referer)
 // ========================================
 
-package com.MasterExtractors
+package com.{MODULE}
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
