@@ -76,26 +76,31 @@ suspend fun loadExtractorWithFallback(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     var loaded = false
+    val startTime = System.currentTimeMillis()
+
+    Log.d("ExtractorHelper", "▶️ loadExtractorWithFallback called for: $url")
 
     // Step 1: Try loadExtractor (CloudStream API)
     try {
+        Log.d("ExtractorHelper", "📞 Calling loadExtractor...")
         loaded = loadExtractor(url, referer, subtitleCallback, callback)
-        Log.d("ExtractorHelper", "loadExtractor result: $loaded")
+        Log.d("ExtractorHelper", "✅ loadExtractor result: $loaded")
     } catch (e: Exception) {
-        Log.e("ExtractorHelper", "loadExtractor exception: ${e.message}")
+        Log.e("ExtractorHelper", "❌ loadExtractor exception: ${e.javaClass.simpleName}: ${e.message}\n   Stack: ${e.stackTraceToString().take(300)}")
     }
 
     // Step 2: If failed, try direct extractor call from SyncExtractors WITH CIRCUIT BREAKER
     if (!loaded) {
-        Log.d("ExtractorHelper", "loadExtractor failed, trying direct extractors with CircuitBreaker...")
-        Log.d("ExtractorHelper", "URL: $url")
+        Log.w("ExtractorHelper", "⚠️ loadExtractor failed, trying direct SyncExtractors with CircuitBreaker...")
+        Log.d("ExtractorHelper", "   URL: $url")
 
         val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
-        Log.d("ExtractorHelper", "URL Domain: $urlDomain")
+        Log.d("ExtractorHelper", "   URL Domain: $urlDomain")
 
         // Get SyncExtractors list from generated_sync package
         // Using direct object reference instead of reflection for reliability
         val extractors = com.Samehadaku.generated_sync.SyncExtractors.list
+        Log.d("ExtractorHelper", "   Total SyncExtractors available: ${extractors.size}")
 
         // Find ALL matching extractors
         val matchingExtractors = extractors.filter { extractor ->
@@ -105,9 +110,11 @@ suspend fun loadExtractorWithFallback(
             domainMatch || nameMatch
         }
 
-        Log.d("ExtractorHelper", "Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
+        Log.d("ExtractorHelper", "   Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
 
         // Try ALL matching extractors IN PARALLEL WITH CIRCUIT BREAKER
+        var successCount = 0
+        var failCount = 0
         try {
             coroutineScope {
                 matchingExtractors.forEach { extractor ->
@@ -119,7 +126,7 @@ suspend fun loadExtractorWithFallback(
                                 failureThreshold = 3
                             )
 
-                            Log.d("ExtractorHelper", "Trying extractor: ${extractor.name} (${extractor.mainUrl})")
+                            Log.d("ExtractorHelper", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
 
                             // Wrap extractor call with CircuitBreaker
                             val result = breaker.execute {
@@ -127,22 +134,28 @@ suspend fun loadExtractorWithFallback(
                             }
 
                             if (result != null) {
-                                Log.d("ExtractorHelper", "SUCCESS: Extractor ${extractor.name} worked!")
+                                successCount++
+                                Log.d("ExtractorHelper", "      ✅ SUCCESS: Extractor ${extractor.name} worked!")
                             } else {
-                                Log.w("ExtractorHelper", "CircuitBreaker OPEN for ${extractor.name} - skipping")
+                                failCount++
+                                Log.w("ExtractorHelper", "      🔴 CircuitBreaker OPEN for ${extractor.name} - skipping (failed 3+ times)")
                             }
                         } catch (e: Exception) {
-                            Log.e("ExtractorHelper", "Extractor ${extractor.name} failed: ${e.message}")
+                            failCount++
+                            Log.e("ExtractorHelper", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}\n         Stack trace: ${e.stackTraceToString().lines().take(5).joinToString("\\n         ")}")
                         }
                     }
                 }
             }
             loaded = true  // Mark as loaded (extractors were called)
+            Log.d("ExtractorHelper", "📊 SyncExtractors result: $successCount success, $failCount failed")
         } catch (e: Exception) {
-            Log.e("ExtractorHelper", "Parallel extraction failed: ${e.message}")
+            Log.e("ExtractorHelper", "❌ Parallel extraction failed: ${e.javaClass.simpleName}: ${e.message}\n   Stack: ${e.stackTraceToString().take(300)}")
         }
     }
-    
+
+    val duration = System.currentTimeMillis() - startTime
+    Log.d("ExtractorHelper", "⏱️ loadExtractorWithFallback completed in ${duration}ms - loaded=$loaded")
     return loaded
 }
 
@@ -168,26 +181,33 @@ suspend fun preFetchExtractorLinks(
 ): Pair<List<ExtractorLink>, List<SubtitleFile>> {
     val links = mutableListOf<ExtractorLink>()
     val subtitles = mutableListOf<SubtitleFile>()
-    
+    val startTime = System.currentTimeMillis()
+
+    Log.d("PreFetch", "▶️ Starting pre-fetch for URL: $url")
+
     // Step 1: Try loadExtractor
     try {
-        loadExtractor(url, referer, 
+        Log.d("PreFetch", "📞 Calling loadExtractor...")
+        loadExtractor(url, referer,
             subtitleCallback = { sub -> subtitles.add(sub) },
             callback = { link -> links.add(link) }
         )
+        Log.d("PreFetch", "✅ loadExtractor completed successfully")
     } catch (e: Exception) {
-        Log.e("PreFetch", "loadExtractor failed: ${e.message}")
+        Log.e("PreFetch", "❌ loadExtractor FAILED: ${e.javaClass.simpleName}: ${e.message}\n   Stack: ${e.stackTraceToString().take(500)}")
     }
-    
+
     // Step 2: If no links, try direct extractors
     if (links.isEmpty()) {
-        Log.d("PreFetch", "loadExtractor failed, trying direct extractors...")
+        Log.w("PreFetch", "⚠️ No links from loadExtractor, trying direct SyncExtractors...")
 
         val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+        Log.d("PreFetch", "   URL Domain: $urlDomain")
 
         // Get SyncExtractors list from generated_sync package
         // Using direct object reference instead of reflection for reliability
         val extractors = com.Samehadaku.generated_sync.SyncExtractors.list
+        Log.d("PreFetch", "   Total SyncExtractors available: ${extractors.size}")
 
         // Find matching extractors
         val matchingExtractors = extractors.filter { extractor ->
@@ -197,27 +217,40 @@ suspend fun preFetchExtractorLinks(
             domainMatch || nameMatch
         }
 
-        Log.d("PreFetch", "Found ${matchingExtractors.size} matching extractors")
-        
+        Log.d("PreFetch", "   Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
+
         // Try all matching extractors
+        var successCount = 0
+        var failCount = 0
         matchingExtractors.forEach { extractor ->
             try {
+                Log.d("PreFetch", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
                 extractor.getUrl(url, referer,
-                    subtitleCallback = { sub -> 
-                        synchronized(subtitles) { subtitles.add(sub) } 
+                    subtitleCallback = { sub ->
+                        synchronized(subtitles) {
+                            subtitles.add(sub)
+                            Log.d("PreFetch", "      ↳ ${extractor.name} found subtitle: ${sub.name}")
+                        }
                     },
-                    callback = { link -> 
-                        synchronized(links) { links.add(link) } 
+                    callback = { link ->
+                        synchronized(links) {
+                            links.add(link)
+                            successCount++
+                            Log.d("PreFetch", "      ↳ ${extractor.name} SUCCESS: ${link.name} - ${link.quality}p")
+                        }
                     }
                 )
-                Log.d("PreFetch", "✅ ${extractor.name} succeeded")
             } catch (e: Exception) {
-                Log.e("PreFetch", "❌ ${extractor.name} failed: ${e.message}")
+                failCount++
+                Log.e("PreFetch", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}\n         Stack trace: ${e.stackTraceToString().lines().take(5).joinToString("\\n         ")}")
             }
         }
+        
+        Log.d("PreFetch", "📊 SyncExtractors result: $successCount success, $failCount failed")
     }
-    
-    Log.d("PreFetch", "Total pre-fetched: ${links.size} links, ${subtitles.size} subtitles")
+
+    val duration = System.currentTimeMillis() - startTime
+    Log.d("PreFetch", "⏱️ Pre-fetch completed in ${duration}ms - ${links.size} links, ${subtitles.size} subtitles")
     return Pair(links, subtitles)
 }
 
