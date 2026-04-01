@@ -89,7 +89,8 @@ suspend fun loadExtractorWithFallback(
         Log.d("ExtractorHelper", "URL Domain: $urlDomain")
 
         // Get SyncExtractors list dynamically
-        val syncExtractorsClass = Class.forName("com.master.generated_sync.SyncExtractors")
+        // Use current package context (com.{module}.generated_sync) instead of hardcoded package
+        val syncExtractorsClass = Class.forName("${javaClass.`package`.name}.SyncExtractors")
         val listField = syncExtractorsClass.getDeclaredField("list")
         @Suppress("UNCHECKED_CAST")
         val extractors = listField.get(null) as List<com.lagradost.cloudstream3.utils.ExtractorApi>
@@ -183,7 +184,8 @@ suspend fun preFetchExtractorLinks(
         val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
         
         // Get SyncExtractors list dynamically
-        val syncExtractorsClass = Class.forName("com.master.generated_sync.SyncExtractors")
+        // Use current package context (com.{module}.generated_sync) instead of hardcoded package
+        val syncExtractorsClass = Class.forName("${javaClass.`package`.name}.SyncExtractors")
         val listField = syncExtractorsClass.getDeclaredField("list")
         @Suppress("UNCHECKED_CAST")
         val extractors = listField.get(null) as List<com.lagradost.cloudstream3.utils.ExtractorApi>
