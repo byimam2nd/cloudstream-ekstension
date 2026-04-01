@@ -236,7 +236,7 @@ suspend fun preFetchExtractorLinks(
                         synchronized(links) {
                             links.add(extractorLink)
                             successCount++
-                            Log.d("PreFetch", "      ↳ ${extractor.name} SUCCESS: ${extractorLink.name} - ${extractorLink.quality}p")
+                            Log.d("PreFetch", "      ↳ ${extractor.name} SUCCESS: ${extractorLink.source} - ${extractorLink.type}")
                         }
                     }
                 )
