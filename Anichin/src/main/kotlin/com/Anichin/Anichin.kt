@@ -465,7 +465,7 @@ open class Anichin : MainAPI() {
                                 }
                             }
                             else -> {
-                                logDebug("Anichin", "Using loadExtractorWithFallback for $label (iframe: ${iframeUrl.take(50)}...)")
+                                logDebug("Anichin", "Using loadExtractorWithFallback for $label")
                                 
                                 // ✅ USE loadExtractorWithFallback dengan CircuitBreaker
                                 val loaded = com.Anichin.generated_sync.loadExtractorWithFallback(
@@ -473,27 +473,13 @@ open class Anichin : MainAPI() {
                                     referer = data,
                                     subtitleCallback = subtitleCallback,
                                     callback = callback
-                                ) { link ->
-                                    // Customize link dengan MasterLinkGenerator
-                                    runBlocking {
-                                        MasterLinkGenerator.createLink(
-                                            source = link.name,
-                                            url = link.url,
-                                            referer = link.referer,
-                                            quality = MasterLinkGenerator.detectQualityFromUrl(link.url),
-                                            headers = link.headers
-                                        )?.let { extractorLink ->
-                                            extractorLink.extractorData = link.extractorData
-                                            callback.invoke(extractorLink)
-                                        }
-                                    }
-                                }
+                                )
                                 
                                 if (loaded) {
                                     successCount++
-                                    logDebug("Anichin", "✅ loadExtractorWithFallback succeeded for $label")
+                                    logDebug("Anichin", "✅ loadExtractorWithFallback succeeded")
                                 } else {
-                                    logError("Anichin", "❌ loadExtractorWithFallback failed for $label")
+                                    logError("Anichin", "❌ loadExtractorWithFallback failed")
                                 }
                             }
                         }
