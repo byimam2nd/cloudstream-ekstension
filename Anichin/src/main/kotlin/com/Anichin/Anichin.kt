@@ -459,52 +459,41 @@ open class Anichin : MainAPI() {
                                     url = iframeUrl,
                                     referer = data,
                                     quality = getQualityFromName(label)
-                                )?.let { 
+                                )?.let {
                                     callback(it)
                                     successCount++
                                 }
                             }
                             else -> {
-                                logDebug("Anichin", "Calling loadExtractor for $label")
-                                var loaded = false
-                                try {
-                                    loaded = loadExtractor(iframeUrl, referer = data, subtitleCallback, callback)
-                                    logDebug("Anichin", "loadExtractor result for $label: $loaded")
-                                } catch (e: Exception) {
-                                    logError("Anichin", "loadExtractor exception for $label: ${e.message}")
-                                }
-
-                                // If loadExtractor failed or returned false, try direct extractor call from SyncExtractors
-                                if (!loaded) {
-                                    logDebug("Anichin", "loadExtractor failed, trying direct extractor from SyncExtractors...")
-                                    logDebug("Anichin", "iframeUrl: $iframeUrl")
-
-                                    // Find ALL matching extractors from SyncExtractors list
-                                    val iframeDomain = iframeUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
-                                    logDebug("Anichin", "iframeDomain: $iframeDomain")
-
-                                    val matchingExtractors = com.Anichin.generated_sync.SyncExtractors.list.filter { extractor ->
-                                        val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
-                                        val domainMatch = iframeDomain.contains(extractorDomain) || extractorDomain.contains(iframeDomain)
-                                        val nameMatch = iframeUrl.contains(extractor.name, ignoreCase = true)
-                                        domainMatch || nameMatch
-                                    }
-
-                                    logDebug("Anichin", "Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
-
-                                    // Try ALL matching extractors
-                                    matchingExtractors.forEach { extractor ->
-                                        try {
-                                            logDebug("Anichin", "Trying extractor: ${extractor.name} (${extractor.mainUrl})")
-                                            extractor.getUrl(iframeUrl, data, subtitleCallback, callback)
-                                            logDebug("Anichin", "SUCCESS: Extractor ${extractor.name} worked!")
-                                            successCount++
-                                        } catch (e: Exception) {
-                                            logError("Anichin", "Extractor ${extractor.name} failed: ${e.message}")
+                                logDebug("Anichin", "Using loadExtractorWithFallback for $label (iframe: ${iframeUrl.take(50)}...)")
+                                
+                                // ✅ USE loadExtractorWithFallback dengan CircuitBreaker
+                                val loaded = com.Anichin.generated_sync.loadExtractorWithFallback(
+                                    url = iframeUrl,
+                                    referer = data,
+                                    subtitleCallback = subtitleCallback,
+                                    callback = callback
+                                ) { link ->
+                                    // Customize link dengan MasterLinkGenerator
+                                    runBlocking {
+                                        MasterLinkGenerator.createLink(
+                                            source = link.name,
+                                            url = link.url,
+                                            referer = link.referer,
+                                            quality = MasterLinkGenerator.detectQualityFromUrl(link.url),
+                                            headers = link.headers
+                                        )?.let { extractorLink ->
+                                            extractorLink.extractorData = link.extractorData
+                                            callback.invoke(extractorLink)
                                         }
                                     }
-                                } else {
+                                }
+                                
+                                if (loaded) {
                                     successCount++
+                                    logDebug("Anichin", "✅ loadExtractorWithFallback succeeded for $label")
+                                } else {
+                                    logError("Anichin", "❌ loadExtractorWithFallback failed for $label")
                                 }
                             }
                         }
