@@ -194,10 +194,15 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout
+      - name: Wait for commit to propagate
+        run: sleep 10
+
+      - name: Checkout (with latest commit from sync job)
         uses: actions/checkout@v4
         with:
           path: "src"
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Checkout builds
         uses: actions/checkout@v4
