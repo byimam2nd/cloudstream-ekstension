@@ -229,7 +229,7 @@ suspend fun preFetchExtractorLinks(
                     subtitleCallback = { subtitleFile ->
                         synchronized(subtitles) {
                             subtitles.add(subtitleFile)
-                            Log.d("PreFetch", "      ↳ ${extractor.name} found subtitle: ${subtitleFile.name}")
+                            Log.d("PreFetch", "      ↳ ${extractor.name} found subtitle")
                         }
                     },
                     callback = { extractorLink ->
