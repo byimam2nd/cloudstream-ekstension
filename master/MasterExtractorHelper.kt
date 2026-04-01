@@ -221,17 +221,17 @@ suspend fun preFetchExtractorLinks(
             try {
                 Log.d("PreFetch", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
                 extractor.getUrl(url, referer,
-                    subtitleCallback = { sub ->
+                    subtitleCallback = { subtitleFile ->
                         synchronized(subtitles) {
-                            subtitles.add(sub)
-                            Log.d("PreFetch", "      ↳ ${extractor.name} found subtitle: ${sub.name}")
+                            subtitles.add(subtitleFile)
+                            Log.d("PreFetch", "      ↳ ${extractor.name} found subtitle: ${subtitleFile.name}")
                         }
                     },
-                    callback = { link ->
+                    callback = { extractorLink ->
                         synchronized(links) {
-                            links.add(link)
+                            links.add(extractorLink)
                             successCount++
-                            Log.d("PreFetch", "      ↳ ${extractor.name} SUCCESS: ${link.name} - ${link.quality}p")
+                            Log.d("PreFetch", "      ↳ ${extractor.name} SUCCESS: ${extractorLink.name} - ${extractorLink.quality}p")
                         }
                     }
                 )
