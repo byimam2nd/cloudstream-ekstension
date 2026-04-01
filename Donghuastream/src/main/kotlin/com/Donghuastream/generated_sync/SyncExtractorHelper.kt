@@ -93,12 +93,9 @@ suspend fun loadExtractorWithFallback(
         val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
         Log.d("ExtractorHelper", "URL Domain: $urlDomain")
 
-        // Get SyncExtractors list dynamically
-        // Use current package context (com.{module}.generated_sync) instead of hardcoded package
-        val syncExtractorsClass = Class.forName("${javaClass.`package`.name}.SyncExtractors")
-        val listField = syncExtractorsClass.getDeclaredField("list")
-        @Suppress("UNCHECKED_CAST")
-        val extractors = listField.get(null) as List<com.lagradost.cloudstream3.utils.ExtractorApi>
+        // Get SyncExtractors list from generated_sync package
+        // Using direct object reference instead of reflection for reliability
+        val extractors = com.Donghuastream.generated_sync.SyncExtractors.list
 
         // Find ALL matching extractors
         val matchingExtractors = extractors.filter { extractor ->
@@ -121,14 +118,14 @@ suspend fun loadExtractorWithFallback(
                                 extractor.name,
                                 failureThreshold = 3
                             )
-                            
+
                             Log.d("ExtractorHelper", "Trying extractor: ${extractor.name} (${extractor.mainUrl})")
-                            
+
                             // Wrap extractor call with CircuitBreaker
                             val result = breaker.execute {
                                 extractor.getUrl(url, referer, subtitleCallback, callback)
                             }
-                            
+
                             if (result != null) {
                                 Log.d("ExtractorHelper", "SUCCESS: Extractor ${extractor.name} worked!")
                             } else {
