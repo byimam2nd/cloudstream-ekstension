@@ -33,6 +33,7 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.base64Decode
 import com.lagradost.cloudstream3.utils.loadExtractor
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
