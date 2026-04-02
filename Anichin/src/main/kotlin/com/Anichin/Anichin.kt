@@ -465,22 +465,28 @@ open class Anichin : MainAPI() {
                                 }
                             }
                             else -> {
-                                logDebug("Anichin", "Using loadExtractorWithFallback for $label")
-                                
-                                // ✅ USE loadExtractorWithFallback dengan CircuitBreaker
-                                val loaded = com.Anichin.generated_sync.loadExtractorWithFallback(
-                                    url = iframeUrl,
-                                    referer = data,
-                                    subtitleCallback = subtitleCallback,
-                                    callback = callback
+                                logDebug("Anichin", "Using preFetchExtractorLinks with iframe URL for $label")
+
+                                // ✅ USE preFetchExtractorLinks dengan iframe URL
+                                // Ini akan match dengan vidguard.to, voe.sx, dll extractors
+                                val (links, subtitles) = com.Anichin.generated_sync.preFetchExtractorLinks(
+                                    url = iframeUrl,        // Iframe URL untuk matching
+                                    iframeUrl = iframeUrl,  // Pass iframe URL explicitly
+                                    referer = data
                                 )
-                                
-                                if (loaded) {
+
+                                // Callback links ke user
+                                links.forEach { link ->
+                                    callback(link)
                                     successCount++
-                                    logDebug("Anichin", "✅ loadExtractorWithFallback succeeded")
-                                } else {
-                                    logError("Anichin", "❌ loadExtractorWithFallback failed")
                                 }
+
+                                // Callback subtitles
+                                subtitles.forEach { subtitle ->
+                                    subtitleCallback(subtitle)
+                                }
+
+                                logDebug("Anichin", "✅ preFetchExtractorLinks found ${links.size} links, ${subtitles.size} subtitles")
                             }
                         }
                     } catch (e: Exception) {
