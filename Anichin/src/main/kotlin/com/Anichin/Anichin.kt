@@ -348,8 +348,10 @@ open class Anichin : MainAPI() {
                 }
             }.reversed()
 
-            // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
-            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
+            // 🎯 PRE-FETCH: DISABLED - Always fails with page URL (anichin.cafe ≠ vidguard.to)
+            // PreFetch requires iframe URL, not page URL
+            // Will be re-enabled when iframe extraction is implemented
+            // EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
 
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
@@ -465,28 +467,25 @@ open class Anichin : MainAPI() {
                                 }
                             }
                             else -> {
-                                logDebug("Anichin", "Using preFetchExtractorLinks with iframe URL for $label")
+                                logDebug("Anichin", "Using loadExtractorWithFallback for $label")
 
-                                // ✅ USE preFetchExtractorLinks dengan iframe URL
-                                // Ini akan match dengan vidguard.to, voe.sx, dll extractors
-                                val (links, subtitles) = com.Anichin.generated_sync.preFetchExtractorLinks(
-                                    url = iframeUrl,        // Iframe URL untuk matching
-                                    iframeUrl = iframeUrl,  // Pass iframe URL explicitly
-                                    referer = data
+                                // ✅ USE loadExtractorWithFallback dengan CircuitBreaker
+                                // Note: Using loadExtractorWithFallback instead of preFetchExtractorLinks
+                                // because PreFetch always fails with page URL (anichin.cafe)
+                                // loadExtractorWithFallback will extract iframe URL internally
+                                val loaded = com.Anichin.generated_sync.loadExtractorWithFallback(
+                                    url = iframeUrl,
+                                    referer = data,
+                                    subtitleCallback = subtitleCallback,
+                                    callback = callback
                                 )
 
-                                // Callback links ke user
-                                links.forEach { link ->
-                                    callback(link)
+                                if (loaded) {
                                     successCount++
+                                    logDebug("Anichin", "✅ loadExtractorWithFallback succeeded")
+                                } else {
+                                    logDebug("Anichin", "⚠️ loadExtractorWithFallback returned no results")
                                 }
-
-                                // Callback subtitles
-                                subtitles.forEach { subtitle ->
-                                    subtitleCallback(subtitle)
-                                }
-
-                                logDebug("Anichin", "✅ preFetchExtractorLinks found ${links.size} links, ${subtitles.size} subtitles")
                             }
                         }
                     } catch (e: Exception) {
@@ -499,9 +498,10 @@ open class Anichin : MainAPI() {
 
         logDebug("Anichin", "loadLinks completed: $successCount/${options.size} servers working")
 
-        // 🎯 SMART PRE-FETCH: Pre-fetch NEXT episode after successful load
-        // Note: This is a simple implementation - full implementation would extract current episode from URL
-        // For now, we'll pre-fetch in background without blocking
+        // 🎯 SMART PRE-FETCH: DISABLED - Always fails with page URL
+        // PreFetch requires iframe URL, not page URL
+        // Will be re-enabled when iframe extraction is implemented
+        // EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
 
         // Return true if at least 1 server works
         return successCount > 0
