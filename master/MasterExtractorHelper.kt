@@ -28,81 +28,10 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.base64Decode
 import com.lagradost.cloudstream3.utils.loadExtractor
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-
-// ============================================
-// REGION 0: IFRAME EXTRACTION HELPERS
-// ============================================
-
-/**
- * Extract iframe URL from HTML document
- * Call this in provider's loadLinks() before calling preFetchExtractorLinks()
- * 
- * @param document Parsed HTML document from episode page
- * @param baseUrl Base URL for resolving relative URLs
- * @return First iframe URL found, or null if none
- */
-fun extractIframeFromDocument(
-    document: Document,
-    baseUrl: String
-): String? {
-    // Try common iframe selectors
-    val iframeSelectors = listOf(
-        "iframe[src]",
-        "meta[property='og:video']",
-        "meta[name='twitter:player']",
-        "source[src]",
-        "video source[src]",
-        "li[data-index] a", // Anichin specific
-        ".mobius > .mirror > option" // Animasu specific
-    )
-    
-    for (selector in iframeSelectors) {
-        val element = document.selectFirst(selector)
-        val iframeUrl = when {
-            selector.contains("meta") -> element?.attr("content")
-            selector.contains("option") -> {
-                // Handle base64 encoded iframe (Anichin/Animasu pattern)
-                val base64 = element?.attr("value")
-                if (!base64.isNullOrBlank() && base64.length > 20) {
-                    try {
-                        val decoded = base64Decode(base64)
-                        val decodedDoc = Jsoup.parse(decoded)
-                        decodedDoc.selectFirst("iframe")?.attr("src")
-                    } catch (e: Exception) { null }
-                } else {
-                    element?.attr("data-index")
-                }
-            }
-            else -> element?.attr("src")
-        }
-        
-        if (!iframeUrl.isNullOrBlank()) {
-            return fixUrl(iframeUrl, baseUrl)
-        }
-    }
-    
-    return null
-}
-
-/**
- * Fix relative URL to absolute URL
- */
-fun fixUrl(url: String, baseUrl: String): String {
-    if (url.startsWith("http://") || url.startsWith("https://")) return url
-    if (url.startsWith("//")) return "https:$url"
-    if (url.startsWith("/")) {
-        val base = baseUrl.substringBeforeLast("/")
-        return "$base$url"
-    }
-    return url
-}
 
 // ============================================
 // REGION 1: LOAD EXTRACTOR WITH FALLBACK + CIRCUIT BREAKER
