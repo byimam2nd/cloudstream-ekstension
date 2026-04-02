@@ -29,9 +29,11 @@ import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.base64Decode
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jsoup.Jsoup
 
 /**
  * Fix relative URL to absolute URL
@@ -204,10 +206,10 @@ suspend fun extractIframeUrl(
                 selector.contains("option") -> {
                     // Handle base64 encoded iframe (Anichin/Animasu pattern)
                     val base64 = element?.attr("value")
-                    if (!base64.isNullOrBlank() && base64.length > 20) {
+                    if (!base64.isNullOrBlank() && base64.length() > 20) {
                         try {
                             val decoded = base64Decode(base64)
-                            val decodedDoc = org.jsoup.Jsoup.parse(decoded)
+                            val decodedDoc = Jsoup.parse(decoded)
                             decodedDoc.selectFirst("iframe")?.attr("src")
                         } catch (e: Exception) {
                             null
