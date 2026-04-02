@@ -35,7 +35,21 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/**
+ * Fix relative URL to absolute URL
+ */
+fun fixUrl(url: String, baseUrl: String): String {
+    if (url.startsWith("http://") || url.startsWith("https://")) return url
+    if (url.startsWith("//")) return "https:$url"
+    if (url.startsWith("/")) {
+        val base = baseUrl.substringBeforeLast("/")
+        return "$base$url"
+    }
+    return url
+}
 
 // ============================================
 // REGION 1: LOAD EXTRACTOR WITH FALLBACK + CIRCUIT BREAKER
@@ -164,13 +178,75 @@ suspend fun loadExtractorWithFallback(
 // ============================================
 
 /**
+ * Extract iframe URL from episode page
+ *
+ * @param url Episode page URL
+ * @param referer Referer URL
+ * @return First iframe URL found, or null if none
+ */
+suspend fun extractIframeUrl(
+    url: String,
+    referer: String? = null
+): String? {
+    return try {
+        val document = app.get(url, referer = referer).document
+        
+        // Try common iframe selectors
+        val iframeSelectors = listOf(
+            "iframe[src]",
+            "meta[property='og:video']",
+            "meta[name='twitter:player']",
+            "source[src]",
+            "video source[src]",
+            "li[data-index] a", // Anichin specific
+            ".mobius > .mirror > option" // Animasu specific
+        )
+        
+        for (selector in iframeSelectors) {
+            val element = document.selectFirst(selector)
+            val iframeUrl = when {
+                selector.contains("meta") -> element?.attr("content")
+                selector.contains("option") -> {
+                    // Handle base64 encoded iframe (Anichin/Animasu pattern)
+                    val base64 = element?.attr("value")
+                    if (!base64.isNullOrBlank() && base64.length > 20) {
+                        try {
+                            val decoded = base64Decode(base64)
+                            val decodedDoc = org.jsoup.Jsoup.parse(decoded)
+                            decodedDoc.selectFirst("iframe")?.attr("src")
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else {
+                        element?.attr("data-index")
+                    }
+                }
+                else -> element?.attr("src")
+            }
+            
+            if (!iframeUrl.isNullOrBlank()) {
+                val fixedUrl = fixUrl(iframeUrl, url)
+                Log.d("PreFetch", "🎬 Found iframe URL via $selector: $fixedUrl")
+                return fixedUrl
+            }
+        }
+        
+        Log.w("PreFetch", "⚠️ No iframe URL found on page")
+        null
+    } catch (e: Exception) {
+        Log.e("PreFetch", "❌ Failed to extract iframe URL: ${e.javaClass.simpleName}: ${e.message}")
+        null
+    }
+}
+
+/**
  * Pre-fetch extractor links untuk caching
- * 
+ *
  * Difference dengan loadExtractorWithFallback:
  * - Return list of links (bukan boolean)
  * - Tidak langsung callback ke user
  * - Cocok untuk caching di background
- * 
+ *
  * @param url Video URL to extract
  * @param referer Referer URL
  * @return Pair of (List<ExtractorLink>, List<SubtitleFile>)
@@ -186,13 +262,24 @@ suspend fun preFetchExtractorLinks(
     Log.d("PreFetch", "▶️ Starting pre-fetch for URL: $url")
 
     // Step 1: Try loadExtractor
+    val linksBefore = links.size
+    val subtitlesBefore = subtitles.size
+    
     try {
         Log.d("PreFetch", "📞 Calling loadExtractor...")
         loadExtractor(url, referer,
             subtitleCallback = { sub -> subtitles.add(sub) },
             callback = { link -> links.add(link) }
         )
-        Log.d("PreFetch", "✅ loadExtractor completed successfully")
+        
+        val linksAdded = links.size - linksBefore
+        val subtitlesAdded = subtitles.size - subtitlesBefore
+        
+        if (linksAdded > 0 || subtitlesAdded > 0) {
+            Log.d("PreFetch", "✅ loadExtractor found $linksAdded links, $subtitlesAdded subtitles")
+        } else {
+            Log.w("PreFetch", "⚠️ loadExtractor returned no results (0 links, 0 subtitles)")
+        }
     } catch (e: Exception) {
         Log.e("PreFetch", "❌ loadExtractor FAILED: ${e.javaClass.simpleName}: ${e.message}\n   Stack: ${e.stackTraceToString().take(500)}")
     }
@@ -201,51 +288,86 @@ suspend fun preFetchExtractorLinks(
     if (links.isEmpty()) {
         Log.w("PreFetch", "⚠️ No links from loadExtractor, trying direct SyncExtractors...")
 
-        val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+        // Extract iframe URL first for better matching
+        val iframeUrl = extractIframeUrl(url, referer)
+        val targetUrl = iframeUrl ?: url
+        
+        val urlDomain = targetUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+        Log.d("PreFetch", "   Target URL: $targetUrl")
         Log.d("PreFetch", "   URL Domain: $urlDomain")
 
         // Get SyncExtractors list from generated_sync package
-        // Using direct object reference instead of reflection for reliability
         val extractors = com.LayarKaca21.generated_sync.SyncExtractors.list
         Log.d("PreFetch", "   Total SyncExtractors available: ${extractors.size}")
 
-        // Find matching extractors
+        // Find matching extractors based on iframe URL domain
         val matchingExtractors = extractors.filter { extractor ->
             val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+            
+            // Match iframe domain with extractor domain
             val domainMatch = urlDomain.contains(extractorDomain) || extractorDomain.contains(urlDomain)
-            val nameMatch = url.contains(extractor.name, ignoreCase = true)
+            
+            // Also try extractor name match in URL
+            val nameMatch = targetUrl.contains(extractor.name, ignoreCase = true)
+            
             domainMatch || nameMatch
         }
 
         Log.d("PreFetch", "   Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
 
-        // Try all matching extractors
+        // Try all matching extractors with retry logic
         var successCount = 0
         var failCount = 0
+        
         matchingExtractors.forEach { extractor ->
-            try {
-                Log.d("PreFetch", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
-                extractor.getUrl(url, referer,
-                    subtitleCallback = { subtitleFile ->
-                        synchronized(subtitles) {
-                            subtitles.add(subtitleFile)
-                            Log.d("PreFetch", "      ↳ ${extractor.name} found subtitle")
-                        }
-                    },
-                    callback = { extractorLink ->
-                        synchronized(links) {
-                            links.add(extractorLink)
-                            successCount++
-                            Log.d("PreFetch", "      ↳ ${extractor.name} SUCCESS: ${extractorLink.source} - ${extractorLink.type}")
-                        }
+            var lastException: Exception? = null
+            var succeeded = false
+            
+            // Retry up to 2 times
+            repeat(3) { attempt ->
+                if (succeeded) return@repeat
+                
+                try {
+                    if (attempt > 0) {
+                        Log.d("PreFetch", "   🔄 Retry ${attempt + 1}/3 for ${extractor.name}")
+                        kotlinx.coroutines.delay(1000L * attempt) // Exponential backoff
                     }
-                )
-            } catch (e: Exception) {
-                failCount++
-                Log.e("PreFetch", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}\n         Stack trace: ${e.stackTraceToString().lines().take(5).joinToString("\\n         ")}")
+                    
+                    Log.d("PreFetch", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
+                    extractor.getUrl(
+                        iframeUrl ?: url, // Use iframe URL if available
+                        referer ?: url,
+                        subtitleCallback = { subtitleFile ->
+                            synchronized(subtitles) {
+                                subtitles.add(subtitleFile)
+                                Log.d("PreFetch", "      ↳ ${extractor.name} found subtitle")
+                            }
+                        },
+                        callback = { extractorLink ->
+                            synchronized(links) {
+                                links.add(extractorLink)
+                                successCount++
+                                Log.d("PreFetch", "      ↳ ${extractor.name} SUCCESS: ${extractorLink.source} - ${extractorLink.type}")
+                            }
+                            succeeded = true // Stop retrying on success
+                        }
+                    )
+                    
+                    if (succeeded) {
+                        Log.d("PreFetch", "      ✅ ${extractor.name} succeeded on attempt ${attempt + 1}")
+                    }
+                } catch (e: Exception) {
+                    lastException = e
+                    failCount++
+                    Log.w("PreFetch", "      ⚠️ ${extractor.name} attempt ${attempt + 1} failed: ${e.message}")
+                }
+            }
+            
+            if (!succeeded) {
+                Log.e("PreFetch", "      ❌ ${extractor.name} failed after 3 attempts: ${lastException?.message}")
             }
         }
-        
+
         Log.d("PreFetch", "📊 SyncExtractors result: $successCount success, $failCount failed")
     }
 
