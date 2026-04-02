@@ -49,13 +49,13 @@ import com.Anichin.generated_sync.getRandomUserAgent
 import com.Anichin.generated_sync.executeWithRetry
 import com.Anichin.generated_sync.logError
 import com.Anichin.generated_sync.logDebug
-import com.Anichin.generated_sync.EpisodePreFetcher
 import com.Anichin.generated_sync.SmartCacheMonitor
 import com.Anichin.generated_sync.HttpClientFactory
 import com.Anichin.generated_sync.CompiledRegexPatterns
 import com.Anichin.generated_sync.CircuitBreaker
 import com.Anichin.generated_sync.CircuitBreakerRegistry
 import com.Anichin.generated_sync.MasterLinkGenerator
+import com.Anichin.generated_sync.loadExtractorWithFallback
 
 // Cache instances
 private val searchCache = CacheManager<List<SearchResponse>>()
@@ -348,11 +348,6 @@ open class Anichin : MainAPI() {
                 }
             }.reversed()
 
-            // 🎯 PRE-FETCH: DISABLED - Always fails with page URL (anichin.cafe ≠ vidguard.to)
-            // PreFetch requires iframe URL, not page URL
-            // Will be re-enabled when iframe extraction is implemented
-            // EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
-
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
             } else {
@@ -391,12 +386,7 @@ open class Anichin : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // 🎯 CHECK CACHE FIRST (from pre-fetch)
-        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-            return true
-        }
-        
-        // No cache → extract normally
+        // Extract normally (no cache)
         val html = executeWithRetry(maxRetries = 3) {
             rateLimitDelay()
             app.get(
