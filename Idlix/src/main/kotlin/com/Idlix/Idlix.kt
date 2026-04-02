@@ -27,7 +27,6 @@ import com.Idlix.generated_sync.getRandomUserAgent
 import com.Idlix.generated_sync.executeWithRetry
 import com.Idlix.generated_sync.logError
 import com.Idlix.generated_sync.logDebug
-import com.Idlix.generated_sync.EpisodePreFetcher
 import com.Idlix.generated_sync.SmartCacheMonitor
 import com.Idlix.generated_sync.HttpClientFactory
 import com.Idlix.generated_sync.CompiledRegexPatterns
@@ -349,7 +348,6 @@ class Idlix : MainAPI() {
             }
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
-            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
 
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
@@ -382,8 +380,6 @@ class Idlix : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
-        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-            return true
         }
 
         // No cache → extract normally

@@ -2,7 +2,6 @@ package com.Pencurimovie
 
 import com.Pencurimovie.generated_sync.CacheManager
 import com.Pencurimovie.generated_sync.AutoUsedConstants
-import com.Pencurimovie.generated_sync.EpisodePreFetcher
 import com.Pencurimovie.generated_sync.SmartCacheMonitor
 import com.Pencurimovie.generated_sync.HttpClientFactory
 import com.Pencurimovie.generated_sync.CompiledRegexPatterns
@@ -314,7 +313,6 @@ class Pencurimovie : MainAPI() {
             }
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
-            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
 
 
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -350,8 +348,6 @@ class Pencurimovie : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
-        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-            return true
         }
 
         // No cache → extract normally

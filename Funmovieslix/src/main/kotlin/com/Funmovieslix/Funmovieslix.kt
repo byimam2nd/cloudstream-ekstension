@@ -3,7 +3,6 @@ package com.Funmovieslix
 import com.Funmovieslix.generated_sync.CacheManager
 import com.Funmovieslix.generated_sync.AutoUsedConstants
 import com.Funmovieslix.generated_sync.logError
-import com.Funmovieslix.generated_sync.EpisodePreFetcher
 import com.Funmovieslix.generated_sync.SmartCacheMonitor
 import com.Funmovieslix.generated_sync.HttpClientFactory
 import com.Funmovieslix.generated_sync.CompiledRegexPatterns

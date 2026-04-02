@@ -2,7 +2,6 @@ package com.Donghuastream
 
 import com.Donghuastream.generated_sync.CacheManager
 import com.Donghuastream.generated_sync.AutoUsedConstants
-import com.Donghuastream.generated_sync.EpisodePreFetcher
 import com.Donghuastream.generated_sync.SmartCacheMonitor
 import com.Donghuastream.generated_sync.HttpClientFactory
 import com.Donghuastream.generated_sync.CompiledRegexPatterns
@@ -253,7 +252,6 @@ open class Donghuastream : MainAPI() {
             }.reversed()
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
-            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
 
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
@@ -300,8 +298,6 @@ open class Donghuastream : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
-        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-            return true
         }
 
         // No cache → extract normally

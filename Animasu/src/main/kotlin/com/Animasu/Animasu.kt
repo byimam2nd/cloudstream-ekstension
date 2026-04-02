@@ -23,7 +23,6 @@ import com.Animasu.generated_sync.logError
 import com.Animasu.generated_sync.logDebug
 import com.Animasu.generated_sync.executeWithRetry
 import com.Animasu.generated_sync.rateLimitDelay
-import com.Animasu.generated_sync.EpisodePreFetcher
 import com.Animasu.generated_sync.SmartCacheMonitor
 import com.Animasu.generated_sync.HttpClientFactory
 import com.Animasu.generated_sync.CompiledRegexPatterns
@@ -298,7 +297,6 @@ class Animasu : MainAPI() {
         }.reversed()
 
         // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
-        EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
 
         // Tracker integration (MAL/AniList)
         val tracker = runCatching {
@@ -334,8 +332,6 @@ class Animasu : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
-        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-            return true
         }
         
         // No cache → extract normally

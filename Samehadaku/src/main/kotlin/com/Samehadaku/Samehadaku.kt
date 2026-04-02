@@ -12,7 +12,6 @@ import com.Samehadaku.generated_sync.CacheManager
 import com.Samehadaku.generated_sync.AutoUsedConstants
 import com.Samehadaku.generated_sync.getRandomUserAgent
 import com.Samehadaku.generated_sync.logError
-import com.Samehadaku.generated_sync.EpisodePreFetcher
 import com.Samehadaku.generated_sync.SmartCacheMonitor
 import com.Samehadaku.generated_sync.HttpClientFactory
 import com.Samehadaku.generated_sync.CompiledRegexPatterns

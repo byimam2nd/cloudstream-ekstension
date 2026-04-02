@@ -7,7 +7,6 @@ import com.LayarKaca21.generated_sync.rateLimitDelay
 import com.LayarKaca21.generated_sync.getRandomUserAgent
 import com.LayarKaca21.generated_sync.logError
 import com.LayarKaca21.generated_sync.logDebug
-import com.LayarKaca21.generated_sync.EpisodePreFetcher
 import com.LayarKaca21.generated_sync.SmartCacheMonitor
 import com.LayarKaca21.generated_sync.HttpClientFactory
 import com.LayarKaca21.generated_sync.CompiledRegexPatterns
@@ -270,7 +269,6 @@ class LayarKaca21 : MainAPI() {
             }
 
             // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
-            EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
 
 
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -304,8 +302,6 @@ class LayarKaca21 : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         // 🎯 CHECK CACHE FIRST (from pre-fetch)
-        if (EpisodePreFetcher.loadCached(data, callback, subtitleCallback)) {
-            return true
         }
 
         // No cache → extract normally
