@@ -379,10 +379,7 @@ class Idlix : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // 🎯 CHECK CACHE FIRST (from pre-fetch)
-        }
-
-        // No cache → extract normally
+        // Extract normally (no cache)
         try {
             val document = executeWithRetry(maxRetries = 3) {
                 rateLimitDelay()
