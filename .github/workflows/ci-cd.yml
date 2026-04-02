@@ -275,27 +275,39 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
 
-          # Debug: Find all .cs3 files
-          echo "🔍 Finding .cs3 files..."
-          find . -name "*.cs3" -type f || true
+          # Debug: Find ALL .cs3 and .jar files anywhere
+          echo "🔍 Finding ALL .cs3 and .jar files..."
+          find . -type f \( -name "*.cs3" -o -name "*.jar" \) 2>/dev/null | head -50 || echo "No .cs3 or .jar files found anywhere"
           
-          # Debug: List all build outputs
-          echo "📋 Listing build output directories..."
-          for dir in */build/outputs/apk/debug */build/outputs/apk/release */build/libs; do
-            echo "  Checking $dir:"
-            ls -la "$dir" 2>/dev/null || echo "    Directory not found"
+          # Debug: List all build output directories
+          echo "📋 Listing ALL build directories..."
+          find . -type d -name "build" 2>/dev/null | while read dir; do
+            echo "  Found build dir: $dir"
+            ls -la "$dir/outputs" 2>/dev/null || true
+            ls -la "$dir/libs" 2>/dev/null || true
           done
           
-          # Copy new builds to builds branch
-          cp */build/outputs/apk/debug/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
-          cp */build/outputs/apk/release/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
-          cp */build/libs/*.jar $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
+          # Try multiple possible locations for .cs3 files
+          echo "📦 Copying build artifacts..."
+          
+          # Location 1: Standard APK output
+          cp */build/outputs/apk/debug/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null && echo "✅ Copied from debug APK" || true
+          cp */build/outputs/apk/release/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null && echo "✅ Copied from release APK" || true
+          
+          # Location 2: Direct build folder
+          cp */build/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null && echo "✅ Copied from build root" || true
+          
+          # Location 3: Build libs
+          cp */build/libs/*.jar $GITHUB_WORKSPACE/builds/ 2>/dev/null && echo "✅ Copied from libs" || true
+          
+          # Location 4: Module root
+          cp */*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null && echo "✅ Copied from module root" || true
 
           cd $GITHUB_WORKSPACE/builds
 
           # List files before commit
           echo "📋 Files in builds folder:"
-          ls -la *.cs3 *.jar 2>/dev/null || echo "No .cs3 or .jar files found"
+          ls -la *.cs3 *.jar 2>/dev/null || echo "❌ No .cs3 or .jar files found"
 
           # Check if any files were copied
           if [ -n "$(ls -A *.cs3 *.jar 2>/dev/null)" ]; then
@@ -308,5 +320,6 @@ jobs:
               echo "ℹ️ No new build artifacts to push"
             fi
           else
-            echo "ℹ️ No build artifacts found"
+            echo "❌ No build artifacts found - build may have failed to generate .cs3 files"
+            exit 1
           fi
