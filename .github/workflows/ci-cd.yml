@@ -287,11 +287,19 @@ jobs:
 
           # List files before commit
           echo "📋 Files in builds folder:"
-          ls -la *.cs3 *.jar plugins.json 2>/dev/null || echo "No build artifacts found"
+          ls -la *.cs3 *.jar plugins.json 2>/dev/null || echo "Some files may be missing"
 
-          # Check if any files were copied
-          if [ -n "$(ls -A *.cs3 *.jar plugins.json 2>/dev/null)" ]; then
-            git add *.cs3 *.jar plugins.json 2>/dev/null || true
+          # Check if .cs3 files exist (primary artifacts)
+          if ls *.cs3 1> /dev/null 2>&1; then
+            # Configure git user
+            git config --local user.email "actions@github.com"
+            git config --local user.name "GitHub Actions"
+            
+            # Add all build artifacts
+            git add *.cs3 2>/dev/null || true
+            git add *.jar 2>/dev/null || true
+            git add plugins.json 2>/dev/null || true
+            
             if ! git diff --cached --quiet; then
               git commit -m "Build artifacts from $(date +'%Y-%m-%d %H:%M:%S')"
               git push
@@ -300,6 +308,6 @@ jobs:
               echo "ℹ️ No new build artifacts to push"
             fi
           else
-            echo "❌ No build artifacts found"
+            echo "❌ No .cs3 build artifacts found"
             exit 1
           fi
