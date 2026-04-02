@@ -190,6 +190,7 @@ suspend fun preFetchExtractorLinks(
  *
  * OVERLOAD 2: Without iframe URL (LEGACY)
  * Only use this if you haven't extracted iframe URL
+ * NOTE: This will likely fail for provider pages (anichin.cafe ≠ vidguard.to)
  *
  * @param url Video URL to extract
  * @param referer Referer URL
@@ -199,6 +200,7 @@ suspend fun preFetchExtractorLinks(
     url: String,
     referer: String? = null
 ): Pair<List<ExtractorLink>, List<SubtitleFile>> {
+    Log.w("PreFetch", "⚠️ preFetchExtractorLinks called without iframe URL - may fail!")
     return preFetchExtractorLinksInternal(url, url, referer)
 }
 

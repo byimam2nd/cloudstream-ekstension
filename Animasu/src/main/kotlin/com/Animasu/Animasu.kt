@@ -331,10 +331,7 @@ class Animasu : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // 🎯 CHECK CACHE FIRST (from pre-fetch)
-        }
-        
-        // No cache → extract normally
+        // Extract normally (no cache)
         val document = executeWithRetry {
             rateLimitDelay(moduleName = "Animasu")
             app.get(
