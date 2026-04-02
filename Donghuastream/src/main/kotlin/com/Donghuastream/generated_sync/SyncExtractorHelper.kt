@@ -37,6 +37,76 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+
+// ============================================
+// REGION 0: IFRAME EXTRACTION HELPERS
+// ============================================
+
+/**
+ * Extract iframe URL from HTML document
+ * Call this in provider's loadLinks() before calling preFetchExtractorLinks()
+ * 
+ * @param document Parsed HTML document from episode page
+ * @param baseUrl Base URL for resolving relative URLs
+ * @return First iframe URL found, or null if none
+ */
+fun extractIframeFromDocument(
+    document: Document,
+    baseUrl: String
+): String? {
+    // Try common iframe selectors
+    val iframeSelectors = listOf(
+        "iframe[src]",
+        "meta[property='og:video']",
+        "meta[name='twitter:player']",
+        "source[src]",
+        "video source[src]",
+        "li[data-index] a", // Anichin specific
+        ".mobius > .mirror > option" // Animasu specific
+    )
+    
+    for (selector in iframeSelectors) {
+        val element = document.selectFirst(selector)
+        val iframeUrl = when {
+            selector.contains("meta") -> element?.attr("content")
+            selector.contains("option") -> {
+                // Handle base64 encoded iframe (Anichin/Animasu pattern)
+                val base64 = element?.attr("value")
+                if (!base64.isNullOrBlank() && base64.length > 20) {
+                    try {
+                        val decoded = base64Decode(base64)
+                        val decodedDoc = Jsoup.parse(decoded)
+                        decodedDoc.selectFirst("iframe")?.attr("src")
+                    } catch (e: Exception) { null }
+                } else {
+                    element?.attr("data-index")
+                }
+            }
+            else -> element?.attr("src")
+        }
+        
+        if (!iframeUrl.isNullOrBlank()) {
+            return fixUrl(iframeUrl, baseUrl)
+        }
+    }
+    
+    return null
+}
+
+/**
+ * Fix relative URL to absolute URL
+ */
+fun fixUrl(url: String, baseUrl: String): String {
+    if (url.startsWith("http://") || url.startsWith("https://")) return url
+    if (url.startsWith("//")) return "https:$url"
+    if (url.startsWith("/")) {
+        val base = baseUrl.substringBeforeLast("/")
+        return "$base$url"
+    }
+    return url
+}
 
 // ============================================
 // REGION 1: LOAD EXTRACTOR WITH FALLBACK + CIRCUIT BREAKER
@@ -167,10 +237,34 @@ suspend fun loadExtractorWithFallback(
 /**
  * Pre-fetch extractor links untuk caching
  *
- * Difference dengan loadExtractorWithFallback:
- * - Return list of links (bukan boolean)
- * - Tidak langsung callback ke user
- * - Cocok untuk caching di background
+ * OVERLOAD 1: With iframe URL (RECOMMENDED)
+ * Use this when you've already extracted iframe URL from the page
+ *
+ * @param url Page URL (for fallback)
+ * @param iframeUrl Iframe URL extracted from page (if available)
+ * @param referer Referer URL
+ * @return Pair of (List<ExtractorLink>, List<SubtitleFile>)
+ */
+suspend fun preFetchExtractorLinks(
+    url: String,
+    iframeUrl: String?,
+    referer: String? = null
+): Pair<List<ExtractorLink>, List<SubtitleFile>> {
+    // If iframe URL provided, use it for matching
+    val targetUrl = iframeUrl ?: url
+    
+    if (iframeUrl != null) {
+        Log.d("PreFetch", "🎬 Using iframe URL: $iframeUrl")
+    }
+    
+    return preFetchExtractorLinksInternal(targetUrl, url, referer)
+}
+
+/**
+ * Pre-fetch extractor links untuk caching
+ *
+ * OVERLOAD 2: Without iframe URL (LEGACY)
+ * Only use this if you haven't extracted iframe URL
  *
  * @param url Video URL to extract
  * @param referer Referer URL
@@ -180,11 +274,22 @@ suspend fun preFetchExtractorLinks(
     url: String,
     referer: String? = null
 ): Pair<List<ExtractorLink>, List<SubtitleFile>> {
+    return preFetchExtractorLinksInternal(url, url, referer)
+}
+
+/**
+ * Internal implementation for pre-fetch
+ */
+private suspend fun preFetchExtractorLinksInternal(
+    targetUrl: String,
+    pageUrl: String,
+    referer: String?
+): Pair<List<ExtractorLink>, List<SubtitleFile>> {
     val links = mutableListOf<ExtractorLink>()
     val subtitles = mutableListOf<SubtitleFile>()
     val startTime = System.currentTimeMillis()
 
-    Log.d("PreFetch", "▶️ Starting pre-fetch for URL: $url")
+    Log.d("PreFetch", "▶️ Starting pre-fetch for URL: $targetUrl")
 
     // Step 1: Try loadExtractor and check if it actually found links
     val linksBefore = links.size
@@ -192,7 +297,7 @@ suspend fun preFetchExtractorLinks(
     
     try {
         Log.d("PreFetch", "📞 Calling loadExtractor...")
-        loadExtractor(url, referer,
+        loadExtractor(targetUrl, referer ?: targetUrl,
             subtitleCallback = { sub -> subtitles.add(sub) },
             callback = { link -> links.add(link) }
         )
@@ -213,9 +318,9 @@ suspend fun preFetchExtractorLinks(
     if (links.isEmpty()) {
         Log.w("PreFetch", "⚠️ No links from loadExtractor, trying direct SyncExtractors...")
 
-        // Extract domain from both page URL and potential iframe URLs
-        val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
-        Log.d("PreFetch", "   Page URL Domain: $urlDomain")
+        // Extract domain from TARGET URL (iframe URL if available)
+        val urlDomain = targetUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+        Log.d("PreFetch", "   Target Domain: $urlDomain")
 
         // Get SyncExtractors list from generated_sync package
         val extractors = com.Donghuastream.generated_sync.SyncExtractors.list
@@ -227,7 +332,7 @@ suspend fun preFetchExtractorLinks(
         // 3. Match by common video hosters
         val matchingExtractors = extractors.filter { extractor ->
             // Strategy 1: Name match in URL
-            val nameMatch = url.contains(extractor.name, ignoreCase = true)
+            val nameMatch = targetUrl.contains(extractor.name, ignoreCase = true)
             
             // Strategy 2: Domain match (for when URL contains extractor domain)
             val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
@@ -271,8 +376,8 @@ suspend fun preFetchExtractorLinks(
                     
                     Log.d("PreFetch", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
                     extractor.getUrl(
-                        url,
-                        referer ?: url,
+                        targetUrl,
+                        referer ?: targetUrl,
                         subtitleCallback = { subtitleFile ->
                             synchronized(subtitles) {
                                 subtitles.add(subtitleFile)
