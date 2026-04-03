@@ -8,7 +8,9 @@ import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.fixUrl
+import com.lagradost.cloudstream3.fixUrlNull
 import com.lagradost.cloudstream3.mainPageOf
+import com.lagradost.cloudstream3.newAnimeSearchResponse
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -25,10 +27,10 @@ private fun Element.toSearchResult(): SearchResponse {
     val title = this.selectFirst("h3 > a")?.text()?.trim()
         ?: this.selectFirst("a")?.attr("title").orEmpty()
     val href = fixUrl(this.selectFirst("a")?.attr("href").orEmpty())
-    val poster = this.selectFirst("img")?.attr("src")
-        ?: this.selectFirst("img[data-src]")?.attr("data-src")
+    val poster = fixUrlNull(this.selectFirst("img")?.attr("src")
+        ?: this.selectFirst("img[data-src]")?.attr("data-src"))
 
-    return com.lagradost.cloudstream3.newAnimeSearchResponse(title, href, TvType.Anime) {
+    return newAnimeSearchResponse(title, href, TvType.Anime) {
         this.posterUrl = poster
     }
 }
