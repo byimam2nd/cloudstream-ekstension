@@ -21,6 +21,7 @@
 package com.Samehadaku.generated_sync
 
 import okhttp3.ConnectionPool
+import okhttp3.CookieJar
 import okhttp3.Dns
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
