@@ -57,60 +57,62 @@ class CacheManager<T>(
     }
 
     suspend fun get(key: String): T? {
-        return mutex.withLock {
-            // Try memory cache first (fastest)
-            val memoryCached = cache[key]
-            if (memoryCached != null && !memoryCached.isExpired()) {
-                return@withLock memoryCached.data
-            }
+        // Step 1: Try memory cache first (fast, with mutex)
+        val memoryResult = mutex.withLock {
+            cache[key]?.takeIf { !it.isExpired() }
+        }
 
-            // Try disk cache (slower but persistent)
-            val diskFile = getDiskCacheFile(key)
-            if (diskFile.exists()) {
-                try {
-                    val diskCached = readFromDisk(diskFile)
-                    if (diskCached != null && !diskCached.isExpired(diskTtl)) {
-                        // Restore to memory cache for faster next access
+        if (memoryResult != null) {
+            return memoryResult.data
+        }
+
+        // Step 2: Try disk cache (slow, WITHOUT mutex - non-blocking)
+        val diskFile = getDiskCacheFile(key)
+        if (diskFile.exists()) {
+            try {
+                val diskCached = readFromDisk(diskFile)
+                if (diskCached != null && !diskCached.isExpired(diskTtl)) {
+                    // Restore to memory cache for faster next access (with mutex)
+                    mutex.withLock {
                         cache[key] = diskCached
-                        return@withLock diskCached.data
-                    } else {
-                        // Expired, delete from disk
-                        diskFile.delete()
                     }
-                } catch (e: Exception) {
-                    // Corrupted cache file, delete it
+                    return diskCached.data
+                } else {
+                    // Expired, delete from disk (no mutex needed)
                     diskFile.delete()
                 }
+            } catch (e: Exception) {
+                // Corrupted cache file, delete it (no mutex needed)
+                diskFile.delete()
             }
-
-            // Cache miss
-            cache.remove(key)
-            null
         }
+
+        // Cache miss (remove from memory if present, with mutex)
+        mutex.withLock {
+            cache.remove(key)
+        }
+        return null
     }
 
     suspend fun put(key: String, data: T, ttl: Long = defaultTtl) {
+        // Step 1: Store in memory cache (with mutex)
+        val cachedResult = CachedResult(data, System.currentTimeMillis(), ttl)
         mutex.withLock {
-            // Store in memory cache
-            val cachedResult = CachedResult(data, System.currentTimeMillis(), ttl)
             cache[key] = cachedResult
+        }
 
-            // Store in disk cache (for persistence)
-            try {
-                val diskFile = getDiskCacheFile(key)
+        // Step 2: Store in disk cache (WITHOUT mutex - non-blocking)
+        try {
+            val diskFile = getDiskCacheFile(key)
 
-                // Check disk space before writing
-                if (getTotalDiskSize() + estimateSize(data) > maxDiskSize) {
-                    cleanupDiskCache()
-                }
-
-                writeToDisk(diskFile, cachedResult)
-            } catch (e: Exception) {
-                // Disk cache failed, continue with memory cache only
+            // Check disk space before writing (no mutex needed for read-only check)
+            if (getTotalDiskSize() + estimateSize(data) > maxDiskSize) {
+                cleanupDiskCache()
             }
 
-            // Cleanup expired entries periodically (not on every put to avoid performance hit)
-            // cleanupExpiredEntries() - disabled for performance
+            writeToDisk(diskFile, cachedResult)
+        } catch (e: Exception) {
+            // Disk cache failed, continue with memory cache only
         }
     }
 

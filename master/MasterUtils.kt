@@ -63,6 +63,8 @@ private const val DEBUG_MODE = false
  * Object singleton untuk rate limiting
  * Thread-safe dengan Mutex
  * Support per-module independent rate limiting
+ *
+ * FIX: Mutex hanya untuk check/update timestamp, bukan selama delay
  */
 internal object RateLimiter {
     private val rateLimitMutex = Mutex()
@@ -71,20 +73,30 @@ internal object RateLimiter {
     /**
      * Delay untuk rate limiting dengan random jitter
      * Mencegah bot detection dengan request timing yang tidak predictable
-     * 
+     *
      * @param moduleName Module name for independent rate limiting
      */
-    suspend fun delay(moduleName: String = "default") = rateLimitMutex.withLock {
-        val now = System.currentTimeMillis()
-        val lastRequest = requestTimers[moduleName] ?: 0L
-        val elapsed = now - lastRequest
+    suspend fun delay(moduleName: String = "default") {
+        // Step 1: Calculate wait time (mutex only for timestamp check/update)
+        val waitTime = rateLimitMutex.withLock {
+            val now = System.currentTimeMillis()
+            val lastRequest = requestTimers[moduleName] ?: 0L
+            val elapsed = now - lastRequest
 
-        if (elapsed < MIN_REQUEST_DELAY) {
-            val delayNeeded = MIN_REQUEST_DELAY - elapsed + Random.nextLong(0, MAX_REQUEST_DELAY - MIN_REQUEST_DELAY)
-            kotlinx.coroutines.delay(delayNeeded)
+            if (elapsed < MIN_REQUEST_DELAY) {
+                val delayNeeded = MIN_REQUEST_DELAY - elapsed + Random.nextLong(0, MAX_REQUEST_DELAY - MIN_REQUEST_DELAY)
+                requestTimers[moduleName] = now
+                delayNeeded
+            } else {
+                requestTimers[moduleName] = now
+                0L
+            }
         }
 
-        requestTimers[moduleName] = System.currentTimeMillis()
+        // Step 2: Wait if needed (NON-BLOCKING - no mutex held)
+        if (waitTime > 0) {
+            kotlinx.coroutines.delay(waitTime)
+        }
     }
 }
 
