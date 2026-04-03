@@ -148,7 +148,8 @@ suspend fun loadExtractorWithFallback(
                     }
                 }
             }
-            loaded = true  // Mark as loaded (extractors were called)
+            // FIX: Only mark as loaded if at least one extractor succeeded
+            loaded = successCount > 0
             Log.d("ExtractorHelper", "📊 SyncExtractors result: $successCount success, $failCount failed")
         } catch (e: Exception) {
             Log.e("ExtractorHelper", "❌ Parallel extraction failed: ${e.javaClass.simpleName}: ${e.message}\n   Stack: ${e.stackTraceToString().take(300)}")

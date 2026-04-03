@@ -68,9 +68,12 @@ class CircuitBreaker(
     /**
      * Execute block dengan circuit breaker protection
      * Returns null jika circuit OPEN
+     *
+     * FIX: Mutex hanya untuk state transition, bukan selama eksekusi block
      */
     suspend fun <T> execute(block: suspend () -> T): T? {
-        return mutex.withLock {
+        // Step 1: Check state (mutex only for state check)
+        val shouldExecute = mutex.withLock {
             when (state) {
                 CircuitState.OPEN -> {
                     // Check if timeout exceeded
@@ -78,27 +81,35 @@ class CircuitBreaker(
                         Log.d("CircuitBreaker", "🟡 $name: OPEN → HALF_OPEN")
                         state = CircuitState.HALF_OPEN
                         successCount = 0
+                        true  // Allow execution
                     } else {
                         Log.w("CircuitBreaker", "🔴 $name: Circuit OPEN, skipping")
-                        return@withLock null
+                        false  // Block execution
                     }
                 }
-                
+
                 CircuitState.HALF_OPEN, CircuitState.CLOSED -> {
-                    // Allow execution
+                    true  // Allow execution
                 }
             }
-            
-            try {
-                val result = block()
-                onSuccess()
-                result
-                
-            } catch (e: Exception) {
-                Log.e("CircuitBreaker", "❌ $name: ${e.message}")
-                onFailure()
-                null
-            }
+        }
+
+        if (!shouldExecute) {
+            return null
+        }
+
+        // Step 2: Execute block (NON-BLOCKING - no mutex held)
+        return try {
+            val result = block()
+            // Step 3: Update state on success (mutex only for state update)
+            mutex.withLock { onSuccess() }
+            result
+
+        } catch (e: Exception) {
+            Log.e("CircuitBreaker", "❌ $name: ${e.message}")
+            // Step 3: Update state on failure (mutex only for state update)
+            mutex.withLock { onFailure() }
+            null
         }
     }
     

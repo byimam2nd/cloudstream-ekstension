@@ -161,50 +161,78 @@ object RegexHelpers {
 
 /**
  * Request Deduplicator - Mencegah duplicate concurrent requests
- * 
+ *
  * AUTO-WORKS: Wrapped inside executeWithRetry()
  * Providers tidak perlu call manual!
- * 
+ *
  * Benefits:
  * - Prevents duplicate concurrent requests
  * - Shares in-flight request results
  * - Reduces server load
  */
 object AutoRequestDeduplicator {
-    private val pendingRequests = ConcurrentHashMap<String, Long>()
+    private val pendingRequests = ConcurrentHashMap<String, kotlinx.coroutines.CompletableDeferred<Any?>>()
     private val mutex = Mutex()
-    
+
     /**
      * Deduplicate request dengan key
-     * 
+     *
      * AUTO-WRAP inside executeWithRetry!
      */
+    @Suppress("UNCHECKED_CAST")
     suspend fun <T> deduplicate(key: String, block: suspend () -> T): T {
-        return mutex.withLock {
-            // Check if same request already in-flight
-            val pending = pendingRequests[key]
-            if (pending != null) {
-                // Request in-flight, log it
-                Log.d("Deduplicator", "⏳ Request $key already in-flight")
-                // In full implementation, we'd wait for the pending request
+        // Check if there's already a pending request for this key
+        val existingDeferred = mutex.withLock {
+            pendingRequests[key]
+        }
+
+        // If request is in-flight, wait for it
+        if (existingDeferred != null && !existingDeferred.isCompleted) {
+            Log.d("Deduplicator", "⏳ Deduplicating request: $key")
+            return existingDeferred.await() as T
+        }
+
+        // Create new deferred for this request
+        val newDeferred = kotlinx.coroutines.CompletableDeferred<Any?>()
+
+        // Try to register this request
+        val registered = mutex.withLock {
+            // Double-check after acquiring lock
+            val current = pendingRequests[key]
+            if (current != null && !current.isCompleted) {
+                // Another request was registered while we were waiting
+                newDeferred.cancel()
+                false
+            } else {
+                pendingRequests[key] = newDeferred
+                true
             }
-            
-            // Mark as pending
-            pendingRequests[key] = System.currentTimeMillis()
+        }
+
+        if (!registered) {
+            // Wait for the other request
+            return pendingRequests[key]!!.await() as T
+        }
+
+        // Execute the request
+        return try {
             Log.d("Deduplicator", "🚀 Starting request: $key")
-            
-            try {
-                // Execute request
-                val result = block()
-                Log.d("Deduplicator", "✅ Request completed: $key")
-                result
-            } finally {
-                // Remove from pending
+            val result = block()
+            newDeferred.complete(result)
+            Log.d("Deduplicator", "✅ Request completed: $key")
+            result
+        } catch (e: Exception) {
+            newDeferred.completeExceptionally(e)
+            Log.d("Deduplicator", "❌ Request failed: $key - ${e.message}")
+            throw e
+        } finally {
+            // Clean up pending request
+            mutex.withLock {
                 pendingRequests.remove(key)
             }
         }
     }
-    
+
     /**
      * Get count of pending requests (for debugging)
      */
