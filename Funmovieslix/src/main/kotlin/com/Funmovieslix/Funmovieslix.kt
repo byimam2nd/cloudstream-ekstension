@@ -427,7 +427,7 @@ class Funmovieslix : MainAPI() {
     // ========================================
     // Parses quality badge text and maps to SearchQuality enum
     private fun extractQuality(element: Element): SearchQuality {
-        val qualityText = parent.select("div.quality-badge").text().uppercase()
+        val qualityText = element.select("div.quality-badge").text().uppercase()
 
         return when {
             qualityText.contains("HDTS") -> SearchQuality.HdCam
