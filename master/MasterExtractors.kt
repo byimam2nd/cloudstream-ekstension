@@ -1939,7 +1939,7 @@ object MasterLinkGenerator {
             val playlistContent = fetchM3U8Playlist(m3u8Url, referer)
             
             // Parse variants
-            val variants = parseM3U8Variants(playlistContent, m3u8Url)
+            val variants = parseM3U8VariantsShared(playlistContent, m3u8Url)
             
             // Generate ExtractorLink untuk setiap variant
             variants.forEach { variant ->
@@ -2104,24 +2104,8 @@ object MasterLinkGenerator {
         return response.text
     }
     
-    /**
-     * Parse M3U8 playlist, extract semua quality variants
-     * Delegates to shared top-level function
-     */
-    private fun parseM3U8Variants(
-        playlistContent: String,
-        baseUrl: String
-    ): List<M3U8QualityVariant> {
-        return parseM3U8VariantsShared(playlistContent, baseUrl)
-    }
-
-    /**
-     * Resolve relative URL ke absolute
-     * Delegates to shared top-level function
-     */
-    private fun resolveRelativeUrl(url: String, baseUrl: String): String {
-        return resolveRelativeUrlShared(url, baseUrl)
-    }
+    // parseM3U8Variants removed — use parseM3U8VariantsShared directly
+    // resolveRelativeUrl removed — use resolveRelativeUrlShared directly
 }
 
 /**
@@ -2275,20 +2259,12 @@ object SmartM3U8Parser {
             timeout = 10_000
         )
         
-        // Inline parsing logic (same as MasterLinkGenerator.parseM3U8Variants)
-        return parseM3U8VariantsInline(response.text, m3u8Url)
+        // Inline parsing logic
+        return parseM3U8VariantsShared(response.text, m3u8Url)
     }
-    
-    /**
-     * Inline M3U8 variants parser untuk SmartM3U8Parser
-     * Delegates to shared top-level function (DRY)
-     */
-    private fun parseM3U8VariantsInline(
-        playlistContent: String,
-        baseUrl: String
-    ): List<M3U8QualityVariant> {
-        return parseM3U8VariantsShared(playlistContent, baseUrl)
-    }
+
+    // parseM3U8VariantsInline removed — use parseM3U8VariantsShared directly
+    // resolveRelativeUrl removed — use resolveRelativeUrlShared directly
     
     /**
      * Auto-select best quality variant dari M3U8 playlist
@@ -2409,7 +2385,7 @@ object SmartM3U8Parser {
                 !it.startsWith("#") &&
                 (it.endsWith(".ts") || it.endsWith(".m4s"))
             }.map { line ->
-                resolveRelativeUrl(line, variantUrl)
+                resolveRelativeUrlShared(line, variantUrl)
             }
         } catch (e: Exception) {
             emptyList()
@@ -2439,11 +2415,5 @@ object SmartM3U8Parser {
         } ?: defaultHeaders
     }
     
-    /**
-     * Resolve relative URL ke absolute
-     * Delegates to shared top-level function (DRY)
-     */
-    private fun resolveRelativeUrl(url: String, baseUrl: String): String {
-        return resolveRelativeUrlShared(url, baseUrl)
-    }
+    // resolveRelativeUrl removed — use resolveRelativeUrlShared directly
 }
