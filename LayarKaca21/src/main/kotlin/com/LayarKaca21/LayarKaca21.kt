@@ -372,6 +372,15 @@ class LayarKaca21 : MainAPI() {
                         subtitleCallback = subtitleCallback,
                         callback = callback
                     )
+                    if (!loaded) {
+                        Log.e("LayarKaca21", "loadExtractorWithFallback failed for $finalIframe")
+                        // P1 Fallback: Try direct link extraction as last resort
+                        MasterLinkGenerator.createLink(
+                            source = "LayarKaca",
+                            url = finalIframe,
+                            referer = "$mainUrl/"
+                        )?.let { callback(it) }
+                    }
                     if (loaded) successCount++
                 } else {
                     val loaded = com.LayarKaca21.generated_sync.loadExtractorWithFallback(
@@ -380,6 +389,15 @@ class LayarKaca21 : MainAPI() {
                         subtitleCallback = subtitleCallback,
                         callback = callback
                     )
+                    if (!loaded) {
+                        Log.e("LayarKaca21", "loadExtractorWithFallback failed for $iframe")
+                        // P1 Fallback: Try direct link extraction as last resort
+                        MasterLinkGenerator.createLink(
+                            source = "LayarKaca",
+                            url = iframe,
+                            referer = "$mainUrl/"
+                        )?.let { callback(it) }
+                    }
                     if (loaded) successCount++
                 }
             } catch (e: Exception) {
