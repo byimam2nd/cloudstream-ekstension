@@ -89,7 +89,7 @@ class Animasu : MainAPI() {
     override val hasDownloadSupport = true
     
     // Standard timeout (10 detik)
-    private val requestTimeout = 10000L
+    private val requestTimeout = 10_000L
 
     override val supportedTypes = setOf(
         TvType.Anime,

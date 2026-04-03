@@ -56,7 +56,7 @@ private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
 open class Donghuastream : MainAPI() {
-    override var mainUrl              = "https://donghuastream.org"
+    override var mainUrl = "https://donghuastream.org"
     override var name                 = "Donghuastream"
     override val hasMainPage          = true
     override var lang                 = "zh"

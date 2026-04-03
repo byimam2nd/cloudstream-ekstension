@@ -1,3 +1,13 @@
+// ========================================
+// IDLIX PROVIDER
+// ========================================
+// Site: https://idlixian.com
+// Type: Movie/TV Series/Anime/Asian Drama
+// Language: Indonesian (id)
+// Standard: cloudstream-ekstension
+// Features: AES decryption for video links
+// ========================================
+
 package com.Idlix
 
 import com.Idlix.generated_sync.CacheManager
@@ -34,10 +44,18 @@ import com.Idlix.generated_sync.CircuitBreaker
 import com.Idlix.generated_sync.CircuitBreakerRegistry
 import com.Idlix.generated_sync.MasterLinkGenerator
 
-// Cache instances
+// ========================================
+// CACHE INSTANCES
+// ========================================
+// Using shared CacheManager from generated_sync
+// Search results cached for 5 minutes
+// Main page results cached for 3 minutes
 private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
+// ========================================
+// MAIN PROVIDER CLASS
+// ========================================
 class Idlix : MainAPI() {
     override var mainUrl = "https://idlixian.com"
     private var directUrl = mainUrl
@@ -53,8 +71,11 @@ class Idlix : MainAPI() {
     )
 
     // Standard timeout untuk semua request (10 detik)
-    private val requestTimeout = 10000L
+    private val requestTimeout = 10_000L
 
+    // ========================================
+    // MAIN PAGE CATEGORIES
+    // ========================================
     override val mainPage = mainPageOf(
         "$mainUrl/" to "Featured",
         "$mainUrl/trending/page/?get=movies" to "Trending Movies",
@@ -74,6 +95,12 @@ class Idlix : MainAPI() {
         }
     }
 
+    // ========================================
+    // GET MAIN PAGE
+    // ========================================
+    // Fetches category/trending listings with pagination
+    // Handles both featured (non-paged) and paged content
+    // Results are cached to avoid redundant requests
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
@@ -167,6 +194,11 @@ class Idlix : MainAPI() {
         }
     }
 
+    // ========================================
+    // SEARCH
+    // ========================================
+    // Uses external API for fast search, falls back to scraping if API fails
+    // Results cached for 5 minutes
     override suspend fun search(query: String): List<SearchResponse> {
         // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
         val cacheKey = "search_${query}"
@@ -266,6 +298,12 @@ class Idlix : MainAPI() {
         return results
     }
 
+    // ========================================
+    // LOAD DETAIL PAGE
+    // ========================================
+    // Loads movie/series details including title, poster, description, actors
+    // For series: parses episode list with season/episode numbers
+    // Supports pre-fetching for faster link loading
     override suspend fun load(url: String): LoadResponse {
         val request = executeWithRetry(maxRetries = 3) {
             rateLimitDelay()
@@ -373,6 +411,11 @@ class Idlix : MainAPI() {
         }
     }
 
+    // ========================================
+    // LOAD LINKS (VIDEO SOURCES)
+    // ========================================
+    // Uses AJAX API with AES decryption to extract video links
+    // Handles nonce/time-based authentication
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -460,6 +503,10 @@ class Idlix : MainAPI() {
         }
     }
 
+    // ========================================
+    // AES DECRYPTION HELPERS
+    // ========================================
+    // Creates decryption key from nonce and time
     private fun createKey(r: String, m: String): String {
         val rList = r.split("\\x").filter { it.isNotEmpty() }.toTypedArray()
         var n = ""
@@ -485,10 +532,14 @@ class Idlix : MainAPI() {
         return n
     }
 
+    // Removes escape characters from decrypted strings
     private fun String.fixBloat(): String {
         return this.replace("\"", "").replace("\\", "")
     }
 
+    // ========================================
+    // DATA CLASSES FOR API RESPONSES
+    // ========================================
     data class ResponseSource(
         @JsonProperty("hls") val hls: Boolean,
         @JsonProperty("videoSource") val videoSource: String,

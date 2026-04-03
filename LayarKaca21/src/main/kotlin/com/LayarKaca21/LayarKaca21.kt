@@ -1,3 +1,12 @@
+// ========================================
+// LAYARKACA21 PROVIDER
+// ========================================
+// Site: https://lk21.de
+// Type: Movie/TV Series/Asian Drama
+// Language: Indonesian (id)
+// Standard: cloudstream-ekstension
+// ========================================
+
 package com.LayarKaca21
 
 import com.LayarKaca21.generated_sync.CacheManager
@@ -23,10 +32,18 @@ import org.jsoup.nodes.Element
 import java.util.concurrent.ConcurrentHashMap
 import java.net.URI
 
-// Cache instances
+// ========================================
+// CACHE INSTANCES
+// ========================================
+// Using shared CacheManager from generated_sync
+// Search results cached for 5 minutes
+// Main page results cached for 3 minutes
 private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
+// ========================================
+// MAIN PROVIDER CLASS
+// ========================================
 class LayarKaca21 : MainAPI() {
 
     override var mainUrl = "https://lk21.de"
@@ -43,8 +60,11 @@ class LayarKaca21 : MainAPI() {
     )
 
     // Standard timeout untuk semua request (10 detik)
-    private val requestTimeout = 10000L
+    private val requestTimeout = 10_000L
 
+    // ========================================
+    // MAIN PAGE CATEGORIES
+    // ========================================
     override val mainPage = mainPageOf(
         "$mainUrl/latest/page/" to "Film Upload Terbaru",
         "$mainUrl/populer/page/" to "Film Terplopuler",
@@ -59,6 +79,11 @@ class LayarKaca21 : MainAPI() {
         "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
     )
 
+    // ========================================
+    // GET MAIN PAGE
+    // ========================================
+    // Fetches category listings with pagination
+    // Results are cached to avoid redundant requests
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
@@ -158,6 +183,11 @@ class LayarKaca21 : MainAPI() {
         }
     }
 
+    // ========================================
+    // SEARCH
+    // ========================================
+    // Searches the site for movies/series
+    // Results cached for 5 minutes
     override suspend fun search(query: String): List<SearchResponse> {
         // MENIRU PERSIS ExtCloud/LayarKacaProvider yang sudah diupdate
         val refer = app.get(mainUrl).url
@@ -191,6 +221,11 @@ class LayarKaca21 : MainAPI() {
         return results
     }
 
+    // ========================================
+    // LOAD DETAIL PAGE
+    // ========================================
+    // Loads movie/series details including title, poster, description
+    // For series: parses episode list with season/episode numbers
     override suspend fun load(url: String): LoadResponse {
         val fixUrl = getProperLink(url)
 
@@ -295,6 +330,11 @@ class LayarKaca21 : MainAPI() {
         }
     }
 
+    // ========================================
+    // LOAD LINKS (VIDEO SOURCES)
+    // ========================================
+    // Extracts video embed URLs using AJAX API
+    // Handles both direct iframes and AJAX-based loading
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,

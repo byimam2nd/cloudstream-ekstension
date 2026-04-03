@@ -1,3 +1,12 @@
+// ========================================
+// FUNMOVIESLIX PROVIDER
+// ========================================
+// Site: https://funmovieslix.com
+// Type: Movie/Anime/Cartoon Streaming
+// Language: Indonesian (id)
+// Standard: cloudstream-ekstension
+// ========================================
+
 package com.Funmovieslix
 
 import com.Funmovieslix.generated_sync.CacheManager
@@ -47,10 +56,18 @@ import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
 import java.util.concurrent.ConcurrentHashMap
 
-// Caching using shared CacheManager from CacheManager.kt
+// ========================================
+// CACHE INSTANCES
+// ========================================
+// Using shared CacheManager from generated_sync
+// Search results cached for 5 minutes
+// Main page results cached for 3 minutes
 private val searchCache = CacheManager<List<SearchResponse>>()
 private val mainPageCache = CacheManager<HomePageResponse>()
 
+// ========================================
+// MAIN PROVIDER CLASS
+// ========================================
 class Funmovieslix : MainAPI() {
     override var mainUrl = "https://funmovieslix.com"
     override var name = "Funmovieslix"
@@ -59,6 +76,9 @@ class Funmovieslix : MainAPI() {
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.Movie, TvType.Anime, TvType.Cartoon)
 
+    // ========================================
+    // MAIN PAGE CATEGORIES
+    // ========================================
     override val mainPage = mainPageOf(
         "category/action" to "Action Category",
         "category/science-fiction" to "Sci-Fi Category",
@@ -70,6 +90,11 @@ class Funmovieslix : MainAPI() {
         "category/comedy" to "Comedy Category",
     )
 
+    // ========================================
+    // GET MAIN PAGE
+    // ========================================
+    // Fetches category listings with pagination
+    // Results are cached to avoid redundant requests
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
@@ -105,6 +130,11 @@ class Funmovieslix : MainAPI() {
         return response
     }
 
+    // ========================================
+    // PARSE SEARCH RESULT FROM HTML ELEMENT
+    // ========================================
+    // Extracts title, URL, poster, quality and score from movie card
+    // Uses multiple fallback strategies for each field
     private fun Element.toSearchResult(): SearchResponse {
         // FIXED: Fallback strategy untuk title (2-layer)
         val title = this.select("h3").text()
@@ -136,8 +166,13 @@ class Funmovieslix : MainAPI() {
     }
 
     // Standard timeout (10 detik)
-    private val requestTimeout = 10000L
+    private val requestTimeout = 10_000L
 
+    // ========================================
+    // SEARCH
+    // ========================================
+    // Searches across 3 pages in parallel for faster results
+    // Results cached for 5 minutes
     override suspend fun search(query: String): List<SearchResponse> {
         // CACHING: Check cache first (instant load for 5 minutes)
         val cacheKey = "search_${query}"
@@ -175,6 +210,11 @@ class Funmovieslix : MainAPI() {
         return results
     }
 
+    // ========================================
+    // LOAD DETAIL PAGE
+    // ========================================
+    // Loads movie/series details including title, poster, description
+    // For series: parses episode list with season/episode numbers
     override suspend fun load(url: String): LoadResponse {
         val document = executeWithRetry {
             rateLimitDelay()
@@ -268,6 +308,14 @@ class Funmovieslix : MainAPI() {
         }
     }
 
+    // ========================================
+    // LOAD LINKS (VIDEO SOURCES)
+    // ========================================
+    // Extracts video embed URLs using 3 strategies:
+    // 1. Parse "const embeds" from script tags
+    // 2. Extract iframe src attributes
+    // 3. Check data-src/data-url/data-link attributes
+    // Then loads all extractors in parallel for speed
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -374,6 +422,10 @@ class Funmovieslix : MainAPI() {
         return true
     }
 
+    // ========================================
+    // DETECT SEARCH QUALITY FROM HTML
+    // ========================================
+    // Parses quality badge text and maps to SearchQuality enum
     fun getSearchQuality(parent: Element): SearchQuality {
         val qualityText = parent.select("div.quality-badge").text().uppercase()
 

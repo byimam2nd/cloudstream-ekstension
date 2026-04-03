@@ -18,7 +18,7 @@ import org.jsoup.Jsoup
 
 
 open class SeaTV : Donghuastream() {
-    override var mainUrl              = "https://seatv-24.xyz"
+    override var mainUrl = "https://seatv-24.xyz"
     override var name                 = "SeaTV"
     override val hasMainPage          = true
     override var lang                 = "zh"

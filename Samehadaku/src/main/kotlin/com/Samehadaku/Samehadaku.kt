@@ -68,7 +68,7 @@ class Samehadaku : MainAPI() {
     override var lang = "id"
     override val hasDownloadSupport = true
     
-    private val requestTimeout = 10000L
+    private val requestTimeout = 10_000L
 
     override val supportedTypes = setOf(
         TvType.Anime,
