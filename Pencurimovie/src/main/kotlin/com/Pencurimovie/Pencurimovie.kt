@@ -84,7 +84,7 @@ class Pencurimovie : MainAPI() {
                dynamicDomains.any { host.contains(it) }
     }
     
-    private fun normalizeUrl(url: String): String {
+    private fun normalizeLink(url: String): String {
         // Don't remove query params (needed for tokens!)
         return url.substringBefore("#")
     }
@@ -366,7 +366,7 @@ class Pencurimovie : MainAPI() {
             document.select("iframe").forEach {
                 val src = it.attr("data-src").ifEmpty { it.attr("src") }
                 if (src.isNotEmpty() && src.startsWith("http") && isValidVideoHost(src)) {
-                    links.add(normalizeUrl(fixUrl(src)))
+                    links.add(normalizeLink(fixUrl(src)))
                 }
             }
             
@@ -378,7 +378,7 @@ class Pencurimovie : MainAPI() {
                     .ifEmpty { it.attr("href") }
                 
                 if (link.isNotEmpty() && link.startsWith("http") && isValidVideoHost(link)) {
-                    links.add(normalizeUrl(link))
+                    links.add(normalizeLink(link))
                 }
             }
             
@@ -389,7 +389,7 @@ class Pencurimovie : MainAPI() {
                 .filter { url ->
                     isValidVideoHost(url)
                 }
-                .forEach { links.add(normalizeUrl(it)) }
+                .forEach { links.add(normalizeLink(it)) }
             
             // =========================
             // STEP 2: Priority sorting (smart ordering)
@@ -535,7 +535,7 @@ class Pencurimovie : MainAPI() {
         }
         
         // Dedup + normalize
-        return results.map { normalizeUrl(it) }.distinct()
+        return results.map { normalizeLink(it) }.distinct()
     }
     
     // =========================

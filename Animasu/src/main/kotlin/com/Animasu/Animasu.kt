@@ -130,7 +130,7 @@ class Animasu : MainAPI() {
         }
     }
 
-    private fun getProperAnimeLink(uri: String): String {
+    private fun normalizeLink(uri: String): String {
         return if (uri.contains("/anime/")) {
             uri
         } else {
@@ -146,7 +146,7 @@ class Animasu : MainAPI() {
     }
 
     private fun Element.toSearchResult(): AnimeSearchResponse {
-        val href = getProperAnimeLink(fixUrlNull(this.selectFirst("a")?.attr("href")).toString())
+        val href = normalizeLink(fixUrlNull(this.selectFirst("a")?.attr("href")).toString())
         
         // FIXED: Fallback strategy untuk title (2-layer)
         val title = this.select("div.tt").text().trim()
@@ -392,7 +392,7 @@ class Animasu : MainAPI() {
                     quality = if (link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo") {
                         link.quality  // Keep existing quality for M3U8/Uservideo
                     } else {
-                        getIndexQuality(quality) ?: MasterLinkGenerator.detectQualityFromUrl(link.url)  // Auto-detect from URL
+                        parseQualityToInt(quality) ?: MasterLinkGenerator.detectQualityFromUrl(link.url)  // Auto-detect from URL
                     },
                     headers = link.headers
                 )?.let { extractorLink ->
@@ -411,7 +411,7 @@ class Animasu : MainAPI() {
     // ========================================
     // GET INDEX QUALITY
     // ========================================
-    private fun getIndexQuality(str: String?): Int {
+    private fun parseQualityToInt(str: String?): Int {
         return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
             ?: Qualities.Unknown.value
     }

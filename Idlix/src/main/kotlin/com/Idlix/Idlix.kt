@@ -154,7 +154,7 @@ class Idlix : MainAPI() {
         return response
     }
 
-    private fun getProperLink(uri: String): String {
+    private fun normalizeLink(uri: String): String {
         return when {
             uri.contains("/episode/") -> {
                 var title = uri.substringAfter("$mainUrl/episode/")
@@ -179,7 +179,7 @@ class Idlix : MainAPI() {
             ?: this.selectFirst("div.title > a")?.text()?.trim()
             ?: "Unknown Title"
         
-        val href = getProperLink(titleElement?.attr("href").orEmpty())
+        val href = normalizeLink(titleElement?.attr("href").orEmpty())
         
         // FIXED: Fallback strategy untuk poster (3-layer)
         val posterUrl = this.select("div.poster > img").attr("src")

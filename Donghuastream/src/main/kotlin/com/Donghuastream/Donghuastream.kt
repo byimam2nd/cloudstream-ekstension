@@ -105,7 +105,7 @@ open class Donghuastream : MainAPI() {
         return response
     }
 
-    fun Element.toSearchResult(): SearchResponse {
+    private fun Element.toSearchResult(): SearchResponse {
         // FIXED: Fallback strategy untuk title (2-layer)
         val title = this.select("div.bsx > a").attr("title")
             .ifEmpty { this.selectFirst("div.bsx a")?.attr("title").orEmpty() }

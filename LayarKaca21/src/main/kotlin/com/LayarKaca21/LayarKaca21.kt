@@ -121,7 +121,7 @@ class LayarKaca21 : MainAPI() {
         return result
     }
 
-    private suspend fun getProperLink(url: String): String {
+    private suspend fun normalizeLink(url: String): String {
         if (url.startsWith(seriesUrl)) return url
 
         return try {
@@ -227,7 +227,7 @@ class LayarKaca21 : MainAPI() {
     // Loads movie/series details including title, poster, description
     // For series: parses episode list with season/episode numbers
     override suspend fun load(url: String): LoadResponse {
-        val fixUrl = getProperLink(url)
+        val fixUrl = normalizeLink(url)
 
         val document = executeWithRetry(maxRetries = 3) {
             rateLimitDelay()

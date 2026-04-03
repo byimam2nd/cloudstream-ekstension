@@ -156,7 +156,7 @@ class Funmovieslix : MainAPI() {
 
             fixUrlNull(bestUrl?.replace(Regex("-\\d+x\\d+"), ""))
         }
-        val searchQuality = getSearchQuality(this)
+        val searchQuality = extractQuality(this)
         val score=this.select("div.rating-stars").text().substringAfter("(").substringBefore(")")
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
@@ -426,7 +426,7 @@ class Funmovieslix : MainAPI() {
     // DETECT SEARCH QUALITY FROM HTML
     // ========================================
     // Parses quality badge text and maps to SearchQuality enum
-    fun getSearchQuality(parent: Element): SearchQuality {
+    private fun extractQuality(element: Element): SearchQuality {
         val qualityText = parent.select("div.quality-badge").text().uppercase()
 
         return when {
