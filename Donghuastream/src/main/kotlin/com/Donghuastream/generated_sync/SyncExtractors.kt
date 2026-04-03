@@ -2111,16 +2111,81 @@ object MasterLinkGenerator {
     
     /**
      * Parse M3U8 playlist, extract semua quality variants
-     *
-     * FIX: Reuse SmartM3U8Parser to avoid duplicate parsing logic
      */
     private fun parseM3U8Variants(
         playlistContent: String,
         baseUrl: String
     ): List<M3U8QualityVariant> {
-        // FIX: Delegate to SmartM3U8Parser to avoid code duplication
-        return SmartM3U8Parser.parseM3U8VariantsInline(playlistContent, baseUrl)
+        val variants = mutableListOf<M3U8QualityVariant>()
+        val lines = playlistContent.lines()
+
+        var currentQuality: Int? = null
+        var currentBandwidth: Int? = null
+        var currentResolution: Pair<Int, Int>? = null
+
+        for (i in lines.indices) {
+            val line = lines[i].trim()
+
+            // Parse #EXT-X-STREAM-INF line
+            if (line.startsWith("#EXT-X-STREAM-INF:")) {
+                // Extract bandwidth
+                val bandwidthMatch = Regex("BANDWIDTH=(\\d+)").find(line)
+                currentBandwidth = bandwidthMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+
+                // Extract resolution
+                val resolutionMatch = Regex("RESOLUTION=(\\d+)x(\\d+)").find(line)
+                currentResolution = resolutionMatch?.let {
+                    Pair(it.groupValues[1].toInt(), it.groupValues[2].toInt())
+                }
+
+                // Extract quality dari RESOLUTION
+                val qualityMatch = Regex("RESOLUTION=\\d+x(\\d+)").find(line)
+                currentQuality = qualityMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+            }
+
+            // Parse URL line (setelah #EXT-X-STREAM-INF)
+            else if (line.isNotEmpty() && !line.startsWith("#")) {
+                currentQuality?.let { quality ->
+                    val variantUrl = resolveRelativeUrl(line, baseUrl)
+                    variants.add(
+                        M3U8QualityVariant(
+                            quality = quality,
+                            bandwidth = currentBandwidth ?: 0,
+                            url = variantUrl,
+                            resolution = currentResolution ?: Pair(0, 0)
+                        )
+                    )
+                }
+
+                // Reset untuk variant berikutnya
+                currentQuality = null
+                currentBandwidth = null
+                currentResolution = null
+            }
+        }
+
+        return variants.sortedByDescending { it.quality }
     }
+
+    /**
+     * Resolve relative URL ke absolute
+     */
+    private fun resolveRelativeUrl(url: String, baseUrl: String): String {
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return url
+        }
+
+        return try {
+            val baseUri = java.net.URI(baseUrl)
+            val resolved = baseUri.resolve(url)
+            resolved.toString()
+        } catch (e: Exception) {
+            // Fallback: manual concat
+            val basePath = baseUrl.substringBeforeLast("/")
+            "$basePath/$url"
+        }
+    }
+}
 
 /**
  * Data class untuk M3U8 quality variant
