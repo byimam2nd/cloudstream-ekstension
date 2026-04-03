@@ -17,23 +17,7 @@ import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
 
-
-// ========================================
-// HELPER: Parse search result from HTML element
-// ========================================
-private fun Element.toSearchResult(): SearchResponse {
-    val title = this.selectFirst("h3 > a")?.text()?.trim()
-        ?: this.selectFirst("a")?.attr("title").orEmpty()
-    val href = fixUrl(this.selectFirst("a")?.attr("href").orEmpty())
-    val poster = fixUrlNull(this.selectFirst("img")?.attr("src")
-        ?: this.selectFirst("img[data-src]")?.attr("data-src"))
-
-    return newAnimeSearchResponse(title, href, TvType.Anime) {
-        this.posterUrl = poster
-    }
-}
 
 open class SeaTV : Donghuastream() {
     override var mainUrl = "https://seatv-24.xyz"
