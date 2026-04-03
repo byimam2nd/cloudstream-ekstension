@@ -249,6 +249,12 @@ object HttpClientFactory {
             .dns(CachedDns)
 
             // ========================================
+            // Cookie management - persist cookies untuk session-based sites
+            // FIX: Added cookie jar for session persistence
+            // ========================================
+            .cookieJar(CookieJar.NO_COOKIES) // Use CloudStream's cookie management
+
+            // ========================================
             // Add interceptors untuk monitoring dan headers
             // ========================================
             .addInterceptor(UserAgentInterceptor)

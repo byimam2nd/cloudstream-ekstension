@@ -238,10 +238,19 @@ object CompiledRegexPatterns {
     
     /**
      * Extract semua m3u8 URLs dari text menggunakan semua patterns.
+     *
+     * OPTIMIZED: Pre-filter text before running regex patterns
+     * Before: Scanned document 15+ times with all patterns
+     * After: Quick contains() check first, then only run relevant patterns
      */
     fun extractAllM3u8Urls(text: String, baseUrl: String? = null): Set<String> {
         val urls = mutableSetOf<String>()
-        
+
+        // OPTIMIZATION: Quick pre-filter before running expensive regex
+        if (!text.contains("m3u8", ignoreCase = true)) {
+            return urls // Empty set, no m3u8 in text
+        }
+
         // Try all m3u8 patterns
         val patterns = listOf(
             M3U8_COLON_QUOTED,
@@ -261,7 +270,7 @@ object CompiledRegexPatterns {
             M3U8_VAR_ASSIGNMENT,
             M3U8_FUNCTION_CALL
         )
-        
+
         for (pattern in patterns) {
             pattern.findAll(text).forEach { match ->
                 val url = match.groupValues[1].trim()
@@ -270,16 +279,23 @@ object CompiledRegexPatterns {
                 }
             }
         }
-        
+
         return urls
     }
-    
+
     /**
      * Extract semua mp4 URLs dari text.
+     *
+     * OPTIMIZED: Pre-filter text before running regex patterns
      */
     fun extractAllMp4Urls(text: String, baseUrl: String? = null): Set<String> {
         val urls = mutableSetOf<String>()
-        
+
+        // OPTIMIZATION: Quick pre-filter before running expensive regex
+        if (!text.contains(".mp4", ignoreCase = true) && !text.contains("mp4", ignoreCase = true)) {
+            return urls // Empty set, no mp4 in text
+        }
+
         val patterns = listOf(
             MP4_DOUBLE_QUOTED,
             MP4_SINGLE_QUOTED,

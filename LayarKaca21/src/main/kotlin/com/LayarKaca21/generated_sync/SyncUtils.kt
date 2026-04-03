@@ -344,7 +344,10 @@ internal object Translator {
 
     /**
      * Auto-translate English text to Indonesian
-     * Uses smart translation with context awareness
+     * Uses smart translation with word boundaries to avoid substring replacement
+     *
+     * FIX: Uses word boundary regex to prevent replacing substrings within words
+     * Example: "the" in "other" won't be replaced anymore
      */
     fun translateToIndonesian(text: String?): String? {
         if (text.isNullOrBlank()) return null
@@ -352,12 +355,14 @@ internal object Translator {
         // Check if text is already in Indonesian (avoid double translation)
         if (isIndonesian(text)) return text
 
-        // Translate using mapping
+        // Translate using mapping with word boundaries
         var translated = text.lowercase()
 
-        // Apply translations (lazy map access)
+        // Apply translations with word boundary regex (FIX: prevents substring replacement)
         translationMap.forEach { (english, indonesian) ->
-            translated = translated.replace(english, indonesian, ignoreCase = true)
+            // Use word boundary regex: \bword\b
+            val wordBoundaryRegex = Regex("\\b${Regex.escape(english)}\\b", RegexOption.IGNORE_CASE)
+            translated = translated.replace(wordBoundaryRegex, indonesian)
         }
 
         // Capitalize first letter
