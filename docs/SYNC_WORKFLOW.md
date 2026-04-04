@@ -18,7 +18,6 @@ on:
       - 'master/MasterCacheManager.kt'
       - 'master/MasterImageCache.kt'
       - 'master/MasterSmartCacheMonitor.kt'
-      - 'master/MasterSuperSmartPrefetchManager.kt'
 ```
 
 ### Flow Diagram
@@ -211,7 +210,6 @@ paths:
   - 'master/MasterCacheManager.kt'
   - 'master/MasterImageCache.kt'
   - 'master/MasterSmartCacheMonitor.kt'
-  - 'master/MasterSuperSmartPrefetchManager.kt'
 ```
 
 **NOT included (yet):**
