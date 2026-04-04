@@ -37,6 +37,7 @@
 
 package com.{MODULE}
 
+import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
@@ -336,7 +337,7 @@ open class Dingtezuni : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            throw Exception("Failed to extract video from $url: ${e.message}")
+            Log.e("MasterExtractors", "[Dingtezuni] Failed: ${e.message}", e)
         }
     }
 
@@ -458,7 +459,7 @@ open class Dintezuvio : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            throw Exception("Dintezuvio: Failed to extract video from $url: ${e.message}")
+            Log.e("MasterExtractors", "[Dintezuvio] Failed: ${e.message}", e)
         }
     }
 
@@ -885,7 +886,7 @@ open class StreamRuby : ExtractorApi() {
                 )
             }
         } catch (e: Exception) {
-            throw Exception("StreamRuby: Failed to extract video from $url: ${e.message}")
+            Log.e("MasterExtractors", "[StreamRuby] Failed: ${e.message}", e)
         }
     }
 }
@@ -963,8 +964,7 @@ open class Vidguardto : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            // Log error but don't crash
-            throw Exception("Vidguard: Failed to extract video from $url: ${e.message}")
+            Log.e("MasterExtractors", "[Vidguard] Failed: ${e.message}", e)
         }
     }
 
@@ -1062,20 +1062,24 @@ class Archivd : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get(url).document
-        val json = res.select("div#app").attr("data-page")
-        val video = tryParseJson<Sources>(json)?.props?.datas?.data?.link?.media
+        try {
+            val res = app.get(url).document
+            val json = res.select("div#app").attr("data-page")
+            val video = tryParseJson<Sources>(json)?.props?.datas?.data?.link?.media
 
-        callback.invoke(
-            newExtractorLink(
-                this.name,
-                this.name,
-                video ?: return,
-                INFER_TYPE
-            ) {
-                this.referer = "$mainUrl/"
-            }
-        )
+            callback.invoke(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    video ?: return,
+                    INFER_TYPE
+                ) {
+                    this.referer = "$mainUrl/"
+                }
+            )
+        } catch (e: Exception) {
+            Log.e("MasterExtractors", "[Archivd] Failed: ${e.message}", e)
+        }
     }
 
     data class Link(
@@ -1114,26 +1118,29 @@ class Newuservideo : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val iframe = app.get(url, referer = referer).document.select("iframe#videoFrame").attr("src")
-        val doc = app.get(iframe, referer = "$mainUrl/").text
-        val json = "VIDEO_CONFIG\\s?=\\s?(.*)".toRegex().find(doc)?.groupValues?.get(1)
+        try {
+            val iframe = app.get(url, referer = referer).document.select("iframe#videoFrame").attr("src")
+            val doc = app.get(iframe, referer = "$mainUrl/").text
+            val json = "VIDEO_CONFIG\\s?=\\s?(.*)".toRegex().find(doc)?.groupValues?.get(1)
 
-        tryParseJson<Sources>(json)?.streams?.map {
-            callback.invoke(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    it.playUrl ?: return@map,
-                    INFER_TYPE
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = when (it.formatId) {
+            tryParseJson<Sources>(json)?.streams?.map {
+                callback.invoke(
+                    newExtractorLink(
+                        this.name,
+                        this.name,
+                        it.playUrl ?: return@map,
+                        INFER_TYPE
+                    ) {
+                        this.referer = "$mainUrl/"
+                        this.quality = when (it.formatId) {
                         18 -> Qualities.P360.value
                         22 -> Qualities.P720.value
                         else -> Qualities.Unknown.value
                     }
                 }
             )
+        } catch (e: Exception) {
+            Log.e("MasterExtractors", "[Uservideo] Failed: ${e.message}", e)
         }
     }
 
@@ -1176,29 +1183,33 @@ class Dailymotion : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val embedUrl = getEmbedUrl(url) ?: return
-        val id = getVideoId(embedUrl) ?: return
-        val metaDataUrl = "$baseUrl/player/metadata/video/$id"
-        val response = app.get(metaDataUrl, referer = embedUrl).text
-        val qualityUrlRegex = Regex(""""url"\s*:\s*"([^"]+)"""")
-        val subtitlesRegex = Regex(""""subtitles"\s*:\s*\{[^}]*"data"\s*:\s*(\[[^\]]*\])""")
+        try {
+            val embedUrl = getEmbedUrl(url) ?: return
+            val id = getVideoId(embedUrl) ?: return
+            val metaDataUrl = "$baseUrl/player/metadata/video/$id"
+            val response = app.get(metaDataUrl, referer = embedUrl).text
+            val qualityUrlRegex = Regex(""""url"\s*:\s*"([^"]+)"""")
+            val subtitlesRegex = Regex(""""subtitles"\s*:\s*\{[^}]*"data"\s*:\s*(\[[^\]]*\])""")
 
-        val urls = qualityUrlRegex.findAll(response)
-            .map { it.groupValues[1] }
-            .toList().filter { it.contains(".m3u8") }
+            val urls = qualityUrlRegex.findAll(response)
+                .map { it.groupValues[1] }
+                .toList().filter { it.contains(".m3u8") }
 
-        urls.forEach { videoUrl ->
-            getStream(videoUrl, this.name, callback)
-        }
-
-        val subtitlesMatches = subtitlesRegex.findAll(response).map { it.groupValues[1] }.toList()
-        subtitlesMatches.forEach { subtitleJson ->
-            val subRegex = Regex("""\{\s*"label"\s*:\s*"([^"]+)",\s*"urls"\s*:\s*\["([^"]+)"""")
-            subRegex.findAll(subtitleJson).forEach { match ->
-                val label = match.groupValues[1]
-                val subUrl = match.groupValues[2]
-                subtitleCallback(SubtitleFile(label, subUrl))
+            urls.forEach { videoUrl ->
+                getStream(videoUrl, this.name, callback)
             }
+
+            val subtitlesMatches = subtitlesRegex.findAll(response).map { it.groupValues[1] }.toList()
+            subtitlesMatches.forEach { subtitleJson ->
+                val subRegex = Regex("""\{\s*"label"\s*:\s*"([^"]+)",\s*"urls"\s*:\s*\["([^"]+)"""")
+                subRegex.findAll(subtitleJson).forEach { match ->
+                    val label = match.groupValues[1]
+                    val subUrl = match.groupValues[2]
+                    subtitleCallback(SubtitleFile(label, subUrl))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MasterExtractors", "[Dailymotion] Failed: ${e.message}", e)
         }
     }
 
@@ -1241,38 +1252,42 @@ class Jeniusplay : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val document = app.get(url, referer = referer).documentLarge
-        val hash = url.split("/").last().substringAfter("data=")
+        try {
+            val document = app.get(url, referer = referer).documentLarge
+            val hash = url.split("/").last().substringAfter("data=")
 
-        val m3uLink = app.post(
-            url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
-            data = mapOf("hash" to hash, "r" to "$referer"),
-            referer = referer,
-            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-        ).parsed<ResponseSource>().videoSource
+            val m3uLink = app.post(
+                url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
+                data = mapOf("hash" to hash, "r" to "$referer"),
+                referer = referer,
+                headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+            ).parsed<ResponseSource>().videoSource
 
-        callback.invoke(
-            newExtractorLink(
-                name,
-                name,
-                url = m3uLink,
-                ExtractorLinkType.M3U8
+            callback.invoke(
+                newExtractorLink(
+                    name,
+                    name,
+                    url = m3uLink,
+                    ExtractorLinkType.M3U8
+                )
             )
-        )
 
-        document.select("script").map { script ->
-            if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
-                val subData =
-                    getAndUnpack(script.data()).substringAfter("\"tracks\":[").substringBefore("],")
-                AppUtils.tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
-                    subtitleCallback.invoke(
-                        newSubtitleFile(
-                            getLanguage(subtitle.label ?: ""),
-                            subtitle.file
+            document.select("script").map { script ->
+                if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
+                    val subData =
+                        getAndUnpack(script.data()).substringAfter("\"tracks\":[").substringBefore("],")
+                    AppUtils.tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
+                        subtitleCallback.invoke(
+                            newSubtitleFile(
+                                getLanguage(subtitle.label ?: ""),
+                                subtitle.file
+                            )
                         )
-                    )
+                    }
                 }
             }
+        } catch (e: Exception) {
+            Log.e("MasterExtractors", "[Jeniusplay] Failed: ${e.message}", e)
         }
     }
 
@@ -1308,27 +1323,31 @@ class ArchiveOrgExtractor : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url).document
-        val sources = response.select("script").find { script ->
-            script.data().contains("\"sources\"")
-        }?.data() ?: return
+        try {
+            val response = app.get(url).document
+            val sources = response.select("script").find { script ->
+                script.data().contains("\"sources\"")
+            }?.data() ?: return
 
-        val regex = Regex("""\"url\":\"(.*?)\"""")
-        regex.findAll(sources).forEach { match ->
-            val videoUrl = match.groupValues[1].replace("\\/", "/")
-            if (videoUrl.contains(".mp4") || videoUrl.contains(".m3u8")) {
-                callback.invoke(
-                    newExtractorLink(
-                        name,
-                        name,
-                        videoUrl,
-                        if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else INFER_TYPE
-                    ) {
-                        this.referer = "$mainUrl/"
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
+            val regex = Regex("""\"url\":\"(.*?)\"""")
+            regex.findAll(sources).forEach { match ->
+                val videoUrl = match.groupValues[1].replace("\\/", "/")
+                if (videoUrl.contains(".mp4") || videoUrl.contains(".m3u8")) {
+                    callback.invoke(
+                        newExtractorLink(
+                            name,
+                            name,
+                            videoUrl,
+                            if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else INFER_TYPE
+                        ) {
+                            this.referer = "$mainUrl/"
+                            this.quality = Qualities.Unknown.value
+                        }
+                    )
+                }
             }
+        } catch (e: Exception) {
+            Log.e("MasterExtractors", "[ArchiveOrg] Failed: ${e.message}", e)
         }
     }
 }
@@ -1432,7 +1451,7 @@ class Megacloud : ExtractorApi() {
             }
 
         } catch (e: Exception) {
-            // Ignore errors
+            Log.e("MasterExtractors", "[Megacloud] Failed: ${e.message}", e)
         }
     }
 
