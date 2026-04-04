@@ -512,8 +512,8 @@ class Veev : ExtractorApi() {
             headers = mapOf("User-Agent" to DEFAULT_UA)
         ).text
 
-        val encRegex = Regex("""[.\s'](?:fc|_vvto\[[^]]*)(?:['\]]*)?\s*[:=]\s*['"]([^'"]+)""")
-        val foundValues = encRegex.findAll(html).map { it.groupValues[1] }.toList()
+        val foundValues = CompiledRegexPatterns.VEEV_ENCRYPTED_PATTERN.findAll(html)
+            .map { it.groupValues[1] }.toList()
 
         if (foundValues.isEmpty()) return
 
@@ -721,7 +721,7 @@ open class Odnoklassniki : ExtractorApi() {
         val embedUrl = url.replace("/video/", "/videoembed/")
         val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
             .replace("\\\\", "\\")
-            .replace(Regex("""\\u([0-9A-Fa-f]{4})""")) { matchResult ->
+            .replace(CompiledRegexPatterns.UNICODE_ESCAPE) { matchResult ->
                 Integer.parseInt(matchResult.groupValues[1], 16).toChar().toString()
             }
 
@@ -786,8 +786,7 @@ class Rumble : ExtractorApi() {
             ?.substringAfter("{\"mp4")?.substringBefore("\"evt\":{")
         if (scriptData == null) return
 
-        val regex = """"url":"(.*?)"|h":(.*?)\}""".toRegex()
-        val matches = regex.findAll(scriptData)
+        val matches = CompiledRegexPatterns.RUMBLE_URL_PATTERN.findAll(scriptData)
 
         val processedUrls = mutableSetOf<String>()
 
@@ -801,7 +800,7 @@ class Rumble : ExtractorApi() {
             if (!processedUrls.add(cleanedUrl)) continue
 
             val m3u8Response = app.get(cleanedUrl)
-            val variantCount = "#EXT-X-STREAM-INF".toRegex().findAll(m3u8Response.text).count()
+            val variantCount = CompiledRegexPatterns.M3U8_STREAM_INFO.findAll(m3u8Response.text).count()
 
             if (variantCount > 1) {
                 callback.invoke(
@@ -1189,10 +1188,8 @@ class Dailymotion : ExtractorApi() {
             val id = getVideoId(embedUrl) ?: return
             val metaDataUrl = "$baseUrl/player/metadata/video/$id"
             val response = app.get(metaDataUrl, referer = embedUrl).text
-            val qualityUrlRegex = Regex(""""url"\s*:\s*"([^"]+)"""")
-            val subtitlesRegex = Regex(""""subtitles"\s*:\s*\{[^}]*"data"\s*:\s*(\[[^\]]*\])""")
 
-            val urls = qualityUrlRegex.findAll(response)
+            val urls = CompiledRegexPatterns.DAILYMOTION_VIDEO_URL.findAll(response)
                 .map { it.groupValues[1] }
                 .toList().filter { it.contains(".m3u8") }
 
@@ -1200,10 +1197,11 @@ class Dailymotion : ExtractorApi() {
                 getStream(videoUrl, this.name, callback)
             }
 
-            val subtitlesMatches = subtitlesRegex.findAll(response).map { it.groupValues[1] }.toList()
+            // Extract subtitles from subtitle data sections
+            val subtitleDataRegex = Regex(""""subtitles"\s*:\s*\{[^}]*"data"\s*:\s*(\[[^\]]*\])""")
+            val subtitlesMatches = subtitleDataRegex.findAll(response).map { it.groupValues[1] }.toList()
             subtitlesMatches.forEach { subtitleJson ->
-                val subRegex = Regex("""\{\s*"label"\s*:\s*"([^"]+)",\s*"urls"\s*:\s*\["([^"]+)"""")
-                subRegex.findAll(subtitleJson).forEach { match ->
+                CompiledRegexPatterns.DAILYMOTION_SUBTITLE.findAll(subtitleJson).forEach { match ->
                     val label = match.groupValues[1]
                     val subUrl = match.groupValues[2]
                     subtitleCallback(SubtitleFile(label, subUrl))
@@ -1330,8 +1328,7 @@ class ArchiveOrgExtractor : ExtractorApi() {
                 script.data().contains("\"sources\"")
             }?.data() ?: return
 
-            val regex = Regex("""\"url\":\"(.*?)\"""")
-            regex.findAll(sources).forEach { match ->
+            CompiledRegexPatterns.ARCHIVE_ORG_URL.findAll(sources).forEach { match ->
                 val videoUrl = match.groupValues[1].replace("\\/", "/")
                 if (videoUrl.contains(".mp4") || videoUrl.contains(".m3u8")) {
                     callback.invoke(
@@ -2008,27 +2005,25 @@ object MasterLinkGenerator {
      */
     fun detectQualityFromUrl(url: String): Int {
         val urlLower = url.lowercase()
-        
-        // Pattern 1: Explicit resolution (1080, 720, 360, etc.)
-        if (Regex("(1080|p1080|fhd|fullhd)").containsMatchIn(urlLower)) return 1080
-        if (Regex("(720|p720|hd)").containsMatchIn(urlLower)) return 720
-        if (Regex("(480|p480|sd)").containsMatchIn(urlLower)) return 480
-        if (Regex("(360|p360)").containsMatchIn(urlLower)) return 360
-        if (Regex("(240|p240|mobile|lowest)").containsMatchIn(urlLower)) return 240
-        if (Regex("(144|p144)").containsMatchIn(urlLower)) return 144
-        
+
+        // Pattern 1: Explicit quality keywords (using pre-compiled patterns)
+        if (CompiledRegexPatterns.MLG_QUALITY_1080.containsMatchIn(urlLower)) return 1080
+        if (CompiledRegexPatterns.MLG_QUALITY_720.containsMatchIn(urlLower)) return 720
+        if (CompiledRegexPatterns.MLG_QUALITY_480.containsMatchIn(urlLower)) return 480
+        if (CompiledRegexPatterns.MLG_QUALITY_360.containsMatchIn(urlLower)) return 360
+        if (CompiledRegexPatterns.MLG_QUALITY_240.containsMatchIn(urlLower)) return 240
+        if (CompiledRegexPatterns.MLG_QUALITY_144.containsMatchIn(urlLower)) return 144
+
         // Pattern 2: Path-based detection (contoh: .../1080p/stream.m3u8)
-        val pathPattern = Regex("/(\\d{3,4})p?/")
-        pathPattern.find(urlLower)?.groupValues?.getOrNull(1)?.let {
+        CompiledRegexPatterns.MLG_PATH_QUALITY.find(urlLower)?.groupValues?.getOrNull(1)?.let {
             return it.toIntOrNull() ?: 480
         }
-        
+
         // Pattern 3: Quality suffix (contoh: video_1080.m3u8)
-        val suffixPattern = Regex("_(\\d{3,4})")
-        suffixPattern.find(urlLower)?.groupValues?.getOrNull(1)?.let {
+        CompiledRegexPatterns.MLG_SUFFIX_QUALITY.find(urlLower)?.groupValues?.getOrNull(1)?.let {
             return it.toIntOrNull() ?: 480
         }
-        
+
         // Default: 480 (safe untuk kebanyakan kasus)
         return 480
     }
