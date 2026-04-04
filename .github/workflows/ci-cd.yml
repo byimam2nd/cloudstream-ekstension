@@ -26,7 +26,7 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -198,14 +198,14 @@ jobs:
         run: sleep 10
 
       - name: Checkout (with latest commit from sync job)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: "src"
           ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Checkout builds
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: "builds"
           path: "builds"

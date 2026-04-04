@@ -1,9 +1,11 @@
 // ========================================
-// MASTER MONITORS - v3.0 OPTIMIZED
-// Gabungan: SmartCacheMonitor + SyncMonitor + SuperSmartPrefetchManager
+// MASTER MONITORS - v3.6
+// Gabungan: SmartCacheMonitor + SyncMonitor + SuperSmartPrefetchManager + PerformanceMonitor
 // ========================================
-// Last Updated: 2026-03-25
+// Last Updated: 2026-04-04
 // Optimized for: CloudStream Extension Standards
+//
+// NEW v3.6: PerformanceMonitor for runtime metrics
 // ========================================
 
 package com.{MODULE}
@@ -539,5 +541,261 @@ class SuperSmartPrefetchManager(
             // Fallback for non-Android environments (testing)
             true
         }
+    }
+}
+
+// ============================================
+// REGION: PERFORMANCE MONITOR (501-600)
+// ============================================
+
+/**
+ * Performance Monitor - Runtime metrics tracking
+ *
+ * Features:
+ * - Track request latency (P50, P95, P99)
+ * - Track cache hit/miss rates
+ * - Track extractor success rates
+ * - Track memory usage
+ * - Export metrics for analysis
+ *
+ * Usage:
+ * ```kotlin
+ * // Start tracking
+ * PerformanceMonitor.startRequest("search")
+ *
+ * // After operation
+ * PerformanceMonitor.endRequest("search", success = true)
+ *
+ * // Track cache
+ * PerformanceMonitor.trackCacheHit("searchCache", hit = true)
+ *
+ * // Export metrics
+ * val report = PerformanceMonitor.generateReport()
+ * ```
+ */
+internal object PerformanceMonitor {
+
+    companion object {
+        private const val TAG = "PerformanceMonitor"
+        private const val MAX_METRICS = 1000
+        private const val REPORT_THRESHOLD = 100
+    }
+
+    data class RequestMetrics(
+        val operation: String,
+        val latencyMs: Long,
+        val success: Boolean,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+
+    data class CacheMetrics(
+        val cacheName: String,
+        val hit: Boolean,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+
+    data class ExtractorMetrics(
+        val extractorName: String,
+        val success: Boolean,
+        val latencyMs: Long,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+
+    data class MetricsReport(
+        val totalRequests: Int,
+        val successRate: Double,
+        val p50Latency: Long,
+        val p95Latency: Long,
+        val p99Latency: Long,
+        val cacheHitRate: Double,
+        val extractorSuccessRate: Double,
+        val generatedAt: Long = System.currentTimeMillis()
+    )
+
+    // Thread-safe storage
+    private val requestMetrics = Collections.synchronizedList(mutableListOf<RequestMetrics>())
+    private val cacheMetrics = Collections.synchronizedList(mutableListOf<CacheMetrics>())
+    private val extractorMetrics = Collections.synchronizedList(mutableListOf<ExtractorMetrics>())
+    private val operationTimers = ConcurrentHashMap<String, Long>()
+
+    /**
+     * Start tracking a request
+     * @param operation Operation name (e.g., "search", "load", "mainPage")
+     */
+    fun startRequest(operation: String) {
+        operationTimers[operation] = System.currentTimeMillis()
+        logDebug(TAG, "▶️ Started: $operation")
+    }
+
+    /**
+     * End tracking a request
+     * @param operation Operation name
+     * @param success Whether the operation succeeded
+     */
+    fun endRequest(operation: String, success: Boolean) {
+        val startTime = operationTimers[operation] ?: return
+        val latency = System.currentTimeMillis() - startTime
+
+        val metric = RequestMetrics(operation, latency, success)
+        requestMetrics.add(metric)
+        operationTimers.remove(operation)
+
+        // Clean up old metrics
+        if (requestMetrics.size > MAX_METRICS) {
+            requestMetrics.subList(0, requestMetrics.size - MAX_METRICS).clear()
+        }
+
+        val status = if (success) "✅" else "❌"
+        logDebug(TAG, "$status Completed: $operation (${latency}ms)")
+
+        // Warn if latency is high
+        if (latency > 2000) {
+            logError(TAG, "⚠️ High latency detected: $operation took ${latency}ms")
+        }
+    }
+
+    /**
+     * Track cache hit or miss
+     * @param cacheName Cache name (e.g., "searchCache", "mainPageCache")
+     * @param hit Whether it was a cache hit
+     */
+    fun trackCacheHit(cacheName: String, hit: Boolean) {
+        val metric = CacheMetrics(cacheName, hit)
+        cacheMetrics.add(metric)
+
+        // Clean up old metrics
+        if (cacheMetrics.size > MAX_METRICS) {
+            cacheMetrics.subList(0, cacheMetrics.size - MAX_METRICS).clear()
+        }
+
+        val status = if (hit) "HIT" else "MISS"
+        logDebug(TAG, "📦 Cache $status: $cacheName")
+    }
+
+    /**
+     * Track extractor call
+     * @param extractorName Extractor name
+     * @param success Whether extraction succeeded
+     * @param latencyMs Extraction time in milliseconds
+     */
+    fun trackExtractor(extractorName: String, success: Boolean, latencyMs: Long) {
+        val metric = ExtractorMetrics(extractorName, success, latencyMs)
+        extractorMetrics.add(metric)
+
+        // Clean up old metrics
+        if (extractorMetrics.size > MAX_METRICS) {
+            extractorMetrics.subList(0, extractorMetrics.size - MAX_METRICS).clear()
+        }
+
+        val status = if (success) "✅" else "❌"
+        logDebug(TAG, "$status Extractor: $extractorName (${latency}ms)")
+    }
+
+    /**
+     * Generate metrics report
+     * @return Comprehensive performance report
+     */
+    fun generateReport(): MetricsReport {
+        val latencies = requestMetrics.map { it.latencyMs }.sorted()
+        val successCount = requestMetrics.count { it.success }
+
+        val cacheHits = cacheMetrics.count { it.hit }
+        val cacheTotal = cacheMetrics.size
+
+        val extractorSuccess = extractorMetrics.count { it.success }
+        val extractorTotal = extractorMetrics.size
+
+        return MetricsReport(
+            totalRequests = requestMetrics.size,
+            successRate = if (requestMetrics.isNotEmpty()) successCount.toDouble() / requestMetrics.size else 0.0,
+            p50Latency = latencies.percentile(50),
+            p95Latency = latencies.percentile(95),
+            p99Latency = latencies.percentile(99),
+            cacheHitRate = if (cacheTotal > 0) cacheHits.toDouble() / cacheTotal else 0.0,
+            extractorSuccessRate = if (extractorTotal > 0) extractorSuccess.toDouble() / extractorTotal else 0.0
+        )
+    }
+
+    /**
+     * Log summary to console
+     */
+    fun logSummary() {
+        val report = generateReport()
+
+        logDebug(TAG, "═══════════════════════════════════════")
+        logDebug(TAG, "📊 Performance Summary")
+        logDebug(TAG, "═══════════════════════════════════════")
+        logDebug(TAG, "Total Requests: ${report.totalRequests}")
+        logDebug(TAG, "Success Rate: ${"%.1f".format(report.successRate * 100)}%")
+        logDebug(TAG, "Latency P50: ${report.p50Latency}ms")
+        logDebug(TAG, "Latency P95: ${report.p95Latency}ms")
+        logDebug(TAG, "Latency P99: ${report.p99Latency}ms")
+        logDebug(TAG, "Cache Hit Rate: ${"%.1f".format(report.cacheHitRate * 100)}%")
+        logDebug(TAG, "Extractor Success: ${"%.1f".format(report.extractorSuccessRate * 100)}%")
+        logDebug(TAG, "═══════════════════════════════════════")
+    }
+
+    /**
+     * Clear all metrics
+     */
+    fun clear() {
+        requestMetrics.clear()
+        cacheMetrics.clear()
+        extractorMetrics.clear()
+        operationTimers.clear()
+        logDebug(TAG, "🗑️ Metrics cleared")
+    }
+
+    /**
+     * Calculate percentile from sorted list
+     */
+    private fun List<Long>.percentile(percentile: Double): Long {
+        if (isEmpty()) return 0
+        val index = (percentile / 100.0 * size).toInt().coerceIn(0, size - 1)
+        return this[index]
+    }
+}
+
+/**
+ * Helper extension for timed operations
+ *
+ * Usage:
+ * ```kotlin
+ * val result = measurePerformance("search") {
+ *     // Your code here
+ *     fetchSearchResults(query)
+ * }
+ * ```
+ */
+internal suspend fun <T> measurePerformance(operation: String, block: suspend () -> T): T {
+    PerformanceMonitor.startRequest(operation)
+    return try {
+        val result = block()
+        PerformanceMonitor.endRequest(operation, success = true)
+        result
+    } catch (e: Exception) {
+        PerformanceMonitor.endRequest(operation, success = false)
+        throw e
+    }
+}
+
+/**
+ * Helper extension for cache tracking
+ *
+ * Usage:
+ * ```kotlin
+ * val result = trackCache("searchCache", query) {
+ *     fetchFromNetwork(query)
+ * }
+ * ```
+ */
+internal suspend fun <T> trackCache(cacheName: String, cachedValue: T?, block: suspend () -> T): T {
+    val hit = cachedValue != null
+    PerformanceMonitor.trackCacheHit(cacheName, hit)
+
+    return if (hit) {
+        cachedValue!!
+    } else {
+        block()
     }
 }
