@@ -42,7 +42,6 @@
 // ========================================
 package com.Funmovieslix.generated_sync
 
-import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
@@ -342,7 +341,7 @@ open class Dingtezuni : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[Dingtezuni] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[Dingtezuni] Failed: ${e.message}")
         }
     }
 
@@ -464,7 +463,7 @@ open class Dintezuvio : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[Dintezuvio] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[Dintezuvio] Failed: ${e.message}")
         }
     }
 
@@ -891,7 +890,7 @@ open class StreamRuby : ExtractorApi() {
                 )
             }
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[StreamRuby] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[StreamRuby] Failed: ${e.message}")
         }
     }
 }
@@ -969,7 +968,7 @@ open class Vidguardto : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[Vidguard] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[Vidguard] Failed: ${e.message}")
         }
     }
 
@@ -1083,7 +1082,7 @@ class Archivd : ExtractorApi() {
                 }
             )
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[Archivd] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[Archivd] Failed: ${e.message}")
         }
     }
 
@@ -1123,26 +1122,30 @@ class Newuservideo : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val iframe = app.get(url, referer = referer).document.select("iframe#videoFrame").attr("src")
-        val doc = app.get(iframe, referer = "$mainUrl/").text
-        val json = "VIDEO_CONFIG\\s?=\\s?(.*)".toRegex().find(doc)?.groupValues?.get(1)
+        try {
+            val iframe = app.get(url, referer = referer).document.select("iframe#videoFrame").attr("src")
+            val doc = app.get(iframe, referer = "$mainUrl/").text
+            val json = "VIDEO_CONFIG\\s?=\\s?(.*)".toRegex().find(doc)?.groupValues?.get(1)
 
-        tryParseJson<Sources>(json)?.streams?.map {
-            callback.invoke(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    it.playUrl ?: return@map,
-                    INFER_TYPE
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = when (it.formatId) {
-                        18 -> Qualities.P360.value
-                        22 -> Qualities.P720.value
-                        else -> Qualities.Unknown.value
+            tryParseJson<Sources>(json)?.streams?.map {
+                callback.invoke(
+                    newExtractorLink(
+                        this.name,
+                        this.name,
+                        it.playUrl ?: return@map,
+                        INFER_TYPE
+                    ) {
+                        this.referer = "$mainUrl/"
+                        this.quality = when (it.formatId) {
+                            18 -> Qualities.P360.value
+                            22 -> Qualities.P720.value
+                            else -> Qualities.Unknown.value
+                        }
                     }
-                }
-            )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("MasterExtractors", "[Uservideo] Failed: ${e.message}")
         }
     }
 
@@ -1211,7 +1214,7 @@ class Dailymotion : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[Dailymotion] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[Dailymotion] Failed: ${e.message}")
         }
     }
 
@@ -1289,7 +1292,7 @@ class Jeniusplay : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[Jeniusplay] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[Jeniusplay] Failed: ${e.message}")
         }
     }
 
@@ -1349,7 +1352,7 @@ class ArchiveOrgExtractor : ExtractorApi() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[ArchiveOrg] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[ArchiveOrg] Failed: ${e.message}")
         }
     }
 }
@@ -1453,7 +1456,7 @@ class Megacloud : ExtractorApi() {
             }
 
         } catch (e: Exception) {
-            Log.e("MasterExtractors", "[Megacloud] Failed: ${e.message}", e)
+            Log.e("MasterExtractors", "`[Megacloud] Failed: ${e.message}")
         }
     }
 
@@ -1848,13 +1851,13 @@ object SyncExtractors {
 // - isValidVideoUrl() - URL validation
 //
 // Usage Example:
-// ```kotlin
+// kotlin
 // MasterLinkGenerator.createLink(
 //     source = "Extractor",
 //     url = videoUrl,
 //     referer = referer
 // )?.let { callback(it) }
-// ```
+// 
 // ========================================
 
 /**
