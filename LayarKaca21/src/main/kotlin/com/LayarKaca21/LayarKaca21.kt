@@ -28,12 +28,8 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.*
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import org.json.JSONObject
 import org.jsoup.nodes.Element
-import java.util.concurrent.ConcurrentHashMap
 import java.net.URI
 
 // ========================================

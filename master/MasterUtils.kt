@@ -16,8 +16,6 @@
 package com.{MODULE}
 
 import com.lagradost.api.Log
-import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.SearchResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

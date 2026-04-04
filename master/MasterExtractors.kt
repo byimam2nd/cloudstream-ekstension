@@ -52,9 +52,6 @@ import org.mozilla.javascript.Context
 import org.mozilla.javascript.NativeJSON
 import org.mozilla.javascript.NativeObject
 import org.mozilla.javascript.Scriptable
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
-import android.annotation.SuppressLint
 
 // Import Master utilities untuk performa optimal
 // ========================================

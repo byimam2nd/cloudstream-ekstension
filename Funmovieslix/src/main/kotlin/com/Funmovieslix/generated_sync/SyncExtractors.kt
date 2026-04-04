@@ -35,11 +35,6 @@
 //   MasterLinkGenerator.createLink(source, url, referer)
 // ========================================
 
-// ========================================
-// AUTO-GENERATED - DO NOT EDIT MANUALLY
-// Synced from common/MasterExtractors.kt
-// File: SyncExtractors.kt
-// ========================================
 package com.Funmovieslix.generated_sync
 
 import com.lagradost.api.Log
@@ -57,9 +52,6 @@ import org.mozilla.javascript.Context
 import org.mozilla.javascript.NativeJSON
 import org.mozilla.javascript.NativeObject
 import org.mozilla.javascript.Scriptable
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
-import android.annotation.SuppressLint
 
 // Import Master utilities untuk performa optimal
 // ========================================
@@ -75,8 +67,8 @@ import android.annotation.SuppressLint
 //
 // Script sync akan otomatis update semua import paths
 // ========================================
-import com.Funmovieslix.generated_sync.HttpClientFactory
-import com.Funmovieslix.generated_sync.CompiledRegexPatterns
+import master.HttpClientFactory
+import master.CompiledRegexPatterns
 
 // ========================================
 // REGION: CONSTANTS & CONFIG (1-100)

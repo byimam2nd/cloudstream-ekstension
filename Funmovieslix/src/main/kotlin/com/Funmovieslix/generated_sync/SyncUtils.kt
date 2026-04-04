@@ -13,16 +13,9 @@
 // - ✅ ConcurrentHashMap untuk thread safety
 // ========================================
 
-// ========================================
-// AUTO-GENERATED - DO NOT EDIT MANUALLY
-// Synced from common/MasterUtils.kt
-// File: SyncUtils.kt
-// ========================================
 package com.Funmovieslix.generated_sync
 
 import com.lagradost.api.Log
-import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.SearchResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
