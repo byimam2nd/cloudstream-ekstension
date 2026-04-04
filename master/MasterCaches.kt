@@ -50,7 +50,7 @@ class CacheManager<T>(
 
     suspend fun get(key: String): T? {
         return mutex.withLock {
-            cache[key]?.takeIf { !it.isExpired() }
+            cache[key]?.takeIf { !it.isExpired() }?.data
         }
     }
 
