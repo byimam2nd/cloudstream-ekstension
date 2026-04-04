@@ -16,6 +16,10 @@ buildscript {
         classpath("com.android.tools.build:gradle:8.13.2")
         classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
+        
+        // Code quality plugins
+        classpath("org.jlleitschuh.gradle:ktlint-gradle:12.3.0")
+        classpath("io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.8")
     }
 }
 
@@ -43,6 +47,8 @@ subprojects {
     apply(plugin = "com.android.library")
     apply(plugin = "kotlin-android")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
+    apply(plugin = "io.gitlab.arturbosch.detekt")
 
     cloudstream {
         // Dynamic repo from env or local.properties or default
@@ -126,6 +132,50 @@ subprojects {
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
         implementation("com.github.vidstige:jadb:$jadbVersion")
         implementation("org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion")
+    }
+
+    // ============================================
+    // KTLINT CONFIGURATION
+    // ============================================
+    configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+        android.set(true)
+        outputToConsole.set(true)
+        outputColorName.set("RED")
+        ignoreFailures.set(false)
+        enableExperimentalRules.set(false)
+        
+        filter {
+            exclude("**/generated/**")
+            exclude("**/generated_sync/**")
+            exclude("**/build/**")
+        }
+    }
+
+    // ============================================
+    // DETEKT CONFIGURATION
+    // ============================================
+    configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        buildUponDefaultConfig = true
+        allRules = false
+        autoCorrect = true
+        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+        baseline = file("$rootDir/config/detekt/baseline.yml")
+        
+        parallel = true
+        debug = false
+        
+        source = objects.fileCollection().from(
+            io.gitlab.arturbosch.detekt.extensions.DetektPlugin.CONFIGURATION_DETEKT_PLUGINS,
+            "src/main/java",
+            "src/main/kotlin"
+        )
+        
+        reports {
+            html.required.set(true)
+            xml.required.set(true)
+            txt.required.set(true)
+            sarif.required.set(false)
+        }
     }
 }
 
