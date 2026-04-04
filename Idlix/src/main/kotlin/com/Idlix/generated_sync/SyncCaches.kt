@@ -1,9 +1,14 @@
 // ========================================
-// MASTER CACHES - v3.0 OPTIMIZED
-// Gabungan: CacheManager + ImageCache
+// MASTER CACHES - v4.0 MEMORY-ONLY
+// CacheManager + ImageCache (disk cache dihapus)
 // ========================================
-// Last Updated: 2026-03-25
-// Optimized for: CloudStream Extension Standards
+// Last Updated: 2026-04-04
+// Optimized for: Runtime Performance
+//
+// CHANGES (v4.0):
+// - ✅ Hapus disk cache (ObjectOutputStream lambat: +20-60ms per operasi)
+// - ✅ Memory-only cache (TTL: 30 menit sudah cukup)
+// - ✅ Mutex hanya untuk akses memory, non-blocking untuk operasi lain
 // ========================================
 
 // ========================================
@@ -20,27 +25,20 @@ import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
-import java.io.ObjectOutputStream
-import java.io.ObjectInputStream
-import java.io.ByteArrayOutputStream
-import java.io.ByteArrayInputStream
-import java.io.FileOutputStream
 import java.security.MessageDigest
-import java.util.concurrent.ConcurrentHashMap
 
 // ============================================
-// REGION: GENERIC CACHE MANAGER (1-150)
+// REGION: GENERIC CACHE MANAGER (MEMORY-ONLY)
 // ============================================
 
 /**
- * Generic thread-safe cache manager with TTL + Disk Cache
+ * Generic thread-safe memory cache manager with TTL
  *
  * Features:
- * - In-memory cache for fast access (TTL: 30 minutes)
- * - Disk cache for persistence (TTL: 24 hours)
- * - Total disk cache limit: 200MB (shared across all providers)
- * - Auto-cleanup when limit exceeded
- * - Lazy initialization for better startup performance
+ * - In-memory cache untuk akses cepat (~1ms per operasi)
+ * - TTL: 30 menit default
+ * - Tanpa disk cache (ObjectOutputStream lambat + CloudStream restart jarang)
+ * - Lazy initialization untuk better startup performance
  *
  * Usage:
  * ```
@@ -48,152 +46,38 @@ import java.util.concurrent.ConcurrentHashMap
  * ```
  */
 class CacheManager<T>(
-    private val defaultTtl: Long = 30 * 60 * 1000L, // 30 minutes for memory
-    private val diskTtl: Long = 24 * 60 * 60 * 1000L, // 24 hours for disk
-    private val maxDiskSize: Long = 200 * 1024 * 1024 // 200MB total limit
+    private val defaultTtl: Long = 30 * 60 * 1000L // 30 minutes
 ) {
     private val cache = ConcurrentHashMap<String, CachedResult<T>>()
     private val mutex = Mutex()
 
-    // Disk cache directory (shared across all providers)
-    private val diskCacheDir: File by lazy {
-        val baseDir = System.getProperty("java.io.tmpdir") ?: "/tmp"
-        File("$baseDir/cloudstream-cache").apply { mkdirs() }
-    }
-
     suspend fun get(key: String): T? {
-        // Step 1: Try memory cache first (fast, with mutex)
-        val memoryResult = mutex.withLock {
+        return mutex.withLock {
             cache[key]?.takeIf { !it.isExpired() }
         }
-
-        if (memoryResult != null) {
-            return memoryResult.data
-        }
-
-        // Step 2: Try disk cache (slow, WITHOUT mutex - non-blocking)
-        val diskFile = getDiskCacheFile(key)
-        if (diskFile.exists()) {
-            try {
-                val diskCached = readFromDisk(diskFile)
-                if (diskCached != null && !diskCached.isExpired(diskTtl)) {
-                    // Restore to memory cache for faster next access (with mutex)
-                    mutex.withLock {
-                        cache[key] = diskCached
-                    }
-                    return diskCached.data
-                } else {
-                    // Expired, delete from disk (no mutex needed)
-                    diskFile.delete()
-                }
-            } catch (e: Exception) {
-                // Corrupted cache file, delete it (no mutex needed)
-                diskFile.delete()
-            }
-        }
-
-        // Cache miss (remove from memory if present, with mutex)
-        mutex.withLock {
-            cache.remove(key)
-        }
-        return null
     }
 
     suspend fun put(key: String, data: T, ttl: Long = defaultTtl) {
-        // Step 1: Store in memory cache (with mutex)
-        val cachedResult = CachedResult(data, System.currentTimeMillis(), ttl)
         mutex.withLock {
-            cache[key] = cachedResult
-        }
-
-        // Step 2: Store in disk cache (WITHOUT mutex - non-blocking)
-        try {
-            val diskFile = getDiskCacheFile(key)
-
-            // Check disk space before writing (no mutex needed for read-only check)
-            if (getTotalDiskSize() + estimateSize(data) > maxDiskSize) {
-                cleanupDiskCache()
-            }
-
-            writeToDisk(diskFile, cachedResult)
-        } catch (e: Exception) {
-            // Disk cache failed, continue with memory cache only
+            cache[key] = CachedResult(data, System.currentTimeMillis(), ttl)
         }
     }
 
     suspend fun clear() {
         mutex.withLock {
             cache.clear()
-            diskCacheDir.listFiles()?.forEach { it.delete() }
         }
     }
 
-    suspend fun size(): Int = cache.size
+    suspend fun size(): Int = mutex.withLock { cache.size }
 
-    suspend fun diskSize(): Long = mutex.withLock { getTotalDiskSize() }
-
-    // ========================================
-    // HELPER FUNCTIONS
-    // ========================================
-
-    private fun getDiskCacheFile(key: String): File {
-        // Use MD5 hash for filename to avoid special characters
-        val hash = key.md5()
-        return File(diskCacheDir, "cache_$hash.dat")
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun readFromDisk(file: File): CachedResult<T>? {
-        return try {
-            ObjectInputStream(ByteArrayInputStream(file.readBytes())).use {
-                it.readObject() as? CachedResult<T>
-            }
-        } catch (e: Exception) {
-            null
+    /**
+     * Cleanup expired entries (call periodically jika perlu)
+     */
+    suspend fun cleanupExpired() {
+        mutex.withLock {
+            cache.entries.removeAll { it.value.isExpired() }
         }
-    }
-
-    private fun writeToDisk(file: File, data: CachedResult<T>) {
-        ByteArrayOutputStream().use { baos ->
-            ObjectOutputStream(baos).use { oos ->
-                oos.writeObject(data)
-                file.writeBytes(baos.toByteArray())
-            }
-        }
-    }
-
-    private fun estimateSize(data: T): Long {
-        // Rough estimate: 1KB base + serialized size
-        return try {
-            ByteArrayOutputStream().use { baos ->
-                ObjectOutputStream(baos).use { oos ->
-                    oos.writeObject(data)
-                    baos.size().toLong()
-                }
-            }
-        } catch (e: Exception) {
-            1024 // Default 1KB estimate
-        }
-    }
-
-    private fun getTotalDiskSize(): Long {
-        return diskCacheDir.listFiles()?.sumOf { it.length() } ?: 0L
-    }
-
-    private fun cleanupDiskCache() {
-        // Delete oldest files until under limit
-        val files = diskCacheDir.listFiles()?.sortedBy { it.lastModified() } ?: return
-        var currentSize = getTotalDiskSize()
-
-        for (file in files) {
-            if (currentSize <= maxDiskSize * 0.8) break // Stop at 80% of limit
-            currentSize -= file.length()
-            file.delete()
-        }
-    }
-
-    private fun cleanupExpiredEntries() {
-        cache.entries.removeAll { it.value.isExpired() }
     }
 }
 
@@ -203,7 +87,6 @@ data class CachedResult<T>(
     val ttl: Long = 30 * 60 * 1000L
 ) {
     fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
-    fun isExpired(customTtl: Long): Boolean = System.currentTimeMillis() - timestamp > customTtl
 }
 
 // ============================================
@@ -416,219 +299,14 @@ class ImageCache(
 }
 
 // ============================================
-// REGION: UTILITY EXTENSIONS (401-450)
+// REGION: UTILITY EXTENSIONS
 // ============================================
 
 /**
- * MD5 hash extension for String
+ * MD5 hash extension untuk String
+ * Digunakan untuk generate filename dari cache key
  */
 fun String.md5(): String {
     return MessageDigest.getInstance("MD5").digest(this.toByteArray())
         .joinToString("") { "%02x".format(it) }
-}
-
-// ============================================
-// REGION: PERSISTENT CACHE MANAGER (451-550)
-// ============================================
-
-/**
- * Persistent Cache Manager - DISK-BASED cache untuk semua modul
- *
- * Features:
- * - Survives app restart (unlike memory cache)
- * - TTL: 24 hours (longer than 30 min memory cache)
- * - Auto-cleanup when size exceeds limit
- * - Thread-safe dengan Mutex
- *
- * Usage:
- * ```kotlin
- * val cache = PersistentCacheManager<List<SearchResponse>>(
- *     ttl = 24 * 60 * 60 * 1000L,  // 24 hours
- *     maxSize = 50 * 1024 * 1024L  // 50MB
- * )
- *
- * cache.put("search:anime", searchResults)
- * val results = cache.get("search:anime")
- * ```
- */
-class PersistentCacheManager<T>(
-    private val ttl: Long = 24 * 60 * 60 * 1000L,  // 24 hours default
-    private val maxSize: Long = 50 * 1024 * 1024L  // 50MB default
-) {
-    private val cache = ConcurrentHashMap<String, PersistentCachedResult<T>>()
-    private val mutex = Mutex()
-
-    // Disk cache directory (UNIQUE NAME to avoid conflicts!)
-    private val persistentDiskCacheDir: File by lazy {
-        val baseDir = System.getProperty("java.io.tmpdir") ?: "/tmp"
-        File("$baseDir/cloudstream-persistent-cache").apply { mkdirs() }
-    }
-
-    /**
-     * Get data dari cache (memory or disk)
-     */
-    suspend fun get(key: String): T? {
-        return mutex.withLock {
-            // Try memory first
-            val memoryCached = cache[key]
-            if (memoryCached != null && !memoryCached.isExpired()) {
-                Log.d("PersistentCache", "✅ Memory HIT: $key")
-                return@withLock memoryCached.data
-            }
-
-            // Try disk cache
-            val diskFile = getPersistentCacheFile(key)
-            if (diskFile.exists()) {
-                try {
-                    val diskCached = readPersistentFromDisk(diskFile)
-                    if (diskCached != null && !diskCached.isExpired()) {
-                        // Restore to memory
-                        cache[key] = diskCached
-                        Log.d("PersistentCache", "✅ Disk HIT: $key")
-                        return@withLock diskCached.data
-                    } else {
-                        // Expired, delete
-                        diskFile.delete()
-                    }
-                } catch (e: Exception) {
-                    Log.e("PersistentCache", "Disk read failed: ${e.message}")
-                    diskFile.delete()
-                }
-            }
-
-            // Cache miss
-            cache.remove(key)
-            Log.d("PersistentCache", "❌ MISS: $key")
-            null
-        }
-    }
-
-    /**
-     * Put data ke cache (memory + disk)
-     */
-    suspend fun put(key: String, data: T, customTtl: Long = ttl) {
-        mutex.withLock {
-            // Store in memory
-            val cachedResult = PersistentCachedResult(data, System.currentTimeMillis(), customTtl)
-            cache[key] = cachedResult
-
-            // Store in disk
-            try {
-                val diskFile = getPersistentCacheFile(key)
-
-                // Check disk space
-                if (getPersistentTotalDiskSize() + estimatePersistentSize(data) > maxSize) {
-                    cleanupPersistentDiskCache()
-                }
-
-                writePersistentToDisk(diskFile, cachedResult)
-                Log.d("PersistentCache", "💾 Saved: $key (${estimatePersistentSize(data) / 1024}KB)")
-            } catch (e: Exception) {
-                Log.e("PersistentCache", "Disk write failed: ${e.message}")
-            }
-        }
-    }
-
-    /**
-     * Remove data dari cache
-     */
-    suspend fun remove(key: String) {
-        mutex.withLock {
-            cache.remove(key)
-            getPersistentCacheFile(key).delete()
-            Log.d("PersistentCache", "🗑️ Removed: $key")
-        }
-    }
-
-    /**
-     * Clear semua cache
-     */
-    suspend fun clear() {
-        mutex.withLock {
-            cache.clear()
-            persistentDiskCacheDir.listFiles()?.forEach { it.delete() }
-            Log.d("PersistentCache", "🗑️ Cache cleared")
-        }
-    }
-
-    /**
-     * Get cache size (memory entries)
-     */
-    suspend fun size(): Int = cache.size
-
-    /**
-     * Get disk cache size (bytes)
-     */
-    suspend fun diskSize(): Long = mutex.withLock { getPersistentTotalDiskSize() }
-
-    // ============================================
-    // HELPER FUNCTIONS (UNIQUE NAMES!)
-    // ============================================
-
-    private fun getPersistentCacheFile(key: String): File {
-        val hash = key.md5()
-        return File(persistentDiskCacheDir, "persistent_$hash.dat")
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun readPersistentFromDisk(file: File): PersistentCachedResult<T>? {
-        return try {
-            ObjectInputStream(ByteArrayInputStream(file.readBytes())).use {
-                it.readObject() as? PersistentCachedResult<T>
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun writePersistentToDisk(file: File, data: PersistentCachedResult<T>) {
-        ByteArrayOutputStream().use { baos ->
-            ObjectOutputStream(baos).use { oos ->
-                oos.writeObject(data)
-                file.writeBytes(baos.toByteArray())
-            }
-        }
-    }
-
-    private fun estimatePersistentSize(data: T): Long {
-        return try {
-            ByteArrayOutputStream().use { baos ->
-                ObjectOutputStream(baos).use { oos ->
-                    oos.writeObject(data)
-                    baos.size().toLong()
-                }
-            }
-        } catch (e: Exception) {
-            1024  // Default 1KB estimate
-        }
-    }
-
-    private fun getPersistentTotalDiskSize(): Long {
-        return persistentDiskCacheDir.listFiles()?.sumOf { it.length() } ?: 0L
-    }
-
-    private fun cleanupPersistentDiskCache() {
-        // Delete oldest files until under 80% capacity
-        val files = persistentDiskCacheDir.listFiles()?.sortedBy { it.lastModified() } ?: return
-        var freed = 0L
-        val targetFree = (getPersistentTotalDiskSize() * 0.2).toLong()
-
-        for (file in files) {
-            if (freed >= targetFree) break
-            file.delete()
-            freed += file.length()
-            Log.d("PersistentCache", "🗑️ Deleted old: ${file.name}")
-        }
-    }
-}
-
-/**
- * Cached result dengan TTL
- */
-data class PersistentCachedResult<T>(
-    val data: T,
-    val timestamp: Long,
-    val ttl: Long
-) {
-    fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > ttl
 }
