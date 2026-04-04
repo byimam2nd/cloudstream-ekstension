@@ -13,6 +13,11 @@
 // - ✅ ConcurrentHashMap untuk thread safety
 // ========================================
 
+// ========================================
+// AUTO-GENERATED - DO NOT EDIT MANUALLY
+// Synced from common/MasterUtils.kt
+// File: SyncUtils.kt
+// ========================================
 package com.Pencurimovie.generated_sync
 
 import com.lagradost.api.Log

@@ -35,6 +35,11 @@
 //   MasterLinkGenerator.createLink(source, url, referer)
 // ========================================
 
+// ========================================
+// AUTO-GENERATED - DO NOT EDIT MANUALLY
+// Synced from common/MasterExtractors.kt
+// File: SyncExtractors.kt
+// ========================================
 package com.Animasu.generated_sync
 
 import com.lagradost.api.Log
@@ -67,8 +72,8 @@ import org.mozilla.javascript.Scriptable
 //
 // Script sync akan otomatis update semua import paths
 // ========================================
-import master.HttpClientFactory
-import master.CompiledRegexPatterns
+import com.Animasu.generated_sync.HttpClientFactory
+import com.Animasu.generated_sync.CompiledRegexPatterns
 
 // ========================================
 // REGION: CONSTANTS & CONFIG (1-100)
