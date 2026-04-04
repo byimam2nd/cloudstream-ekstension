@@ -19,7 +19,7 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
         
         // Code quality plugins
-        classpath("org.jlleitschuh.gradle:ktlint-gradle:12.3.0")
+        classpath("org.jlleitschuh.gradle:ktlint-gradle:14.2.0")
         classpath("io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.8")
     }
 }
