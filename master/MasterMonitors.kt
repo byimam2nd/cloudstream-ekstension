@@ -1,11 +1,11 @@
 // ========================================
-// MASTER MONITORS - v3.6
+// MASTER MONITORS - v3.7
 // Gabungan: SmartCacheMonitor + SyncMonitor + SuperSmartPrefetchManager + PerformanceMonitor
 // ========================================
 // Last Updated: 2026-04-04
 // Optimized for: CloudStream Extension Standards
 //
-// NEW v3.6: PerformanceMonitor for runtime metrics
+// v3.7: Fixed Collections import + PerformanceMonitor utilities
 // ========================================
 
 package com.{MODULE}
