@@ -162,16 +162,15 @@ subprojects {
         autoCorrect = true
         config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
         baseline = file("$rootDir/config/detekt/baseline.yml")
-        
+
         parallel = true
         debug = false
-        
+
         source = objects.fileCollection().from(
-            io.gitlab.arturbosch.detekt.extensions.DetektPlugin.CONFIGURATION_DETEKT_PLUGINS,
             "src/main/java",
             "src/main/kotlin"
         )
-        
+
         reports {
             html.required.set(true)
             xml.required.set(true)
