@@ -154,8 +154,9 @@ class LayarKaca21 : MainAPI() {
         val title = this.selectFirst("h3")?.ownText()?.trim()
             ?: this.selectFirst("h3")?.text()?.trim()
             ?: return null
-        
-        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
+
+        val anchor = this.selectFirst("a") ?: return null
+        val href = fixUrl(anchor.attr("href"))
         
         // FIXED: Fallback strategy untuk poster (3-layer)
         val posterUrl = fixUrlNull(

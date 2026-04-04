@@ -290,7 +290,8 @@ class Animasu : MainAPI() {
             .ifEmpty { document.selectFirst("meta[name=description]")?.attr("content").orEmpty() }
         
         val episodes = document.select("ul#daftarepisode > li").mapNotNull {
-            val link = fixUrl(it.selectFirst("a")!!.attr("href"))
+            val anchor = it.selectFirst("a") ?: return@mapNotNull null
+            val link = fixUrl(anchor.attr("href"))
             val name = it.selectFirst("a")?.text() ?: return@mapNotNull null
             val episode = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
             newEpisode(link) { this.episode = episode }

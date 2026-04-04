@@ -206,7 +206,8 @@ object AutoRequestDeduplicator {
 
         if (!registered) {
             // Wait for the other request
-            return pendingRequests[key]!!.await() as T
+            return pendingRequests[key]?.await() as T
+                ?: throw IllegalStateException("Pending request was removed before await")
         }
 
         // Execute the request
