@@ -1,36 +1,36 @@
 package com.Pencurimovie
 
-import com.Pencurimovie.generated_sync.CacheManager
-import com.Pencurimovie.generated_sync.AutoUsedConstants
-import com.Pencurimovie.generated_sync.SmartCacheMonitor
-import com.Pencurimovie.generated_sync.HttpClientFactory
-import com.Pencurimovie.generated_sync.CompiledRegexPatterns
-import com.Pencurimovie.generated_sync.CircuitBreaker
-import com.Pencurimovie.generated_sync.CircuitBreakerRegistry
-import com.Pencurimovie.generated_sync.loadExtractorWithFallback
-import com.Pencurimovie.generated_sync.rateLimitDelay
-import com.Pencurimovie.generated_sync.getRandomUserAgent
-import com.Pencurimovie.generated_sync.executeWithRetry
-import com.Pencurimovie.generated_sync.logError
-import com.Pencurimovie.generated_sync.logDebug
-import com.Pencurimovie.generated_sync.MasterLinkGenerator
+// ============================================
+// GROUP 1: Generated Sync Imports
+// ============================================
+import com.Pencurimovie.generated_sync.*
 
+// ============================================
+// GROUP 2: CloudStream Library
+// ============================================
 import com.lagradost.api.Log
-import org.jsoup.nodes.Element
-import java.util.concurrent.ConcurrentHashMap
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
+
+// ============================================
+// GROUP 3: Kotlin/Java Standard Library
+// ============================================
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.spec.IvParameterSpec
+
+// ============================================
+// GROUP 4: External Libraries
+// ============================================
+import org.jsoup.nodes.Element
 
 
 class Pencurimovie : MainAPI() {

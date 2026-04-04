@@ -10,39 +10,40 @@
 
 package com.Idlix
 
-import com.Idlix.generated_sync.CacheManager
-import com.Idlix.generated_sync.AutoUsedConstants
+// ============================================
+// GROUP 1: Generated Sync Imports
+// ============================================
+import com.Idlix.generated_sync.*
 
-import com.fasterxml.jackson.annotation.JsonProperty
+// ============================================
+// GROUP 2: CloudStream Library
+// ============================================
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import org.jsoup.nodes.Element
-import java.util.concurrent.ConcurrentHashMap
-import java.net.URI
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 
 // ============================================
-// OPTIMIZED: Import shared utilities from generated_sync
+// GROUP 3: Kotlin Coroutines
 // ============================================
-import com.Idlix.generated_sync.rateLimitDelay
-import com.Idlix.generated_sync.getRandomUserAgent
-import com.Idlix.generated_sync.executeWithRetry
-import com.Idlix.generated_sync.logError
-import com.Idlix.generated_sync.logDebug
-import com.Idlix.generated_sync.SmartCacheMonitor
-import com.Idlix.generated_sync.HttpClientFactory
-import com.Idlix.generated_sync.CompiledRegexPatterns
-import com.Idlix.generated_sync.CircuitBreaker
-import com.Idlix.generated_sync.CircuitBreakerRegistry
-import com.Idlix.generated_sync.MasterLinkGenerator
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+
+// ============================================
+// GROUP 4: External Libraries
+// ============================================
+import com.fasterxml.jackson.annotation.JsonProperty
+import org.jsoup.nodes.Element
+
+// ============================================
+// GROUP 5: Java Standard Library
+// ============================================
+import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 
 // ========================================
 // CACHE INSTANCES

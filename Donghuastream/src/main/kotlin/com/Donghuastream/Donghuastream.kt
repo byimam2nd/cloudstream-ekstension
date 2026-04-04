@@ -1,47 +1,27 @@
 package com.Donghuastream
 
-import com.Donghuastream.generated_sync.CacheManager
-import com.Donghuastream.generated_sync.AutoUsedConstants
-import com.Donghuastream.generated_sync.SmartCacheMonitor
-import com.Donghuastream.generated_sync.HttpClientFactory
-import com.Donghuastream.generated_sync.CompiledRegexPatterns
-import com.Donghuastream.generated_sync.CircuitBreaker
-import com.Donghuastream.generated_sync.CircuitBreakerRegistry
-import com.Donghuastream.generated_sync.rateLimitDelay
-import com.Donghuastream.generated_sync.getRandomUserAgent
-import com.Donghuastream.generated_sync.executeWithRetry
-import com.Donghuastream.generated_sync.logError
-import com.Donghuastream.generated_sync.logDebug
-import com.Donghuastream.generated_sync.MasterLinkGenerator
+// ============================================
+// GROUP 1: Generated Sync Imports
+// ============================================
+import com.Donghuastream.generated_sync.*
 
-
+// ============================================
+// GROUP 2: CloudStream Library
+// ============================================
 import com.lagradost.api.Log
-import com.lagradost.cloudstream3.HomePageList
-import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.LoadResponse
-import com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.MainPageRequest
-import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.TvType
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.base64Decode
-import com.lagradost.cloudstream3.fixUrl
-import com.lagradost.cloudstream3.fixUrlNull
-import com.lagradost.cloudstream3.mainPageOf
-import com.lagradost.cloudstream3.newEpisode
-import com.lagradost.cloudstream3.newHomePageResponse
-import com.lagradost.cloudstream3.newMovieLoadResponse
-import com.lagradost.cloudstream3.newMovieSearchResponse
-import com.lagradost.cloudstream3.newTvSeriesLoadResponse
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.httpsify
-import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
+
+// ============================================
+// GROUP 3: Kotlin Coroutines
+// ============================================
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+
+// ============================================
+// GROUP 4: External Libraries
+// ============================================
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 

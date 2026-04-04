@@ -9,51 +9,37 @@
 
 package com.Funmovieslix
 
-import com.Funmovieslix.generated_sync.CacheManager
-import com.Funmovieslix.generated_sync.AutoUsedConstants
-import com.Funmovieslix.generated_sync.logError
-import com.Funmovieslix.generated_sync.SmartCacheMonitor
-import com.Funmovieslix.generated_sync.HttpClientFactory
-import com.Funmovieslix.generated_sync.CompiledRegexPatterns
-import com.Funmovieslix.generated_sync.CircuitBreaker
-import com.Funmovieslix.generated_sync.CircuitBreakerRegistry
-import com.Funmovieslix.generated_sync.rateLimitDelay
-import com.Funmovieslix.generated_sync.getRandomUserAgent
-import com.Funmovieslix.generated_sync.executeWithRetry
-import com.Funmovieslix.generated_sync.logDebug
-import com.Funmovieslix.generated_sync.MasterLinkGenerator
+// ============================================
+// GROUP 1: Generated Sync Imports
+// ============================================
+import com.Funmovieslix.generated_sync.*
 
+// ============================================
+// GROUP 2: CloudStream Library
+// ============================================
 import com.lagradost.api.Log
-import com.lagradost.cloudstream3.Episode
-import com.lagradost.cloudstream3.HomePageList
-import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.LoadResponse
+import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.MainPageRequest
-import com.lagradost.cloudstream3.Score
-import com.lagradost.cloudstream3.SearchQuality
-import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.TvType
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.fixUrl
-import com.lagradost.cloudstream3.fixUrlNull
-import com.lagradost.cloudstream3.mainPageOf
-import com.lagradost.cloudstream3.newEpisode
-import com.lagradost.cloudstream3.newHomePageResponse
-import com.lagradost.cloudstream3.newMovieLoadResponse
-import com.lagradost.cloudstream3.newMovieSearchResponse
-import com.lagradost.cloudstream3.newTvSeriesLoadResponse
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.loadExtractor
-import kotlinx.coroutines.coroutineScope
+import com.lagradost.cloudstream3.utils.*
+
+// ============================================
+// GROUP 3: Kotlin Coroutines
+// ============================================
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+
+// ============================================
+// GROUP 4: External Libraries
+// ============================================
 import org.jsoup.nodes.Element
+
+// ============================================
+// GROUP 5: Java Standard Library
+// ============================================
 import java.util.concurrent.ConcurrentHashMap
 
 // ========================================

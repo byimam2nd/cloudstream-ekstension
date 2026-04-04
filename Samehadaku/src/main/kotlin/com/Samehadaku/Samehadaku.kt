@@ -8,28 +8,29 @@
 
 package com.Samehadaku
 
-import com.Samehadaku.generated_sync.CacheManager
-import com.Samehadaku.generated_sync.AutoUsedConstants
-import com.Samehadaku.generated_sync.getRandomUserAgent
-import com.Samehadaku.generated_sync.logError
-import com.Samehadaku.generated_sync.SmartCacheMonitor
-import com.Samehadaku.generated_sync.HttpClientFactory
-import com.Samehadaku.generated_sync.CompiledRegexPatterns
-import com.Samehadaku.generated_sync.CircuitBreaker
-import com.Samehadaku.generated_sync.CircuitBreakerRegistry
-import com.Samehadaku.generated_sync.rateLimitDelay
-import com.Samehadaku.generated_sync.executeWithRetry
-import com.Samehadaku.generated_sync.logDebug
-import com.Samehadaku.generated_sync.MasterLinkGenerator
+// ============================================
+// GROUP 1: Generated Sync Imports
+// ============================================
+import com.Samehadaku.generated_sync.*
 
+// ============================================
+// GROUP 2: CloudStream Library
+// ============================================
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.*
+
+// ============================================
+// GROUP 3: Kotlin Coroutines
+// ============================================
 import kotlinx.coroutines.runBlocking
+
+// ============================================
+// GROUP 4: External Libraries
+// ============================================
 import org.jsoup.nodes.Element
 
 // ========================================

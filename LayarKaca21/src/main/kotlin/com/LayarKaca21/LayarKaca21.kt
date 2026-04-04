@@ -9,27 +9,28 @@
 
 package com.LayarKaca21
 
-import com.LayarKaca21.generated_sync.CacheManager
-import com.LayarKaca21.generated_sync.AutoUsedConstants
-import com.LayarKaca21.generated_sync.executeWithRetry
-import com.LayarKaca21.generated_sync.rateLimitDelay
-import com.LayarKaca21.generated_sync.getRandomUserAgent
-import com.LayarKaca21.generated_sync.logError
-import com.LayarKaca21.generated_sync.logDebug
-import com.LayarKaca21.generated_sync.SmartCacheMonitor
-import com.LayarKaca21.generated_sync.HttpClientFactory
-import com.LayarKaca21.generated_sync.CompiledRegexPatterns
-import com.LayarKaca21.generated_sync.CircuitBreaker
-import com.LayarKaca21.generated_sync.CircuitBreakerRegistry
-import com.LayarKaca21.generated_sync.MasterLinkGenerator
+// ============================================
+// GROUP 1: Generated Sync Imports
+// ============================================
+import com.LayarKaca21.generated_sync.*
 
+// ============================================
+// GROUP 2: CloudStream Library
+// ============================================
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.*
+
+// ============================================
+// GROUP 3: External Libraries
+// ============================================
 import org.json.JSONObject
 import org.jsoup.nodes.Element
+
+// ============================================
+// GROUP 4: Java Standard Library
+// ============================================
 import java.net.URI
 
 // ========================================

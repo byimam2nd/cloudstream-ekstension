@@ -8,32 +8,37 @@
 
 package com.Animasu
 
+// ============================================
+// GROUP 1: Generated Sync Imports
+// ============================================
+import com.Animasu.generated_sync.*
+
+// ============================================
+// GROUP 2: CloudStream Library
+// ============================================
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.utils.*
-import com.Animasu.generated_sync.CacheManager
-import com.Animasu.generated_sync.AutoUsedConstants
-import com.Animasu.generated_sync.getImageAttr
-import com.Animasu.generated_sync.getRandomUserAgent
-import com.Animasu.generated_sync.logError
-import com.Animasu.generated_sync.logDebug
-import com.Animasu.generated_sync.executeWithRetry
-import com.Animasu.generated_sync.rateLimitDelay
-import com.Animasu.generated_sync.SmartCacheMonitor
-import com.Animasu.generated_sync.HttpClientFactory
-import com.Animasu.generated_sync.CompiledRegexPatterns
-import com.Animasu.generated_sync.CircuitBreaker
-import com.Animasu.generated_sync.CircuitBreakerRegistry
-import com.Animasu.generated_sync.MasterLinkGenerator
+
+// ============================================
+// GROUP 3: Kotlin Coroutines
+// ============================================
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
+
+// ============================================
+// GROUP 4: External Libraries
+// ============================================
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+
+// ============================================
+// GROUP 5: Java Standard Library
+// ============================================
 import java.util.concurrent.ConcurrentHashMap
 
 // ========================================
