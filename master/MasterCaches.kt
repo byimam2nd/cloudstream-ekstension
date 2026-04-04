@@ -20,7 +20,9 @@ import com.lagradost.cloudstream3.app
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.io.FileOutputStream
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 // ============================================
 // REGION: GENERIC CACHE MANAGER (MEMORY-ONLY)
