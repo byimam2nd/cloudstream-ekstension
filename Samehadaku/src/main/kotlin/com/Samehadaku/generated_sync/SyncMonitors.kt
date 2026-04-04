@@ -8,12 +8,7 @@
 // NEW v3.6: PerformanceMonitor for runtime metrics
 // ========================================
 
-// ========================================
-// AUTO-GENERATED - DO NOT EDIT MANUALLY
-// Synced from common/MasterMonitors.kt
-// File: SyncMonitors.kt
-// ========================================
-package com.Samehadaku.generated_sync
+package com.{MODULE}
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
@@ -22,6 +17,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jsoup.nodes.Element
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 // ============================================
