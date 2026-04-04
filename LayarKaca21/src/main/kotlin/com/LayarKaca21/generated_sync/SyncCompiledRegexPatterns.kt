@@ -233,6 +233,65 @@ object CompiledRegexPatterns {
     val JS_PACKED_CONTENT = Regex("eval\\(function\\(p,a,c,k,e,[rd]\\)\\{.*?\\}\\)")
     
     // =========================================================================
+    // EXTRACTOR-SPECIFIC PATTERNS (previously inline)
+    // =========================================================================
+
+    /** Pattern untuk Odnoklassniki unicode escape decoding */
+    val UNICODE_ESCAPE = Regex("""\\u([0-9A-Fa-f]{4})""")
+
+    /** Pattern untuk Rumble video URL extraction */
+    val RUMBLE_URL_PATTERN = Regex("""\"url\":\"(.*?)\"|h\":(.*?)\}""")
+
+    /** Pattern untuk Rumble variant count check */
+    val M3U8_STREAM_INFO = Regex("#EXT-X-STREAM-INF")
+
+    /** Pattern untuk Veev encrypted content extraction */
+    val VEEV_ENCRYPTED_PATTERN = Regex("""[.\s'](?:fc|_vvto\[[^]]*)(?:['\]]*)?\s*[:=]\s*['"]([^'"]+)""")
+
+    /** Pattern untuk Dailymotion video URL extraction */
+    val DAILYMOTION_VIDEO_URL = Regex("""\"url\"\s*:\s*\"([^\"]+)\"""")
+
+    /** Pattern untuk Dailymotion subtitle extraction */
+    val DAILYMOTION_SUBTITLE = Regex("""\{\s*"label"\s*:\s*"([^"]+)",\s*"urls"\s*:\s*\["([^"]+)"""")
+
+    /** Pattern untuk Archive.org URL extraction */
+    val ARCHIVE_ORG_URL = Regex("""\"url\":\"(.*?)\"""")
+
+    /** Pattern untuk extract episode number from text like "Episode 5", "Ep 5" */
+    val EPISODE_TEXT_PATTERN = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+
+    /** Pattern untuk extract quality digits from text */
+    val QUALITY_DIGIT_PATTERN = Regex("[^0-9]")
+
+    // =========================================================================
+    // MASTER LINK GENERATOR QUALITY PATTERNS (previously inline in detectQualityFromUrl)
+    // =========================================================================
+
+    /** Pattern untuk detect 1080p quality dari URL */
+    val MLG_QUALITY_1080 = Regex("(1080|p1080|fhd|fullhd)", RegexOption.IGNORE_CASE)
+
+    /** Pattern untuk detect 720p quality dari URL */
+    val MLG_QUALITY_720 = Regex("(720|p720|hd)", RegexOption.IGNORE_CASE)
+
+    /** Pattern untuk detect 480p quality dari URL */
+    val MLG_QUALITY_480 = Regex("(480|p480|sd)", RegexOption.IGNORE_CASE)
+
+    /** Pattern untuk detect 360p quality dari URL */
+    val MLG_QUALITY_360 = Regex("(360|p360)", RegexOption.IGNORE_CASE)
+
+    /** Pattern untuk detect 240p quality dari URL */
+    val MLG_QUALITY_240 = Regex("(240|p240|low)", RegexOption.IGNORE_CASE)
+
+    /** Pattern untuk detect 144p quality dari URL */
+    val MLG_QUALITY_144 = Regex("(144|p144|mobile)", RegexOption.IGNORE_CASE)
+
+    /** Pattern untuk extract quality from URL path like /1080p/ */
+    val MLG_PATH_QUALITY = Regex("/(\\d{3,4})p?/")
+
+    /** Pattern untuk extract quality from URL suffix like _1080 */
+    val MLG_SUFFIX_QUALITY = Regex("_(\\d{3,4})")
+
+    // =========================================================================
     // UTILITY FUNCTIONS
     // =========================================================================
     
