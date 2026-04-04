@@ -8,7 +8,12 @@
 // NEW v3.6: PerformanceMonitor for runtime metrics
 // ========================================
 
-package com.{MODULE}
+// ========================================
+// AUTO-GENERATED - DO NOT EDIT MANUALLY
+// Synced from common/MasterMonitors.kt
+// File: SyncMonitors.kt
+// ========================================
+package com.LayarKaca21.generated_sync
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
