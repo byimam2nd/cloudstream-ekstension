@@ -2114,7 +2114,7 @@ object MasterLinkGenerator {
         val response = app.get(
             m3u8Url,
             headers = headers,
-            timeout = AutoUsedConstants.DEFAULT_TIMEOUT.toInt()
+            timeout = AutoUsedConstants.DEFAULT_TIMEOUT
         )
         return response.text
     }
@@ -2272,7 +2272,7 @@ object SmartM3U8Parser {
         val response = app.get(
             m3u8Url,
             headers = headers,
-            timeout = AutoUsedConstants.DEFAULT_TIMEOUT.toInt()
+            timeout = AutoUsedConstants.DEFAULT_TIMEOUT
         )
         
         // Inline parsing logic
@@ -2361,7 +2361,7 @@ object SmartM3U8Parser {
             val response = app.head(
                 url,
                 headers = headers,
-                timeout = AutoUsedConstants.FAST_TIMEOUT.toInt()
+                timeout = AutoUsedConstants.FAST_TIMEOUT
             )
             
             val contentLength = response.headers["Content-Length"]?.toLongOrNull()
@@ -2391,7 +2391,7 @@ object SmartM3U8Parser {
             val response = app.get(
                 variantUrl,
                 headers = headers,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT.toInt()
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT
             )
             
             // Extract .ts segment URLs dari variant playlist
