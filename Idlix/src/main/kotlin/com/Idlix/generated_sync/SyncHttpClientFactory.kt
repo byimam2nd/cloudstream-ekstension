@@ -81,6 +81,10 @@ object HttpClientFactory {
     // Slow request threshold (ms)
     private const val SLOW_REQUEST_THRESHOLD_MS = 2000L
 
+    // Response cache configuration
+    private const val RESPONSE_CACHE_TTL_MS = 90_000L  // 90 detik — cukup untuk page navigation
+    private const val RESPONSE_CACHE_MAX_SIZE = 50     // Max 50 cached responses
+
     // ============================================
     // REGION: SINGLETON INSTANCE
     // ============================================
@@ -108,8 +112,23 @@ object HttpClientFactory {
     ) {
         fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > DNS_CACHE_TTL_MS
     }
-    
+
     private val dnsCache = ConcurrentHashMap<String, DnsCacheEntry>()
+
+    /**
+     * Response cache — cache HTTP response body untuk GET requests
+     * TTL: 90 detik, max 50 entries
+     * Menghindari redundant network call untuk halaman yang sama
+     */
+    data class CachedResponse(
+        val body: String,
+        val code: Int,
+        val timestamp: Long = System.currentTimeMillis()
+    ) {
+        fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > RESPONSE_CACHE_TTL_MS
+    }
+
+    private val responseCache = ConcurrentHashMap<String, CachedResponse>()
 
     /**
      * User-Agent pool dengan browser modern (Chrome, Firefox, Safari)
@@ -258,6 +277,7 @@ object HttpClientFactory {
             // ========================================
             // Add interceptors untuk monitoring dan headers
             // ========================================
+            .addInterceptor(ResponseCacheInterceptor)
             .addInterceptor(UserAgentInterceptor)
             .addInterceptor(HeadersInterceptor)
             .addNetworkInterceptor(NetworkPerformanceInterceptor)
@@ -311,6 +331,159 @@ object HttpClientFactory {
     // ============================================
     // REGION: INTERCEPTORS
     // ============================================
+
+    /**
+     * Response Cache Interceptor — Cache GET response untuk menghindari redundant requests
+     *
+     * Cara kerja:
+     * 1. GET request → cek cache → HIT: return cached body (tanpa network)
+     * 2. GET request → cache MISS → proceed → cache response → return
+     * 3. Non-GET (POST, dll) → bypass cache, clear related cache entries
+     *
+     * TTL: 90 detik — cukup untuk page navigation, tidak terlalu lama untuk content dinamis
+     * Max: 50 entries — auto-evict entries terlama jika penuh
+     *
+     * Dampak: Halaman yang sama (search, main page) tidak perlu fetch ulang
+     * Penghematan: ~200-500ms per redundant request
+     */
+    private object ResponseCacheInterceptor : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val request = chain.request()
+
+            // Hanya cache GET requests
+            if (request.method != "GET") {
+                // Non-GET request: clear related cache entries (invalidate cache)
+                val host = request.url.host
+                responseCache.entries.removeAll { it.key.contains(host) }
+                return chain.proceed(request)
+            }
+
+            val cacheKey = request.url.toString()
+
+            // Cek cache
+            val cached = responseCache[cacheKey]
+            if (cached != null && !cached.isExpired()) {
+                if (DEBUG_MODE) {
+                    android.util.Log.d("HttpClientFactory", "📦 RESPONSE CACHE HIT: ${request.url}")
+                }
+                // Return cached response
+                val mediaType = okhttp3.MediaType.parse("text/html; charset=utf-8")
+                return Response.Builder()
+                    .request(request)
+                    .protocol(okhttp3.Protocol.HTTP_1_1)
+                    .code(cached.code)
+                    .message("OK")
+                    .body(okhttp3.ResponseBody.create(mediaType, cached.body))
+                    .sentRequestAtMillis(0)
+                    .receivedResponseAtMillis(0)
+                    .header("X-Cache", "HIT")
+                    .build()
+            }
+
+            // Cache MISS — proceed dengan network request
+            val response = chain.proceed(request)
+
+            // Cache response jika successful dan ada body
+            if (response.isSuccessful && response.body != null) {
+                try {
+                    val bodyString = response.peekBody(Long.MAX_VALUE).string()
+
+                    // Evict oldest entries jika cache penuh
+                    if (responseCache.size >= RESPONSE_CACHE_MAX_SIZE) {
+                        val oldestKey = responseCache.entries.minByOrNull { it.value.timestamp }?.key
+                        if (oldestKey != null) responseCache.remove(oldestKey)
+                    }
+
+                    responseCache[cacheKey] = CachedResponse(
+                        body = bodyString,
+                        code = response.code
+                    )
+
+                    // Return response dengan body yang sudah di-cache
+                    val mediaType = response.body?.contentType()
+                    return response.newBuilder()
+                        .body(okhttp3.ResponseBody.create(mediaType, bodyString))
+                        .header("X-Cache", "MISS")
+                        .build()
+                } catch (e: Exception) {
+                    // Cache failed, return original response
+                    android.util.Log.w("HttpClientFactory", "Response cache write failed: ${e.message}")
+                }
+            }
+
+            return response
+        }
+    }
+
+    /**
+     * Clear response cache (untuk testing atau manual cleanup)
+     */
+    fun clearResponseCache() {
+        responseCache.clear()
+    }
+
+    /**
+     * Get response cache stats
+     */
+    fun getResponseCacheStats(): Map<String, Int> {
+        val total = responseCache.size
+        val expired = responseCache.values.count { it.isExpired() }
+        return mapOf("total" to total, "expired" to expired, "valid" to (total - expired))
+    }
+
+    /**
+     * Connection Pre-warming — Buka koneksi TCP/TLS ke server sebelum video diminta
+     *
+     * Cara kerja:
+     * 1. HEAD request ke URL → TCP handshake + TLS handshake → koneksi terbuka
+     * 2. Saat video benar-benar diminta → koneksi sudah ada → tidak perlu handshake lagi
+     * 3. Penghematan: ~50-150ms (TCP 50ms + TLS 100ms)
+     *
+     * Kapan memanggil:
+     * - Saat user membuka halaman detail (pre-warm semua video server di halaman itu)
+     * - Saat user mulai nonton episode (pre-warm episode berikutnya)
+     *
+     * @param url URL untuk di-pre-warm (bisa video URL atau host server)
+     */
+    suspend fun preWarmConnection(url: String) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val client = getClient()
+                val request = okhttp3.Request.Builder()
+                    .url(url)
+                    .head()
+                    .build()
+
+                // HEAD request — ringan, hanya buka koneksi tanpa download body
+                client.newCall(request).execute().use { response ->
+                    if (DEBUG_MODE) {
+                        android.util.Log.d("HttpClientFactory", "🔥 Pre-warmed: $url (${response.code})")
+                    }
+                }
+            } catch (e: Exception) {
+                // Pre-warm gagal — bukan error kritis, video tetap bisa diputar
+                if (DEBUG_MODE) {
+                    android.util.Log.w("HttpClientFactory", "Pre-warm failed: $url — ${e.message}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Pre-warm koneksi ke semua extractor domains yang terdaftar
+     * Dipanggil sekali saat app start atau saat user membuka halaman utama
+     */
+    suspend fun preWarmExtractorDomains(extractorUrls: List<String>) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            extractorUrls.forEach { url ->
+                try {
+                    preWarmConnection(url)
+                } catch (_: Exception) {
+                    // Ignore per-domain failures
+                }
+            }
+        }
+    }
 
     /**
      * Interceptor untuk menambahkan User-Agent yang konsisten per domain.
