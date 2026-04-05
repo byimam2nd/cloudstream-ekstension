@@ -1,8 +1,8 @@
 // ========================================
-// MASTER EXTRACTOR HELPER - v3.6
-// Helper untuk loadExtractor dengan fallback + Pre-fetching
+// MASTER EXTRACTOR HELPER - v4.0
+// Helper untuk loadExtractor dengan fallback + Pre-fetching + Marathon
 // ========================================
-// Last Updated: 2026-03-26
+// Last Updated: 2026-04-05
 // Sync Target: generated_sync/SyncExtractorHelper.kt
 //
 // PURPOSE:
@@ -355,41 +355,168 @@ private suspend fun preFetchExtractorLinksInternal(
 }
 
 // ============================================
-// REGION 3: EPISODE PRE-FETCHER
+// REGION 3: EPISODE PRE-FETCHER (MARATHON-READY)
 // ============================================
 
 /**
- * Helper object untuk pre-fetching episode links
- * 
- * Usage di module:
+ * Smart Episode Pre-Fetcher untuk Marathon Watching
+ *
+ * Fitur:
+ * - Auto-detect marathon pattern (user nonton berurutan)
+ * - Pre-fetch links episode berikutnya saat user nonton episode sekarang
+ * - Connection pre-warming ke video server episode berikutnya
+ * - TTL 10 menit — cukup untuk nonton 1 episode (20-25 menit)
+ *
+ * Usage di provider loadLinks():
  * ```kotlin
- * // Di load() function
- * EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
- * 
- * // Di loadLinks() function
- * if (EpisodePreFetcher.loadCached(episodeUrl, callback)) return true
+ * // Setelah berhasil load episode, trigger pre-fetch next episode
+ * EpisodePreFetcher.onEpisodeWatched(
+ *     currentEpisode = episode,
+ *     allEpisodes = episodes,
+ *     mainUrl = mainUrl
+ * )
  * ```
+ *
+ * Otomatis:
+ * - Episode 1 selesai dimuat → pre-fetch Episode 2
+ * - Episode 2 selesai dimuat → pre-fetch Episode 3
+ * - Dan seterusnya...
  */
 object EpisodePreFetcher {
-    private const val PRE_FETCH_LIMIT = 10
     private const val CACHE_TTL = 10 * 60 * 1000L  // 10 minutes
-    
+
     private val linkCache = CacheManager<List<ExtractorLink>>()
     private val subtitleCache = CacheManager<List<SubtitleFile>>()
-    
+
+    // Marathon detection: track watch history
+    private val watchHistory = mutableListOf<WatchEvent>()
+    private const val MARATHON_THRESHOLD = 2  // 2 consecutive episodes = marathon detected
+
+    data class WatchEvent(
+        val episodeNumber: Int,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+
     /**
-     * Pre-fetch links untuk multiple episodes
+     * Panggil ini SETELAH berhasil load episode — trigger smart pre-fetch
      *
-     * @param episodes List of episodes to pre-fetch
-     * @param mainUrl Main URL of the site (for referer)
+     * Auto-detect marathon: jika user sudah nonton 2+ episode berurutan,
+     * otomatis pre-fetch episode berikutnya dengan priority lebih tinggi.
+     *
+     * @param currentEpisode Episode yang sedang dimuat
+     * @param allEpisodes Semua episode yang tersedia
+     * @param mainUrl Main URL provider (untuk referer)
+     */
+    suspend fun onEpisodeWatched(
+        currentEpisode: Episode,
+        allEpisodes: List<Episode>,
+        mainUrl: String
+    ) {
+        val epNum = currentEpisode.episode ?: return
+
+        // Track watch history untuk marathon detection
+        watchHistory.add(WatchEvent(epNum))
+
+        // Keep only recent history (last 5 episodes)
+        if (watchHistory.size > 5) watchHistory.removeAt(0)
+
+        // Check if user is in marathon mode
+        val isMarathon = detectMarathonPattern()
+
+        // Find next episode
+        val nextEpisode = allEpisodes.find { it.episode == epNum + 1 } ?: run {
+            Log.d("PreFetch", "No next episode after ep $epNum")
+            return
+        }
+
+        if (isMarathon) {
+            Log.d("PreFetch", "🏃 Marathon detected! Aggressive pre-fetch for ep ${epNum + 1}")
+        }
+
+        // Pre-fetch links untuk next episode
+        coroutineScope {
+            launch {
+                try {
+                    // Pre-warm connection dulu (TCP/TLS handshake)
+                    HttpClientFactory.preWarmConnection(nextEpisode.data)
+
+                    // Jika marathon, langsung extract links
+                    if (isMarathon) {
+                        Log.d("PreFetch", "🎯 Extracting links for next episode: ${nextEpisode.name}")
+                        val (links, subtitles) = preFetchExtractorLinks(
+                            url = nextEpisode.data,
+                            referer = mainUrl
+                        )
+
+                        if (links.isNotEmpty()) {
+                            linkCache.put(nextEpisode.data, links, ttl = CACHE_TTL)
+                            subtitleCache.put(nextEpisode.data, subtitles, ttl = CACHE_TTL)
+                            Log.d("PreFetch", "✅ Pre-fetched: ${nextEpisode.name} (${links.size} links, ${subtitles.size} subs)")
+                        }
+                    } else {
+                        Log.d("PreFetch", "🔥 Pre-warmed connection for: ${nextEpisode.name}")
+                    }
+                } catch (e: Exception) {
+                    Log.d("PreFetch", "Pre-fetch next episode failed (non-critical): ${e.message}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Detect marathon pattern dari watch history
+     * Marathon = 2+ episode berurutan dalam 30 menit terakhir
+     */
+    private fun detectMarathonPattern(): Boolean {
+        if (watchHistory.size < MARATHON_THRESHOLD) return false
+
+        val now = System.currentTimeMillis()
+        val thirtyMinutesAgo = now - 30 * 60 * 1000L
+
+        // Get recent watches
+        val recent = watchHistory.filter { it.timestamp > thirtyMinutesAgo }
+        if (recent.size < MARATHON_THRESHOLD) return false
+
+        // Check if consecutive
+        for (i in 1 until recent.size) {
+            val diff = recent[i].episodeNumber - recent[i - 1].episodeNumber
+            if (diff != 1) return false  // Not consecutive
+        }
+
+        return true
+    }
+
+    /**
+     * LEGACY: Pre-fetch links untuk multiple episodes (saat halaman detail dibuka)
+     * Pre-warm connection saja, tidak extract links (hemat bandwidth)
+     *
+     * @param episodes List of episodes
+     * @param mainUrl Main URL provider
+     */
+    suspend fun preWarmEpisodes(episodes: List<Episode>, mainUrl: String) {
+        coroutineScope {
+            episodes.take(5).forEach { episode ->
+                launch {
+                    try {
+                        // Hanya pre-warm connection, tidak extract links
+                        HttpClientFactory.preWarmConnection(episode.data)
+                    } catch (_: Exception) {
+                        // Ignore per-episode failures
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * LEGACY: Pre-fetch links untuk multiple episodes (full extraction)
+     * Gunakan hanya untuk episode-episode awal (first 3)
      */
     suspend fun preFetchEpisodes(episodes: List<Episode>, mainUrl: String) {
         coroutineScope {
-            episodes.take(PRE_FETCH_LIMIT).forEach { episode ->
+            episodes.take(3).forEach { episode ->
                 launch {
                     try {
-                        Log.d("PreFetch", "Pre-fetching: ${episode.name}")
-
                         val (links, subtitles) = preFetchExtractorLinks(
                             url = episode.data,
                             referer = mainUrl
@@ -398,78 +525,18 @@ object EpisodePreFetcher {
                         if (links.isNotEmpty()) {
                             linkCache.put(episode.data, links, ttl = CACHE_TTL)
                             subtitleCache.put(episode.data, subtitles, ttl = CACHE_TTL)
-                            Log.d("PreFetch", "Pre-fetched: ${episode.name} (${links.size} links)")
                         }
-                    } catch (e: Exception) {
-                        Log.e("PreFetch", "Pre-fetch failed for ${episode.name}: ${e.message}")
+                    } catch (_: Exception) {
+                        // Ignore per-episode failures
                     }
                 }
             }
         }
-        
-        Log.d("PreFetch", "Started pre-fetching ${minOf(episodes.size, PRE_FETCH_LIMIT)} episodes")
     }
-    
-    /**
-     * SMART PRE-FETCH: Pre-fetch NEXT episode only based on current episode
-     * 
-     * Benefits:
-     * - Less network overhead (1 episode vs 10)
-     * - More targeted pre-fetching
-     * - Better resource usage
-     * 
-     * Usage in loadLinks():
-     * ```kotlin
-     * // After successfully loading current episode
-     * EpisodePreFetcher.preFetchNextEpisode(
-     *     currentEpisodeNumber = 5,
-     *     episodes = allEpisodes,
-     *     mainUrl = mainUrl
-     * )
-     * ```
-     * 
-     * @param currentEpisodeNumber Current episode number being watched
-     * @param episodes All available episodes
-     * @param mainUrl Main URL of the site (for referer)
-     */
-    suspend fun preFetchNextEpisode(
-        currentEpisodeNumber: Int,
-        episodes: List<Episode>,
-        mainUrl: String
-    ) {
-        // Find next episode
-        val nextEpisode = episodes.find { 
-            it.episode == (currentEpisodeNumber + 1) 
-        } ?: run {
-            Log.d("PreFetch", "No next episode to pre-fetch")
-            return
-        }
-        
-        coroutineScope {
-            launch {
-                try {
-                    Log.d("PreFetch", "🎯 Smart pre-fetching next episode: ${nextEpisode.name}")
-                    
-                    val (links, subtitles) = preFetchExtractorLinks(
-                        url = nextEpisode.data,
-                        referer = mainUrl
-                    )
-                    
-                    if (links.isNotEmpty()) {
-                        linkCache.put(nextEpisode.data, links, ttl = CACHE_TTL)
-                        subtitleCache.put(nextEpisode.data, subtitles, ttl = CACHE_TTL)
-                        Log.d("PreFetch", "✅ Smart pre-fetched: ${nextEpisode.name} (${links.size} links)")
-                    }
-                } catch (e: Exception) {
-                    Log.e("PreFetch", "Smart pre-fetch failed: ${e.message}")
-                }
-            }
-        }
-    }
-    
+
     /**
      * Load cached links untuk episode
-     * 
+     *
      * @param episodeUrl Episode URL
      * @param callback ExtractorLink callback
      * @param subtitleCallback SubtitleFile callback
