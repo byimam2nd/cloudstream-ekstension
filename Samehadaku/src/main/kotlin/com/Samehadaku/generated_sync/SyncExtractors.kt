@@ -724,7 +724,56 @@ open class Odnoklassniki : ExtractorApi() {
         val headers = ExtractorHelpers.getStandardHeaders(mainUrl)
         
         val embedUrl = url.replace("/video/", "/videoembed/")
-        val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
+        val html = app.get(embedUrl, headers = headers).text
+
+        // Try to extract from data-options attribute (modern OK.ru embed format)
+        val dataOptions = Regex("""data-options="([^"]+)""").find(html)?.groupValues?.get(1)
+            ?.replace("&quot;", "\"")
+        
+        if (dataOptions != null) {
+            try {
+                val optionsObj = JSONObject(dataOptions)
+                val flashvars = optionsObj.optJSONObject("flashvars")
+                if (flashvars != null) {
+                    val metadataStr = flashvars.optString("metadata", "")
+                    if (metadataStr.isNotEmpty()) {
+                        // metadata is doubly-escaped JSON
+                        val metadataObj = JSONObject(metadataStr.replace("\\\"", "\""))
+                        val videosArr = metadataObj.optJSONArray("videos")
+                        if (videosArr != null && videosArr.length() > 0) {
+                            for (i in 0 until videosArr.length()) {
+                                val video = videosArr.getJSONObject(i)
+                                val videoUrl = video.optString("url")
+                                val qualityName = video.optString("name", "sd")
+                                if (videoUrl.isNotEmpty()) {
+                                    val quality = qualityName.toQuality()
+                                    callback.invoke(
+                                        newExtractorLink(
+                                            source = this.name,
+                                            name = this.name,
+                                            url = videoUrl,
+                                            type = INFER_TYPE
+                                        ) {
+                                            this.referer = "$mainUrl/"
+                                            this.quality = quality
+                                            this.headers = headers
+                                        }
+                                    )
+                                }
+                            }
+                            return
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("OkRu", "Failed to parse data-options: ${e.message}")
+            }
+        }
+
+        // Fallback: legacy regex-based extraction
+        val videoReq = html
+            .replace("&quot;", "\"")
+            .replace("\\&quot;", "\"")
             .replace("\\\\", "\\")
             .replace(CompiledRegexPatterns.UNICODE_ESCAPE) { matchResult ->
                 Integer.parseInt(matchResult.groupValues[1], 16).toChar().toString()
