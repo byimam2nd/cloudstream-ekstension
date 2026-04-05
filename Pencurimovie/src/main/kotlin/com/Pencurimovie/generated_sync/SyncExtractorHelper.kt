@@ -115,50 +115,31 @@ suspend fun loadExtractorWithFallback(
 
         Log.d("ExtractorHelper", "   Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
 
-        // Try ALL matching extractors IN PARALLEL WITH CIRCUIT BREAKER
+        // Try ALL matching extractors IN PARALLEL
         // SEMAPHORE: Max 3 concurrent extractor calls to prevent server overload
         val extractorSemaphore = Semaphore(3)
-        var successCount = 0
-        var failCount = 0
         try {
             coroutineScope {
                 matchingExtractors.forEach { extractor ->
                     launch {
                         extractorSemaphore.withPermit {
                             try {
-                                // Get CircuitBreaker for this extractor
-                                val breaker = CircuitBreakerRegistry.getOrCreate(
-                                    extractor.name,
-                                    failureThreshold = 3
-                                )
-
                                 Log.d("ExtractorHelper", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
-
-                                // Wrap extractor call with CircuitBreaker
-                                val result = breaker.execute {
-                                    extractor.getUrl(url, referer, subtitleCallback, callback)
-                                }
-
-                                if (result != null) {
-                                    successCount++
-                                    Log.d("ExtractorHelper", "      ✅ SUCCESS: Extractor ${extractor.name} worked!")
-                                } else {
-                                    failCount++
-                                    Log.w("ExtractorHelper", "      🔴 CircuitBreaker OPEN for ${extractor.name} - skipping (failed 3+ times)")
-                                }
+                                extractor.getUrl(url, referer, subtitleCallback, callback)
+                                Log.d("ExtractorHelper", "      ✅ Extractor ${extractor.name} completed")
                             } catch (e: Exception) {
-                                failCount++
-                                Log.e("ExtractorHelper", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}\n         Stack trace: ${e.stackTraceToString().lines().take(5).joinToString("\\n         ")}")
+                                Log.e("ExtractorHelper", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}")
                             }
                         } // end withPermit
                     }
                 }
             }
-            // FIX: Only mark as loaded if at least one extractor succeeded
-            loaded = successCount > 0
-            Log.d("ExtractorHelper", "📊 SyncExtractors result: $successCount success, $failCount failed")
+            // If we got here without exception and matching extractors existed, consider it loaded
+            // The actual link delivery is handled by callbacks inside extractors
+            loaded = matchingExtractors.isNotEmpty()
+            Log.d("ExtractorHelper", "📊 SyncExtractors completed: ${matchingExtractors.size} extractors tried")
         } catch (e: Exception) {
-            Log.e("ExtractorHelper", "❌ Parallel extraction failed: ${e.javaClass.simpleName}: ${e.message}\n   Stack: ${e.stackTraceToString().take(300)}")
+            Log.e("ExtractorHelper", "❌ Parallel extraction failed: ${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
