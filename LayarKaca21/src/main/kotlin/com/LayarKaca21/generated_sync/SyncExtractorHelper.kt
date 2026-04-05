@@ -79,22 +79,38 @@ suspend fun loadExtractorWithFallback(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     var loaded = false
+    var deliveredLinks = 0
     val startTime = System.currentTimeMillis()
 
     Log.d("ExtractorHelper", "▶️ loadExtractorWithFallback called for: $url")
 
+    // Wrapped callbacks to track actual link delivery
+    val trackedCallback: (ExtractorLink) -> Unit = { link ->
+        deliveredLinks++
+        Log.d("ExtractorHelper", "      🔗 Delivered link: ${link.source} - ${link.quality}p")
+        callback(link)
+    }
+    val trackedSubtitleCallback: (SubtitleFile) -> Unit = { sub ->
+        Log.d("ExtractorHelper", "      📝 Delivered subtitle: ${sub.name}")
+        subtitleCallback(sub)
+    }
+
     // Step 1: Try loadExtractor (CloudStream API)
     try {
         Log.d("ExtractorHelper", "📞 Calling loadExtractor...")
-        loaded = loadExtractor(url, referer, subtitleCallback, callback)
-        Log.d("ExtractorHelper", "✅ loadExtractor result: $loaded")
+        loaded = loadExtractor(url, referer, trackedSubtitleCallback, trackedCallback)
+        Log.d("ExtractorHelper", "✅ loadExtractor result: $loaded (links delivered: $deliveredLinks)")
     } catch (e: Exception) {
-        Log.e("ExtractorHelper", "❌ loadExtractor exception: ${e.javaClass.simpleName}: ${e.message}\n   Stack: ${e.stackTraceToString().take(300)}")
+        Log.e("ExtractorHelper", "❌ loadExtractor exception: ${e.javaClass.simpleName}: ${e.message}")
     }
 
-    // Step 2: If failed, try direct extractor call from SyncExtractors
-    if (!loaded) {
-        Log.w("ExtractorHelper", "⚠️ loadExtractor failed, trying direct SyncExtractors...")
+    // Step 2: If Step 1 failed OR delivered 0 links, try SyncExtractors directly
+    if (!loaded || deliveredLinks == 0) {
+        if (deliveredLinks == 0) {
+            Log.w("ExtractorHelper", "⚠️ loadExtractor returned $loaded with 0 links, trying direct SyncExtractors...")
+        } else {
+            Log.w("ExtractorHelper", "⚠️ loadExtractor failed, trying direct SyncExtractors...")
+        }
         Log.d("ExtractorHelper", "   URL: $url")
 
         val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
@@ -113,18 +129,6 @@ suspend fun loadExtractorWithFallback(
         }
 
         Log.d("ExtractorHelper", "   Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
-
-        // Track ACTUAL link delivery (not just "no exception")
-        var deliveredLinks = 0
-        val trackedCallback: (ExtractorLink) -> Unit = { link ->
-            deliveredLinks++
-            Log.d("ExtractorHelper", "      🔗 Delivered link: ${link.source} - ${link.quality}p")
-            callback(link)
-        }
-        val trackedSubtitleCallback: (SubtitleFile) -> Unit = { sub ->
-            Log.d("ExtractorHelper", "      📝 Delivered subtitle: ${sub.name}")
-            subtitleCallback(sub)
-        }
 
         // Try ALL matching extractors IN PARALLEL
         // SEMAPHORE: Max 3 concurrent extractor calls to prevent server overload
