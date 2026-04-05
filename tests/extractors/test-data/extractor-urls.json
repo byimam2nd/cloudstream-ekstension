@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-04-05",
+  "extractors": [
+    {
+      "group": "okru",
+      "extractors": ["Odnoklassniki", "OkRuSSL", "OkRuHTTP"],
+      "urls": [
+        "https://ok.ru/videoembed/5989442652850",
+        "https://ok.ru/videoembed/5557876755122"
+      ],
+      "expectedMinLinks": 6,
+      "expectedQualities": [144, 240, 360, 480, 720, 1080],
+      "notes": "OK.ru encode \\u0026 dalam URL. Butuh Origin header. Verified via curl: 2026-04-05."
+    },
+    {
+      "group": "dailymotion",
+      "extractors": ["Dailymotion"],
+      "urls": [
+        "https://www.dailymotion.com/embed/video/k1l9ujy1KqApITzcWnm",
+        "https://www.dailymotion.com/embed/video/k4vm0zG3hIy4EYz4Vu1"
+      ],
+      "expectedMinLinks": 1,
+      "notes": "Dailymotion embed pages. HTTP 200 verified via curl: 2026-04-05."
+    },
+    {
+      "group": "krakenfiles",
+      "extractors": ["GDFlix"],
+      "urls": [
+        "https://krakenfiles.com/embed-video/fftpwWYkNC"
+      ],
+      "expectedMinLinks": 0,
+      "notes": "STATUS: Domain returns 404. Video deleted/expired.",
+      "status": "broken"
+    }
+  ]
+}
