@@ -91,7 +91,7 @@ suspend fun loadExtractorWithFallback(
         callback(link)
     }
     val trackedSubtitleCallback: (SubtitleFile) -> Unit = { sub ->
-        Log.d("ExtractorHelper", "      📝 Delivered subtitle: ${sub.language}")
+        
         subtitleCallback(sub)
     }
 
