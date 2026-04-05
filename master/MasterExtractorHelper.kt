@@ -32,6 +32,8 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 // ============================================
 // REGION 1: LOAD EXTRACTOR WITH FALLBACK + CIRCUIT BREAKER
@@ -109,23 +111,26 @@ suspend fun loadExtractorWithFallback(
         Log.d("ExtractorHelper", "   Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
 
         // Try ALL matching extractors IN PARALLEL WITH CIRCUIT BREAKER
+        // SEMAPHORE: Max 3 concurrent extractor calls to prevent server overload
+        val extractorSemaphore = Semaphore(3)
         var successCount = 0
         var failCount = 0
         try {
             coroutineScope {
                 matchingExtractors.forEach { extractor ->
                     launch {
-                        try {
-                            // Get CircuitBreaker for this extractor
-                            val breaker = CircuitBreakerRegistry.getOrCreate(
-                                extractor.name,
-                                failureThreshold = 3
-                            )
+                        extractorSemaphore.withPermit {
+                            try {
+                                // Get CircuitBreaker for this extractor
+                                val breaker = CircuitBreakerRegistry.getOrCreate(
+                                    extractor.name,
+                                    failureThreshold = 3
+                                )
 
-                            Log.d("ExtractorHelper", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
+                                Log.d("ExtractorHelper", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
 
-                            // Wrap extractor call with CircuitBreaker
-                            val result = breaker.execute {
+                                // Wrap extractor call with CircuitBreaker
+                                val result = breaker.execute {
                                 extractor.getUrl(url, referer, subtitleCallback, callback)
                             }
 
@@ -139,6 +144,8 @@ suspend fun loadExtractorWithFallback(
                         } catch (e: Exception) {
                             failCount++
                             Log.e("ExtractorHelper", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}\n         Stack trace: ${e.stackTraceToString().lines().take(5).joinToString("\\n         ")}")
+                        }
+                            } // end withPermit
                         }
                     }
                 }
