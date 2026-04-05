@@ -715,84 +715,51 @@ open class Odnoklassniki : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val headers = ExtractorHelpers.getStandardHeaders(mainUrl)
+        val headers = mapOf(
+            "Accept" to "*/*",
+            "Connection" to "keep-alive",
+            "Sec-Fetch-Dest" to "empty",
+            "Sec-Fetch-Mode" to "cors",
+            "Sec-Fetch-Site" to "cross-site",
+            "Origin" to mainUrl,
+            "User-Agent" to USER_AGENT,
+        )
 
-        // Extract video ID
-        val videoId = Regex("""/video(?:embed)?/(\d+)""").find(url)?.groupValues?.get(1)
-        if (videoId == null) return
-
-        // Method 1: Try OK.ru oembed API (most reliable)
-        try {
-            val oembedUrl = "https://www.ok.ru/oembed?url=https://ok.ru/video/$videoId&format=json"
-            val oembedResp = app.get(oembedUrl, headers = headers, timeout = 10_000).text
-            val oembedObj = JSONObject(oembedResp)
-
-            if (oembedObj.has("videoUrl")) {
-                val videoUrl = oembedObj.optString("videoUrl")
-                if (videoUrl.isNotEmpty()) {
-                    callback.invoke(
-                        newExtractorLink(
-                            source = this.name,
-                            name = this.name,
-                            url = videoUrl,
-                            type = INFER_TYPE
-                        ) {
-                            this.referer = "$mainUrl/"
-                            this.quality = 480
-                            this.headers = headers
-                        }
-                    )
-                    return
-                }
-            }
-        } catch (_: Exception) {}
-
-        // Method 2: Parse HTML embed page with &quot; decoded
         val embedUrl = url.replace("/video/", "/videoembed/")
-        val html = app.get(embedUrl, headers = headers, timeout = 10_000).text
-
-        // Decode HTML entities: &quot; -> " then match escaped JSON
-        val decoded = html.replace("&quot;", "\"")
-
-        // Pattern in decoded HTML: \"name\":\"mobile\"...\"url\":\"https://...\"
-        val videoPattern = Regex("""\\"name\\":\\"(mobile|lowest|low|sd|hd|full)\\".*?\\"url\\":\\"(https://[^\\"]+)""")
-
-        for (match in videoPattern.findAll(decoded)) {
-            val qualityName = match.groupValues[1]
-            val videoUrl = match.groupValues[2]
-                .replace("\\u0026", "&")
-            if (videoUrl.isNotEmpty()) {
-                val quality = qualityName.toQuality()
-                callback.invoke(
-                    newExtractorLink(
-                        source = this.name,
-                        name = this.name,
-                        url = videoUrl,
-                        type = INFER_TYPE
-                    ) {
-                        this.referer = "$mainUrl/"
-                        this.quality = quality
-                        this.headers = headers
-                    }
-                )
+        val videoReq = app.get(embedUrl, headers = headers).text
+            .replace("\\&quot;", "\"")
+            .replace("\\\\", "\\")
+            .replace(Regex("\\\\u([0-9A-Fa-f]{4})")) { matchResult ->
+                Integer.parseInt(matchResult.groupValues[1], 16).toChar().toString()
             }
-        }
 
-        // Method 3: Fallback - Try HLS manifest URL
-        val hlsPattern = Regex("""\\"hlsManifestUrl\\":\\"(https://[^\\"]+m3u8[^\\"]*)""")
-        val hlsMatch = hlsPattern.find(decoded)
-        if (hlsMatch != null) {
-            val hlsUrl = hlsMatch.groupValues[1]
-                .replace("\\u0026", "&")
+        val videosStr = Regex(""""videos":(\[[^]]*])""").find(videoReq)?.groupValues?.get(1)
+            ?: return
+        val videos = tryParseJson<List<OkRuVideo>>(videosStr) ?: return
+
+        for (video in videos) {
+            val videoUrl = if (video.url.startsWith("//")) "https:${video.url}" else video.url
+            if (videoUrl.isEmpty()) continue
+
+            val quality = video.name.uppercase()
+                .replace("MOBILE", "144p")
+                .replace("LOWEST", "240p")
+                .replace("LOW", "360p")
+                .replace("SD", "480p")
+                .replace("HD", "720p")
+                .replace("FULL", "1080p")
+                .replace("QUAD", "1440p")
+                .replace("ULTRA", "4k")
+
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
                     name = this.name,
-                    url = hlsUrl,
-                    type = ExtractorLinkType.M3U8
+                    url = videoUrl,
+                    type = INFER_TYPE
                 ) {
                     this.referer = "$mainUrl/"
-                    this.quality = 1080
+                    this.quality = getQualityFromName(quality)
                     this.headers = headers
                 }
             )
