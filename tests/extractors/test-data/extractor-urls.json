@@ -1,27 +1,85 @@
 {
   "version": "1.0",
   "lastUpdated": "2026-04-05",
+  "source": "Auto-collected from Anichin episode pages (collect-extractor-urls.sh)",
   "extractors": [
     {
       "group": "okru",
       "extractors": ["Odnoklassniki", "OkRuSSL", "OkRuHTTP"],
       "urls": [
         "https://ok.ru/videoembed/5989442652850",
-        "https://ok.ru/videoembed/5557876755122"
+        "https://ok.ru/videoembed/5557876755122",
+        "https://ok.ru/videoembed/13089502071474",
+        "https://ok.ru/videoembed/13103348386482"
       ],
       "expectedMinLinks": 6,
       "expectedQualities": [144, 240, 360, 480, 720, 1080],
-      "notes": "OK.ru encode \\u0026 dalam URL. Butuh Origin header. Verified via curl: 2026-04-05."
+      "notes": "Verified via curl 2026-04-05. Butuh unicode decode \\u0026."
     },
     {
       "group": "dailymotion",
       "extractors": ["Dailymotion"],
       "urls": [
+        "https://www.dailymotion.com/embed/video/k4vm0zG3hIy4EYz4Vu1",
         "https://www.dailymotion.com/embed/video/k1l9ujy1KqApITzcWnm",
-        "https://www.dailymotion.com/embed/video/k4vm0zG3hIy4EYz4Vu1"
+        "https://geo.dailymotion.com/player/xid0t.html?video=k1hip6VVIhnM9lFlr8G",
+        "https://geo.dailymotion.com/player/xid0t.html?video=k1r5CmftZ1W0ReFo3AE"
       ],
       "expectedMinLinks": 1,
-      "notes": "Dailymotion embed pages. HTTP 200 verified via curl: 2026-04-05."
+      "notes": "Verified via curl 2026-04-05. HTTP 200."
+    },
+    {
+      "group": "doodstream",
+      "extractors": ["DoodStream"],
+      "urls": [
+        "https://doods.pro/e/b4ivd8wg8iwx"
+      ],
+      "expectedMinLinks": 1,
+      "expectedType": "M3U8",
+      "notes": "Auto-collected. Butuh pass + token extraction."
+    },
+    {
+      "group": "streamruby",
+      "extractors": ["StreamRuby", "svanila", "svilla"],
+      "urls": [
+        "https://rubyvidhub.com/embed-gair6dsgoyyz.html",
+        "https://rubyvidhub.com/embed-apo004h5yo1r.html",
+        "https://rubyvidhub.com/embed-k2vhu0889f63.html"
+      ],
+      "expectedMinLinks": 1,
+      "expectedType": "M3U8",
+      "notes": "Auto-collected. POST ke /dl endpoint + packed JS."
+    },
+    {
+      "group": "rumble",
+      "extractors": ["Rumble"],
+      "urls": [
+        "https://rumble.com/embed/v75rli2/?pub=2li51c",
+        "https://rumble.com/embed/v75ohuc/?pub=2li51c",
+        "https://rumble.com/embed/v75rxoi/?pub=2li51c"
+      ],
+      "expectedMinLinks": 1,
+      "notes": "Auto-collected. Rumble embed URLs."
+    },
+    {
+      "group": "anichin-stream",
+      "extractors": [],
+      "urls": [
+        "https://anichin.stream/?id=v75uxgy",
+        "https://anichin.stream/?id=v75mwnw"
+      ],
+      "expectedMinLinks": 1,
+      "notes": "Auto-collected. Custom Anichin video server. Belum ada extractor."
+    },
+    {
+      "group": "short-icu",
+      "extractors": [],
+      "urls": [
+        "https://short.icu/TI8ZvyB11",
+        "https://short.icu/vtV5oogXY"
+      ],
+      "expectedMinLinks": 1,
+      "notes": "Auto-collected. URL shortener → redirect ke video host. Belum ada extractor."
     },
     {
       "group": "krakenfiles",
