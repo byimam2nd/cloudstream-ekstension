@@ -1,7 +1,8 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "lastUpdated": "2026-04-05",
-  "source": "Auto-collected from Anichin episode pages (collect-extractor-urls.sh)",
+  "source": "Auto-collected from 8 Anichin series pages (collect-extractor-urls.sh)",
+  "totalCollected": 109,
   "extractors": [
     {
       "group": "okru",
@@ -9,24 +10,26 @@
       "urls": [
         "https://ok.ru/videoembed/5989442652850",
         "https://ok.ru/videoembed/5557876755122",
-        "https://ok.ru/videoembed/13089502071474",
-        "https://ok.ru/videoembed/13103348386482"
+        "https://ok.ru/videoembed/13158821399218",
+        "https://ok.ru/videoembed/13124981164722"
       ],
       "expectedMinLinks": 6,
+      "expectedMaxLinks": 6,
       "expectedQualities": [144, 240, 360, 480, 720, 1080],
-      "notes": "Verified via curl 2026-04-05. Butuh unicode decode \\u0026."
+      "notes": "OK.ru encode \\u0026 dalam URL. Butuh Origin header."
     },
     {
       "group": "dailymotion",
       "extractors": ["Dailymotion"],
       "urls": [
-        "https://www.dailymotion.com/embed/video/k4vm0zG3hIy4EYz4Vu1",
-        "https://www.dailymotion.com/embed/video/k1l9ujy1KqApITzcWnm",
-        "https://geo.dailymotion.com/player/xid0t.html?video=k1hip6VVIhnM9lFlr8G",
-        "https://geo.dailymotion.com/player/xid0t.html?video=k1r5CmftZ1W0ReFo3AE"
+        "https://geo.dailymotion.com/player/xid0t.html?video=k6W4CKqOutx6glFp5T2",
+        "https://geo.dailymotion.com/player/xid0t.html?video=k5C2FAJ7vJz3tzFow6g",
+        "https://geo.dailymotion.com/player/xid0t.html?video=k50BBCpxBBbk6rFoG3e",
+        "https://geo.dailymotion.com/player/xid0t.html?video=k43OLYnCGAcMicFkS58"
       ],
       "expectedMinLinks": 1,
-      "notes": "Verified via curl 2026-04-05. HTTP 200."
+      "expectedMaxLinks": 10,
+      "notes": "geo.dailymotion.com player URLs lebih reliable."
     },
     {
       "group": "doodstream",
@@ -35,51 +38,54 @@
         "https://doods.pro/e/b4ivd8wg8iwx"
       ],
       "expectedMinLinks": 1,
+      "expectedMaxLinks": 1,
       "expectedType": "M3U8",
-      "notes": "Auto-collected. Butuh pass + token extraction."
+      "notes": "Butuh pass + token extraction dari HTML."
     },
     {
       "group": "streamruby",
       "extractors": ["StreamRuby", "svanila", "svilla"],
       "urls": [
-        "https://rubyvidhub.com/embed-gair6dsgoyyz.html",
-        "https://rubyvidhub.com/embed-apo004h5yo1r.html",
-        "https://rubyvidhub.com/embed-k2vhu0889f63.html"
+        "https://rubyvidhub.com/embed-uu0enqwd51wl.html",
+        "https://rubyvidhub.com/embed-fk3niu5m65ms.html",
+        "https://rubyvidhub.com/embed-yk48r3fgjnuz.html"
       ],
       "expectedMinLinks": 1,
+      "expectedMaxLinks": 3,
       "expectedType": "M3U8",
-      "notes": "Auto-collected. POST ke /dl endpoint + packed JS."
+      "notes": "POST ke /dl endpoint. Butuh packed JS unpack."
     },
     {
       "group": "rumble",
       "extractors": ["Rumble"],
       "urls": [
-        "https://rumble.com/embed/v75rli2/?pub=2li51c",
-        "https://rumble.com/embed/v75ohuc/?pub=2li51c",
-        "https://rumble.com/embed/v75rxoi/?pub=2li51c"
+        "https://rumble.com/embed/v75uxgy/?pub=2li51c",
+        "https://rumble.com/embed/v75tbts/?pub=2li51c",
+        "https://rumble.com/embed/v75tc58/?pub=2li51c"
       ],
       "expectedMinLinks": 1,
-      "notes": "Auto-collected. Rumble embed URLs."
+      "expectedMaxLinks": 1,
+      "notes": "HLS URL di JSON: \"hls\":{\"url\":\"...playlist.m3u8\"}"
     },
     {
       "group": "anichin-stream",
       "extractors": [],
       "urls": [
         "https://anichin.stream/?id=v75uxgy",
-        "https://anichin.stream/?id=v75mwnw"
+        "https://anichin.stream/?id=v75tbts"
       ],
       "expectedMinLinks": 1,
-      "notes": "Auto-collected. Custom Anichin video server. Belum ada extractor."
+      "notes": "Custom Anichin video server. Belum ada extractor di MasterExtractors.kt."
     },
     {
       "group": "short-icu",
       "extractors": [],
       "urls": [
-        "https://short.icu/TI8ZvyB11",
-        "https://short.icu/vtV5oogXY"
+        "https://short.icu/osCwNY5mG",
+        "https://short.icu/EbmAtMgRI"
       ],
       "expectedMinLinks": 1,
-      "notes": "Auto-collected. URL shortener → redirect ke video host. Belum ada extractor."
+      "notes": "URL shortener → redirect ke video host. Belum ada extractor."
     },
     {
       "group": "krakenfiles",

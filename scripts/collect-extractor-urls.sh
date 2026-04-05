@@ -26,6 +26,12 @@ echo "=== STEP 1: Collecting embed URLs from episode pages ==="
 PROVIDERS=(
     "https://anichin.cafe/seri/shrouding-the-heavens/"
     "https://anichin.cafe/seri/one-piece/"
+    "https://anichin.cafe/seri/perfect-world/"
+    "https://anichin.cafe/seri/my-senior-brother-is-too-steady/"
+    "https://anichin.cafe/seri/peerless-battle-spirit/"
+    "https://anichin.cafe/seri/purple-river-season-2/"
+    "https://anichin.cafe/seri/release-that-witch/"
+    "https://anichin.cafe/seri/against-the-gods/"
 )
 
 ALL_EMBED_URLS="$OUTPUT_DIR/urls/all-embed-urls.txt"

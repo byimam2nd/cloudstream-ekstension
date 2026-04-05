@@ -74,7 +74,26 @@ const EXTRACTOR_PATTERNS = {
     }
   },
 
-  // --- StreamRuby / StreamWish (POST + packed JS) ---
+  // --- Rumble ---
+  'rumble': {
+    name: 'Rumble',
+    urlRegex: /rumble\.com\/embed\/([a-zA-Z0-9]+)/,
+    fetch: async (url) => {
+      const cmd = `curl -s -L --max-time 15 -A "${UA}" "${url}" 2>/dev/null`;
+      return execSync(cmd, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+    },
+    extract: (html) => {
+      // Pattern: "hls":{"url":"https:\/\/rumble.com\/hls-vod\/...playlist.m3u8"}
+      const hls = html.match(/"hls":\{"url":"(https?:[^"]+playlist\.m3u8)"/);
+      if (hls) {
+        const url = hls[1].replace(/\\\//g, '/');
+        return { success: true, links: [{ url, quality: 0 }] };
+      }
+      return { success: false, reason: 'No HLS found' };
+    }
+  },
+
+  // --- StreamRuby ---
   'streamruby': {
     name: 'StreamRuby / StreamWish',
     urlRegex: /rubyvidhub\.com\/embed-([a-zA-Z0-9]+)\.html/,
@@ -82,26 +101,19 @@ const EXTRACTOR_PATTERNS = {
       const id = url.match(/embed-([a-zA-Z0-9]+)\.html/)?.[1];
       const cmd = `curl -s -L --max-time 15 -A "${UA}" \\
         -H "Origin: https://rubyvidhub.com" \\
+        -H "Referer: https://rubyvidhub.com/" \\
         -X POST -d "op=embed&file_code=${id}&auto=1&referer=" \\
         "https://rubyvidhub.com/dl" 2>/dev/null`;
       return execSync(cmd, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
     },
     extract: (html) => {
-      // Try unpack packed JS
-      const packedMatch = html.match(/eval\(function\(p,a,c,k,e,[rd]\)\{.*?\}\)/s);
-      let script = html;
-      if (packedMatch) {
-        script = unpackJs(packedMatch[0]) || html;
-      }
-      // Try sources: fallback
-      if (!script.includes('sources:')) {
-        const scriptTag = html.match(/<script[^>]*>(.*?)<\/script>/gs);
-        if (scriptTag) script = scriptTag.join('\n');
-      }
-      // Extract m3u8
-      const m3u8 = script.match(/file:\s*["']([^"']*?m3u8[^"']*?)["']/);
-      if (m3u8) return { success: true, links: [{ url: m3u8[1], quality: 0 }] };
-      return { success: false, reason: 'No m3u8 found' };
+      // Look for m3u8 in any form
+      const m3u8 = html.match(/https?:\/\/[^"'\\ ]+\.m3u8[^"'\\ ]*/);
+      if (m3u8) return { success: true, links: [{ url: m3u8[0], quality: 0 }] };
+      // Try file: pattern (unpacked JS)
+      const file = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/);
+      if (file) return { success: true, links: [{ url: file[1], quality: 0 }] };
+      return { success: false, reason: 'No m3u8 found (may need proper unpacker or rate-limited)' };
     }
   },
 
@@ -218,7 +230,10 @@ async function main() {
     }
 
     for (const url of group.urls) {
+      // Small delay to avoid rate limiting
+      await new Promise(r => setTimeout(r, 1000));
       console.log(`  Testing: ${url}`);
+      console.log(`    Pattern: ${pattern.name}`);
 
       try {
         const html = await pattern.fetch(url);

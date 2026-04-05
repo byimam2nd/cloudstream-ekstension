@@ -1832,6 +1832,12 @@ object SyncExtractors {
         Turbovidhls(),
         EmturbovidExtractor(),
         VidHidePro6(),
+        // New extractors dari ExtCloud + Phisher
+        EmturbovidExtractor(),
+        MixDropBz(),
+        FilemoonNl(),
+        Gofile(),
+        HUBCDN(),
     )
 }
 
@@ -2448,4 +2454,121 @@ object SmartM3U8Parser {
     }
     
     // resolveRelativeUrl removed — use resolveRelativeUrlShared directly
+}
+
+// ========================================
+// REGION: NEW EXTRACTORS (dari ExtCloud + Phisher)
+// ========================================
+
+// --- EmturbovidExtractor (dari ExtCloud/Layarasia) ---
+open class EmturbovidExtractor : ExtractorApi() {
+    override var name = "Emturbovid"
+    override var mainUrl = "https://emturbovid.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val ref = referer ?: "$mainUrl/"
+        val headers = mapOf(
+            "Referer" to "$mainUrl/",
+            "Origin" to mainUrl,
+            "User-Agent" to "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+            "Accept" to "*/*"
+        )
+        val page = app.get(url, referer = ref)
+        val playerScript = page.document.selectXpath("//script[contains(text(),'var urlPlay')]").html()
+        if (playerScript.isBlank()) return
+
+        var masterUrl = playerScript.substringAfter("var urlPlay = '").substringBefore("'").trim()
+        if (masterUrl.startsWith("//")) masterUrl = "https:$masterUrl"
+        if (masterUrl.startsWith("/")) masterUrl = mainUrl + masterUrl
+
+        val masterText = app.get(masterUrl, headers = headers).text
+        val lines = masterText.lines()
+        for (i in 0 until lines.size) {
+            val line = lines[i].trim()
+            if (!line.startsWith("#EXT-X-STREAM-INF")) continue
+            val qualityLine = lines.getOrNull(i + 1)?.trim() ?: continue
+            if (!qualityLine.startsWith("http")) continue
+            val resolution = Regex("RESOLUTION=\\d+x(\\d+)").find(line)?.groupValues?.getOrNull(1)
+            val quality = resolution?.toIntOrNull() ?: 480
+            callback.invoke(newExtractorLink(this.name, this.name, qualityLine, ExtractorLinkType.M3U8) {
+                this.referer = "$mainUrl/"; this.quality = quality; this.headers = headers
+            })
+        }
+    }
+}
+
+// --- MixDropBz (dari ExtCloud/AnimeSail) ---
+class MixDropBz : ExtractorApi() {
+    override var name = "MixDrop"
+    override var mainUrl = "https://m1xdrop.bz"
+    override val requiresReferer = false
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val embedUrl = url.replace("/f/", "/e/")
+        val response = app.get(embedUrl, referer = referer ?: "$mainUrl/")
+        val script = if (!getPacked(response.text).isNullOrEmpty()) getAndUnpack(response.text)
+            else response.document.selectFirst("script:containsData(MDCore)")?.data() ?: return
+        val video = Regex("""video_src\s*=\s*["'](.*?)["']""").find(script)?.groupValues?.get(1)
+            ?: Regex("""src:\s*["'](.*?)["']""").find(script)?.groupValues?.get(1) ?: return
+        val videoUrl = if (video.startsWith("//")) "https:$video" else video
+        callback.invoke(newExtractorLink(this.name, this.name, videoUrl, INFER_TYPE) {
+            this.referer = "$mainUrl/"; this.quality = Qualities.Unknown.value
+        })
+    }
+}
+
+// --- FilemoonNl (dari Phisher/StreamPlay) ---
+class FilemoonNl : ExtractorApi() {
+    override val name = "FilemoonNl"
+    override var mainUrl = "https://filemoon.nl"
+    override val requiresReferer = true
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val response = app.get(url, referer = referer)
+        val script = if (!getPacked(response.text).isNullOrEmpty()) getAndUnpack(response.text)
+            else response.document.selectFirst("script:containsData(sources:)")?.data() ?: return
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script)?.groupValues?.getOrNull(1) ?: return
+        val quality = Regex("qualityLabels.*\"(\\d{3,4})[pP]\"").find(script)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: Qualities.Unknown.value
+        callback.invoke(newExtractorLink(this.name, this.name, m3u8, ExtractorLinkType.M3U8) {
+            this.referer = "$mainUrl/"; this.quality = quality
+        })
+    }
+}
+
+// --- Gofile (dari Phisher/DudeFilms) ---
+class Gofile : ExtractorApi() {
+    override val name = "Gofile"
+    override val mainUrl = "https://gofile.io"
+    override val requiresReferer = false
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val id = Regex("/(?:\\?c=|d/)([\\da-zA-Z-]+)").find(url)?.groupValues?.get(1) ?: return
+        val token = app.post("https://api.gofile.io/accounts").parsedSafe<GAR>()?.data?.token ?: return
+        val wt = app.get("https://gofile.io/dist/js/config.js").text.let { Regex("""appdata\.wt\s*=\s*["']([^"']+)["']""").find(it)?.groupValues?.get(1) } ?: return
+        val headers = mapOf("Authorization" to "Bearer $token", "X-Website-Token" to wt)
+        val res = app.get("https://api.gofile.io/contents/$id?contentFilter=&page=1&pageSize=1000&sortField=name&sortDirection=1", headers = headers).parsedSafe<GR>()
+        res?.data?.children?.values?.forEach { f -> if (f.type == "file" && f.link != null) callback.invoke(newExtractorLink(this.name, this.name, f.link, INFER_TYPE) { this.referer = "$mainUrl/"; this.quality = Qualities.Unknown.value }) }
+    }
+    data class GAR(@JsonProperty("data") val data: GAD?)
+    data class GAD(@JsonProperty("token") val token: String?)
+    data class GR(@JsonProperty("data") val data: GD?)
+    data class GD(@JsonProperty("children") val children: Map<String, GF>?)
+    data class GF(@JsonProperty("type") val type: String?, @JsonProperty("link") val link: String?)
+}
+
+// --- HUBCDN (dari Phisher/StreamPlay) ---
+class HUBCDN : ExtractorApi() {
+    override val name = "HUBCDN"
+    override var mainUrl = "https://hubcdn.*"
+    override val requiresReferer = false
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val doc = app.get(url).document
+        val scriptText = doc.selectFirst("script:containsData(var reurl)")?.data()
+        val encodedUrl = Regex("""reurl\s*=\s*"([^"]+)"""").find(scriptText ?: "")?.groupValues?.get(1)?.substringAfter("?r=")
+        val decodedUrl = encodedUrl?.let { base64Decode(it) }?.substringAfterLast("link=")
+        if (decodedUrl != null) callback.invoke(newExtractorLink(this.name, this.name, decodedUrl, INFER_TYPE) { this.referer = "$mainUrl/"; this.quality = Qualities.Unknown.value })
+    }
 }
