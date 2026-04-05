@@ -1,8 +1,9 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "lastUpdated": "2026-04-05",
-  "source": "Auto-collected from 8 Anichin series pages (collect-extractor-urls.sh)",
-  "totalCollected": 109,
+  "source": "Auto-collected from 21 Anichin series pages",
+  "totalCollected": 97,
+  "uniqueDomains": 7,
   "extractors": [
     {
       "group": "okru",
@@ -11,7 +12,8 @@
         "https://ok.ru/videoembed/5989442652850",
         "https://ok.ru/videoembed/5557876755122",
         "https://ok.ru/videoembed/13158821399218",
-        "https://ok.ru/videoembed/13124981164722"
+        "https://ok.ru/videoembed/13124981164722",
+        "https://ok.ru/videoembed/13103348386482"
       ],
       "expectedMinLinks": 6,
       "expectedMaxLinks": 6,
@@ -25,7 +27,8 @@
         "https://geo.dailymotion.com/player/xid0t.html?video=k6W4CKqOutx6glFp5T2",
         "https://geo.dailymotion.com/player/xid0t.html?video=k5C2FAJ7vJz3tzFow6g",
         "https://geo.dailymotion.com/player/xid0t.html?video=k50BBCpxBBbk6rFoG3e",
-        "https://geo.dailymotion.com/player/xid0t.html?video=k43OLYnCGAcMicFkS58"
+        "https://geo.dailymotion.com/player/xid0t.html?video=k43OLYnCGAcMicFkS58",
+        "https://geo.dailymotion.com/player/xid0t.html?video=k1E9bvlpqNFPA3Fos32"
       ],
       "expectedMinLinks": 1,
       "expectedMaxLinks": 10,
@@ -48,7 +51,9 @@
       "urls": [
         "https://rubyvidhub.com/embed-uu0enqwd51wl.html",
         "https://rubyvidhub.com/embed-fk3niu5m65ms.html",
-        "https://rubyvidhub.com/embed-yk48r3fgjnuz.html"
+        "https://rubyvidhub.com/embed-yk48r3fgjnuz.html",
+        "https://rubyvidhub.com/embed-gair6dsgoyyz.html",
+        "https://rubyvidhub.com/embed-apo004h5yo1r.html"
       ],
       "expectedMinLinks": 1,
       "expectedMaxLinks": 3,
@@ -61,31 +66,13 @@
       "urls": [
         "https://rumble.com/embed/v75uxgy/?pub=2li51c",
         "https://rumble.com/embed/v75tbts/?pub=2li51c",
-        "https://rumble.com/embed/v75tc58/?pub=2li51c"
+        "https://rumble.com/embed/v75tc58/?pub=2li51c",
+        "https://rumble.com/embed/v75ohuc/?pub=2li51c",
+        "https://rumble.com/embed/v75rxoi/?pub=2li51c"
       ],
       "expectedMinLinks": 1,
       "expectedMaxLinks": 1,
       "notes": "HLS URL di JSON: \"hls\":{\"url\":\"...playlist.m3u8\"}"
-    },
-    {
-      "group": "anichin-stream",
-      "extractors": [],
-      "urls": [
-        "https://anichin.stream/?id=v75uxgy",
-        "https://anichin.stream/?id=v75tbts"
-      ],
-      "expectedMinLinks": 1,
-      "notes": "Custom Anichin video server. Belum ada extractor di MasterExtractors.kt."
-    },
-    {
-      "group": "short-icu",
-      "extractors": [],
-      "urls": [
-        "https://short.icu/osCwNY5mG",
-        "https://short.icu/EbmAtMgRI"
-      ],
-      "expectedMinLinks": 1,
-      "notes": "URL shortener → redirect ke video host. Belum ada extractor."
     },
     {
       "group": "krakenfiles",

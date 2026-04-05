@@ -24,6 +24,7 @@ UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Ge
 echo "=== STEP 1: Collecting embed URLs from episode pages ==="
 
 PROVIDERS=(
+    # Additional series for more diverse extractor URLs
     "https://anichin.cafe/seri/shrouding-the-heavens/"
     "https://anichin.cafe/seri/one-piece/"
     "https://anichin.cafe/seri/perfect-world/"
@@ -32,6 +33,19 @@ PROVIDERS=(
     "https://anichin.cafe/seri/purple-river-season-2/"
     "https://anichin.cafe/seri/release-that-witch/"
     "https://anichin.cafe/seri/against-the-gods/"
+    "https://anichin.cafe/seri/jujutsu-kaisen-2nd-season/"
+    "https://anichin.cafe/seri/bleach-sennen-kessen-hen/"
+    "https://anichin.cafe/seri/naruto-shippuden/"
+    "https://anichin.cafe/seri/spirit-sword-sovereign/"
+    "https://anichin.cafe/seri/a-will-eternal/"
+    "https://anichin.cafe/seri/martial-universe/"
+    "https://anichin.cafe/seri/against-the-gods-season-2/"
+    "https://anichin.cafe/seri/the-great-ruler/"
+    "https://anichin.cafe/seri/tales-of-demons-and-gods/"
+    "https://anichin.cafe/seri/stellar-transformations/"
+    "https://anichin.cafe/seri/swallowed-star/"
+    "https://anichin.cafe/seri/battle-through-the-heavens/"
+    "https://anichin.cafe/seri/martial-peak/"
 )
 
 ALL_EMBED_URLS="$OUTPUT_DIR/urls/all-embed-urls.txt"
