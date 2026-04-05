@@ -320,3 +320,43 @@ fun cleanDisplayText(text: String): String {
         .replace(CompiledRegexPatterns.RESOLUTION_SUFFIX, "")  // Remove -1920x1080
         .trim()
 }
+
+// ============================================
+// REGION: CONNECTION PRE-WARMING
+// ============================================
+
+/**
+ * Pre-warm koneksi ke server sebelum video diminta
+ *
+ * Cara kerja: HEAD request → buka TCP/TLS → koneksi siap
+ * Penghematan: ~50-150ms first frame time
+ *
+ * Usage:
+ * ```kotlin
+ * // Di loadLinks(), sebelum extract video
+ * preWarmConnection("https://video-server.com")
+ * ```
+ */
+suspend fun preWarmConnection(url: String) {
+    HttpClientFactory.preWarmConnection(url)
+}
+
+/**
+ * Pre-warm koneksi ke semua extractor domains
+ *
+ * Usage:
+ * ```kotlin
+ * // Di main page atau saat app start
+ * preWarmExtractorDomains(listOf("https://server1.com", "https://server2.com"))
+ * ```
+ */
+suspend fun preWarmExtractorDomains(extractorUrls: List<String>) {
+    HttpClientFactory.preWarmExtractorDomains(extractorUrls)
+}
+
+/**
+ * Clear response cache manual (untuk debugging)
+ */
+fun clearResponseCache() {
+    HttpClientFactory.clearResponseCache()
+}
