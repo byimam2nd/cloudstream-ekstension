@@ -1,12 +1,17 @@
 # 🧪 Extractor Knowledge Base
 
-**Purpose:** Dokumentasi lengkap tentang cara membuat extractor yang benar.
-Referensi dari ExtCloud (134 files) dan Phisher (386 files).
+**Purpose:** Dokumentasi referensi untuk memperbaiki extractor di MasterExtractors.kt.
 
-**Sources:**
-- `/cloudstream/ExtCloud/` — 134 Kotlin files
-- `/cloudstream/phisher/` — 386 Kotlin files
-- `/oce/master/MasterExtractors.kt` — 75+ extractors
+**Sumber Referensi:**
+- `/cloudstream/ExtCloud/` — 134 files (open source)
+- `/cloudstream/phisher/` — 386 files (open source)
+- `/oce/master/MasterExtractors.kt` — Extractor milik Anda (75+)
+
+**Cara Pakai:**
+1. Test extractor Anda → `node tests/extractors/test-extractors.js`
+2. Lihat hasil → mana yang gagal
+3. Buka dokumentasi ini → cari pattern yang sesuai
+4. Fix extractor Anda dengan referensi dari ExtCloud/Phisher
 
 ---
 

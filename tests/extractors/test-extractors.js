@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // ========================================
-// Extractor Tester — Test YOUR Extractors
+// Extractor Tester
 // ========================================
-// Script ini test extractor di MasterExtractors.kt (PUNYA ANDA).
-// Jika extractor gagal, referensi fix dari ExtCloud/Phisher (open source).
+// Test extractor dari MasterExtractors.kt (PUNYA ANDA).
+// Jika extractor gagal → ambil referensi fix dari ExtCloud/Phisher.
 // ========================================
 
 const { execSync } = require('child_process');
@@ -17,7 +17,11 @@ const REPORT_FILE = path.join(BASE_DIR, 'tests/extractors/reports/pattern-test-r
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
 // ========================================
-// Extractor Pattern Definitions (dari MasterExtractors.kt + ExtCloud)
+// Pattern Extractor (dari MasterExtractors.kt)
+// ========================================
+// Jika extractor Anda gagal, cari referensi fix di:
+//   /cloudstream/ExtCloud/  — referensi open source
+//   /cloudstream/phisher/   — referensi open source
 // ========================================
 
 const EXTRACTOR_PATTERNS = {
@@ -198,9 +202,7 @@ function unpackJsFromHtml(html) {
 // Main Test Runner
 // ========================================
 async function main() {
-  console.log('=== Extractor Tester — Test Extractor Anda ===\n');
-  console.log('Menguji extractor dari MasterExtractors.kt (PUNYA ANDA).\n');
-  console.log('Jika gagal, fix referensi dari ExtCloud/Phisher (open source).\n');
+  console.log('=== Extractor Tester ===\n');
 
   const db = JSON.parse(fs.readFileSync(URL_DB, 'utf8'));
   const results = [];
