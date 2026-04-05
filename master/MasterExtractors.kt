@@ -1830,12 +1830,12 @@ object SyncExtractors {
         Furher(),
         Furher2(),
         Turbovidhls(),
-        EmturbovidExtractor(),
+        EmturbovidExtractorM3U8(),
         VidHidePro6(),
         // New extractors dari ExtCloud + Phisher
-        EmturbovidExtractor(),
+        EmturbovidExtractorM3U8(),
         MixDropBz(),
-        FilemoonNl(),
+        FilemoonNlExtractor(),
         Gofile(),
         HUBCDN(),
     )
@@ -2461,7 +2461,7 @@ object SmartM3U8Parser {
 // ========================================
 
 // --- EmturbovidExtractor (dari ExtCloud/Layarasia) ---
-open class EmturbovidExtractor : ExtractorApi() {
+open class EmturbovidExtractorM3U8 : ExtractorApi() {
     override var name = "Emturbovid"
     override var mainUrl = "https://emturbovid.com"
     override val requiresReferer = true
@@ -2523,7 +2523,7 @@ class MixDropBz : ExtractorApi() {
 }
 
 // --- FilemoonNl (dari Phisher/StreamPlay) ---
-class FilemoonNl : ExtractorApi() {
+class FilemoonNlExtractor : ExtractorApi() {
     override val name = "FilemoonNl"
     override var mainUrl = "https://filemoon.nl"
     override val requiresReferer = true
