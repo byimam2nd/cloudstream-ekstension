@@ -136,22 +136,21 @@ suspend fun loadExtractorWithFallback(
 
                                 // Wrap extractor call with CircuitBreaker
                                 val result = breaker.execute {
-                                extractor.getUrl(url, referer, subtitleCallback, callback)
-                            }
+                                    extractor.getUrl(url, referer, subtitleCallback, callback)
+                                }
 
-                            if (result != null) {
-                                successCount++
-                                Log.d("ExtractorHelper", "      ✅ SUCCESS: Extractor ${extractor.name} worked!")
-                            } else {
+                                if (result != null) {
+                                    successCount++
+                                    Log.d("ExtractorHelper", "      ✅ SUCCESS: Extractor ${extractor.name} worked!")
+                                } else {
+                                    failCount++
+                                    Log.w("ExtractorHelper", "      🔴 CircuitBreaker OPEN for ${extractor.name} - skipping (failed 3+ times)")
+                                }
+                            } catch (e: Exception) {
                                 failCount++
-                                Log.w("ExtractorHelper", "      🔴 CircuitBreaker OPEN for ${extractor.name} - skipping (failed 3+ times)")
+                                Log.e("ExtractorHelper", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}\n         Stack trace: ${e.stackTraceToString().lines().take(5).joinToString("\\n         ")}")
                             }
-                        } catch (e: Exception) {
-                            failCount++
-                            Log.e("ExtractorHelper", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}\n         Stack trace: ${e.stackTraceToString().lines().take(5).joinToString("\\n         ")}")
-                        }
-                            } // end withPermit
-                        }
+                        } // end withPermit
                     }
                 }
             }
