@@ -2119,7 +2119,7 @@ object MasterLinkGenerator {
         val response = app.get(
             m3u8Url,
             headers = headers,
-            timeout = 10_000
+            timeout = AutoUsedConstants.DEFAULT_TIMEOUT.toInt()
         )
         return response.text
     }
@@ -2166,19 +2166,20 @@ internal fun parseM3U8VariantsShared(
 
         // Parse #EXT-X-STREAM-INF line
         if (line.startsWith("#EXT-X-STREAM-INF:")) {
-            // Extract bandwidth
-            val bandwidthMatch = Regex("BANDWIDTH=(\\d+)").find(line)
+            // Extract bandwidth — compiled regex (no recompilation)
+            val bandwidthMatch = CompiledRegexPatterns.M3U8_BANDWIDTH.find(line)
             currentBandwidth = bandwidthMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
 
-            // Extract resolution
-            val resolutionMatch = Regex("RESOLUTION=(\\d+)x(\\d+)").find(line)
+            // Extract resolution — compiled regex (no recompilation)
+            val resolutionMatch = CompiledRegexPatterns.M3U8_RESOLUTION.find(line)
             currentResolution = resolutionMatch?.let {
-                Pair(it.groupValues[1].toInt(), it.groupValues[2].toInt())
+                val w = it.groupValues[1].toIntOrNull() ?: 0
+                val h = it.groupValues[2].toIntOrNull() ?: 0
+                Pair(w, h)
             }
 
-            // Extract quality dari RESOLUTION
-            val qualityMatch = Regex("RESOLUTION=\\d+x(\\d+)").find(line)
-            currentQuality = qualityMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+            // Extract quality dari RESOLUTION height — reuse same match
+            currentQuality = currentResolution?.second
         }
 
         // Parse URL line (setelah #EXT-X-STREAM-INF)
@@ -2276,7 +2277,7 @@ object SmartM3U8Parser {
         val response = app.get(
             m3u8Url,
             headers = headers,
-            timeout = 10_000
+            timeout = AutoUsedConstants.DEFAULT_TIMEOUT.toInt()
         )
         
         // Inline parsing logic
@@ -2365,7 +2366,7 @@ object SmartM3U8Parser {
             val response = app.head(
                 url,
                 headers = headers,
-                timeout = 5000L
+                timeout = AutoUsedConstants.FAST_TIMEOUT.toInt()
             )
             
             val contentLength = response.headers["Content-Length"]?.toLongOrNull()
@@ -2395,7 +2396,7 @@ object SmartM3U8Parser {
             val response = app.get(
                 variantUrl,
                 headers = headers,
-                timeout = 10_000
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT.toInt()
             )
             
             // Extract .ts segment URLs dari variant playlist
