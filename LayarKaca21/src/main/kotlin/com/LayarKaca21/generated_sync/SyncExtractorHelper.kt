@@ -92,16 +92,15 @@ suspend fun loadExtractorWithFallback(
         Log.e("ExtractorHelper", "❌ loadExtractor exception: ${e.javaClass.simpleName}: ${e.message}\n   Stack: ${e.stackTraceToString().take(300)}")
     }
 
-    // Step 2: If failed, try direct extractor call from SyncExtractors WITH CIRCUIT BREAKER
+    // Step 2: If failed, try direct extractor call from SyncExtractors
     if (!loaded) {
-        Log.w("ExtractorHelper", "⚠️ loadExtractor failed, trying direct SyncExtractors with CircuitBreaker...")
+        Log.w("ExtractorHelper", "⚠️ loadExtractor failed, trying direct SyncExtractors...")
         Log.d("ExtractorHelper", "   URL: $url")
 
         val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
         Log.d("ExtractorHelper", "   URL Domain: $urlDomain")
 
         // Get SyncExtractors list from generated_sync package
-        // Using direct object reference instead of reflection for reliability
         val extractors = com.LayarKaca21.generated_sync.SyncExtractors.list
         Log.d("ExtractorHelper", "   Total SyncExtractors available: ${extractors.size}")
 
@@ -115,6 +114,18 @@ suspend fun loadExtractorWithFallback(
 
         Log.d("ExtractorHelper", "   Found ${matchingExtractors.size} matching extractors: ${matchingExtractors.joinToString { it.name }}")
 
+        // Track ACTUAL link delivery (not just "no exception")
+        var deliveredLinks = 0
+        val trackedCallback: (ExtractorLink) -> Unit = { link ->
+            deliveredLinks++
+            Log.d("ExtractorHelper", "      🔗 Delivered link: ${link.source} - ${link.quality}p")
+            callback(link)
+        }
+        val trackedSubtitleCallback: (SubtitleFile) -> Unit = { sub ->
+            Log.d("ExtractorHelper", "      📝 Delivered subtitle: ${sub.name}")
+            subtitleCallback(sub)
+        }
+
         // Try ALL matching extractors IN PARALLEL
         // SEMAPHORE: Max 3 concurrent extractor calls to prevent server overload
         val extractorSemaphore = Semaphore(3)
@@ -125,8 +136,7 @@ suspend fun loadExtractorWithFallback(
                         extractorSemaphore.withPermit {
                             try {
                                 Log.d("ExtractorHelper", "   🎯 Trying extractor: ${extractor.name} (${extractor.mainUrl})")
-                                extractor.getUrl(url, referer, subtitleCallback, callback)
-                                Log.d("ExtractorHelper", "      ✅ Extractor ${extractor.name} completed")
+                                extractor.getUrl(url, referer, trackedSubtitleCallback, trackedCallback)
                             } catch (e: Exception) {
                                 Log.e("ExtractorHelper", "      ❌ ${extractor.name} FAILED: ${e.javaClass.simpleName}: ${e.message}")
                             }
@@ -134,10 +144,12 @@ suspend fun loadExtractorWithFallback(
                     }
                 }
             }
-            // If we got here without exception and matching extractors existed, consider it loaded
-            // The actual link delivery is handled by callbacks inside extractors
-            loaded = matchingExtractors.isNotEmpty()
-            Log.d("ExtractorHelper", "📊 SyncExtractors completed: ${matchingExtractors.size} extractors tried")
+            // Only mark loaded if ACTUAL links were delivered
+            loaded = deliveredLinks > 0
+            Log.d("ExtractorHelper", "📊 SyncExtractors result: $deliveredLinks links delivered from ${matchingExtractors.size} extractors tried")
+            if (deliveredLinks == 0) {
+                Log.w("ExtractorHelper", "⚠️ No links delivered — all extractors returned empty")
+            }
         } catch (e: Exception) {
             Log.e("ExtractorHelper", "❌ Parallel extraction failed: ${e.javaClass.simpleName}: ${e.message}")
         }
