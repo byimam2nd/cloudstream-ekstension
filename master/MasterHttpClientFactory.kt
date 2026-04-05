@@ -1,16 +1,17 @@
 // ========================================
-// MASTER HTTP CLIENT FACTORY - v3.0 OPTIMIZED
+// MASTER HTTP CLIENT FACTORY - v4.0
 // Factory untuk OkHttpClient dengan konfigurasi optimal
 // ========================================
-// Last Updated: 2026-03-25
+// Last Updated: 2026-04-05
 // Optimized for: CloudStream Extension Standards
 //
-// OPTIMIZATIONS (v3.0):
+// OPTIMIZATIONS:
 // - ✅ HTTP/2 support untuk multiplexing
 // - ✅ DNS cache untuk faster resolution
 // - ✅ Connection pooling yang lebih agresif
-// - ✅ Regional interceptors untuk monitoring
+// - ✅ Connection pre-warming (HEAD request)
 // - ✅ Thread-safe session management
+// - ❌ Response cache DIHAPUS — menyebabkan stale token/CSRF
 // ========================================
 
 package com.{MODULE}
@@ -21,8 +22,6 @@ import okhttp3.Dns
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.ResponseBody.Companion.toResponseBody
 import java.io.IOException
 import java.net.InetAddress
 import java.net.UnknownHostException
@@ -78,10 +77,6 @@ object HttpClientFactory {
     // Slow request threshold (ms)
     private const val SLOW_REQUEST_THRESHOLD_MS = 2000L
 
-    // Response cache configuration
-    private const val RESPONSE_CACHE_TTL_MS = 90_000L  // 90 detik — cukup untuk page navigation
-    private const val RESPONSE_CACHE_MAX_SIZE = 50     // Max 50 cached responses
-
     // ============================================
     // REGION: SINGLETON INSTANCE
     // ============================================
@@ -111,21 +106,6 @@ object HttpClientFactory {
     }
 
     private val dnsCache = ConcurrentHashMap<String, DnsCacheEntry>()
-
-    /**
-     * Response cache — cache HTTP response body untuk GET requests
-     * TTL: 90 detik, max 50 entries
-     * Menghindari redundant network call untuk halaman yang sama
-     */
-    data class CachedResponse(
-        val body: String,
-        val code: Int,
-        val timestamp: Long = System.currentTimeMillis()
-    ) {
-        fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > RESPONSE_CACHE_TTL_MS
-    }
-
-    private val responseCache = ConcurrentHashMap<String, CachedResponse>()
 
     /**
      * User-Agent pool dengan browser modern (Chrome, Firefox, Safari)
@@ -274,7 +254,6 @@ object HttpClientFactory {
             // ========================================
             // Add interceptors untuk monitoring dan headers
             // ========================================
-            .addInterceptor(ResponseCacheInterceptor)
             .addInterceptor(UserAgentInterceptor)
             .addInterceptor(HeadersInterceptor)
             .addNetworkInterceptor(NetworkPerformanceInterceptor)
@@ -328,105 +307,6 @@ object HttpClientFactory {
     // ============================================
     // REGION: INTERCEPTORS
     // ============================================
-
-    /**
-     * Response Cache Interceptor — Cache GET response untuk menghindari redundant requests
-     *
-     * Cara kerja:
-     * 1. GET request → cek cache → HIT: return cached body (tanpa network)
-     * 2. GET request → cache MISS → proceed → cache response → return
-     * 3. Non-GET (POST, dll) → bypass cache, clear related cache entries
-     *
-     * TTL: 90 detik — cukup untuk page navigation, tidak terlalu lama untuk content dinamis
-     * Max: 50 entries — auto-evict entries terlama jika penuh
-     *
-     * Dampak: Halaman yang sama (search, main page) tidak perlu fetch ulang
-     * Penghematan: ~200-500ms per redundant request
-     */
-    private object ResponseCacheInterceptor : Interceptor {
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request()
-
-            // Hanya cache GET requests
-            if (request.method != "GET") {
-                // Non-GET request: clear related cache entries (invalidate cache)
-                val host = request.url.host
-                responseCache.entries.removeAll { it.key.contains(host) }
-                return chain.proceed(request)
-            }
-
-            val cacheKey = request.url.toString()
-
-            // Cek cache
-            val cached = responseCache[cacheKey]
-            if (cached != null && !cached.isExpired()) {
-                if (DEBUG_MODE) {
-                    android.util.Log.d("HttpClientFactory", "📦 RESPONSE CACHE HIT: ${request.url}")
-                }
-                // Return cached response
-                val mediaType = "text/html; charset=utf-8".toMediaTypeOrNull()
-                return Response.Builder()
-                    .request(request)
-                    .protocol(okhttp3.Protocol.HTTP_1_1)
-                    .code(cached.code)
-                    .message("OK")
-                    .body(cached.body.toResponseBody(mediaType))
-                    .sentRequestAtMillis(0)
-                    .receivedResponseAtMillis(0)
-                    .header("X-Cache", "HIT")
-                    .build()
-            }
-
-            // Cache MISS — proceed dengan network request
-            val response = chain.proceed(request)
-
-            // Cache response jika successful dan ada body
-            if (response.isSuccessful && response.body != null) {
-                try {
-                    val bodyString = response.peekBody(Long.MAX_VALUE).string()
-
-                    // Evict oldest entries jika cache penuh
-                    if (responseCache.size >= RESPONSE_CACHE_MAX_SIZE) {
-                        val oldestKey = responseCache.entries.minByOrNull { it.value.timestamp }?.key
-                        if (oldestKey != null) responseCache.remove(oldestKey)
-                    }
-
-                    responseCache[cacheKey] = CachedResponse(
-                        body = bodyString,
-                        code = response.code
-                    )
-
-                    // Return response dengan body yang sudah di-cache
-                    val mediaType = response.body?.contentType()
-                    return response.newBuilder()
-                        .body(bodyString.toResponseBody(mediaType))
-                        .header("X-Cache", "MISS")
-                        .build()
-                } catch (e: Exception) {
-                    // Cache failed, return original response
-                    android.util.Log.w("HttpClientFactory", "Response cache write failed: ${e.message}")
-                }
-            }
-
-            return response
-        }
-    }
-
-    /**
-     * Clear response cache (untuk testing atau manual cleanup)
-     */
-    fun clearResponseCache() {
-        responseCache.clear()
-    }
-
-    /**
-     * Get response cache stats
-     */
-    fun getResponseCacheStats(): Map<String, Int> {
-        val total = responseCache.size
-        val expired = responseCache.values.count { it.isExpired() }
-        return mapOf("total" to total, "expired" to expired, "valid" to (total - expired))
-    }
 
     /**
      * Connection Pre-warming — Buka koneksi TCP/TLS ke server sebelum video diminta
