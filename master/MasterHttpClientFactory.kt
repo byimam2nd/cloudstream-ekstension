@@ -21,6 +21,8 @@ import okhttp3.Dns
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toResponseBody
 import java.io.IOException
 import java.net.InetAddress
 import java.net.UnknownHostException
@@ -362,13 +364,13 @@ object HttpClientFactory {
                     android.util.Log.d("HttpClientFactory", "📦 RESPONSE CACHE HIT: ${request.url}")
                 }
                 // Return cached response
-                val mediaType = okhttp3.MediaType.parse("text/html; charset=utf-8")
+                val mediaType = "text/html; charset=utf-8".toMediaTypeOrNull()
                 return Response.Builder()
                     .request(request)
                     .protocol(okhttp3.Protocol.HTTP_1_1)
                     .code(cached.code)
                     .message("OK")
-                    .body(okhttp3.ResponseBody.create(mediaType, cached.body))
+                    .body(cached.body.toResponseBody(mediaType))
                     .sentRequestAtMillis(0)
                     .receivedResponseAtMillis(0)
                     .header("X-Cache", "HIT")
@@ -397,7 +399,7 @@ object HttpClientFactory {
                     // Return response dengan body yang sudah di-cache
                     val mediaType = response.body?.contentType()
                     return response.newBuilder()
-                        .body(okhttp3.ResponseBody.create(mediaType, bodyString))
+                        .body(bodyString.toResponseBody(mediaType))
                         .header("X-Cache", "MISS")
                         .build()
                 } catch (e: Exception) {
