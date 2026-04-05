@@ -722,16 +722,46 @@ open class Odnoklassniki : ExtractorApi() {
     ) {
         val headers = ExtractorHelpers.getStandardHeaders(mainUrl)
 
-        val embedUrl = url.replace("/video/", "/videoembed/")
-        val html = app.get(embedUrl, headers = headers).text
+        // Extract video ID
+        val videoId = Regex("""/video(?:embed)?/(\d+)""").find(url)?.groupValues?.get(1)
+        if (videoId == null) return
 
-        // Decode &quot; entities — result still has \"name\":\"mobile\" etc
+        // Method 1: Try OK.ru oembed API (most reliable)
+        try {
+            val oembedUrl = "https://www.ok.ru/oembed?url=https://ok.ru/video/$videoId&format=json"
+            val oembedResp = app.get(oembedUrl, headers = headers, timeout = 10_000).text
+            val oembedObj = JSONObject(oembedResp)
+
+            if (oembedObj.has("videoUrl")) {
+                val videoUrl = oembedObj.optString("videoUrl")
+                if (videoUrl.isNotEmpty()) {
+                    callback.invoke(
+                        newExtractorLink(
+                            source = this.name,
+                            name = this.name,
+                            url = videoUrl,
+                            type = INFER_TYPE
+                        ) {
+                            this.referer = "$mainUrl/"
+                            this.quality = 480
+                            this.headers = headers
+                        }
+                    )
+                    return
+                }
+            }
+        } catch (_: Exception) {}
+
+        // Method 2: Parse HTML embed page with &quot; decoded
+        val embedUrl = url.replace("/video/", "/videoembed/")
+        val html = app.get(embedUrl, headers = headers, timeout = 10_000).text
+
+        // Decode HTML entities: &quot; -> " then match escaped JSON
         val decoded = html.replace("&quot;", "\"")
 
-        // Regex to match: \"name\":\"mobile\",\"url\":\"https://...\"
+        // Pattern in decoded HTML: \"name\":\"mobile\"...\"url\":\"https://...\"
         val videoPattern = Regex("""\\"name\\":\\"(mobile|lowest|low|sd|hd|full)\\".*?\\"url\\":\\"(https://[^\\"]+)""")
-        
-        var linkCount = 0
+
         for (match in videoPattern.findAll(decoded)) {
             val qualityName = match.groupValues[1]
             val videoUrl = match.groupValues[2]
@@ -750,30 +780,27 @@ open class Odnoklassniki : ExtractorApi() {
                         this.headers = headers
                     }
                 )
-                linkCount++
             }
         }
 
-        // Fallback: Try HLS manifest URL if no video links found
-        if (linkCount == 0) {
-            val hlsPattern = Regex("""\\"hlsManifestUrl\\":\\"(https://[^\\"]+m3u8[^\\"]*)""")
-            val hlsMatch = hlsPattern.find(decoded)
-            if (hlsMatch != null) {
-                val hlsUrl = hlsMatch.groupValues[1]
-                    .replace("\\u0026", "&")
-                callback.invoke(
-                    newExtractorLink(
-                        source = this.name,
-                        name = this.name,
-                        url = hlsUrl,
-                        type = ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = "$mainUrl/"
-                        this.quality = 1080
-                        this.headers = headers
-                    }
-                )
-            }
+        // Method 3: Fallback - Try HLS manifest URL
+        val hlsPattern = Regex("""\\"hlsManifestUrl\\":\\"(https://[^\\"]+m3u8[^\\"]*)""")
+        val hlsMatch = hlsPattern.find(decoded)
+        if (hlsMatch != null) {
+            val hlsUrl = hlsMatch.groupValues[1]
+                .replace("\\u0026", "&")
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name = this.name,
+                    url = hlsUrl,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = 1080
+                    this.headers = headers
+                }
+            )
         }
     }
 
