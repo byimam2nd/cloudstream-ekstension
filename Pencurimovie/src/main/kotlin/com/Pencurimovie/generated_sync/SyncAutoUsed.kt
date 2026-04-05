@@ -358,10 +358,3 @@ suspend fun preWarmConnection(url: String) {
 suspend fun preWarmExtractorDomains(extractorUrls: List<String>) {
     HttpClientFactory.preWarmExtractorDomains(extractorUrls)
 }
-
-/**
- * Clear response cache manual (untuk debugging)
- */
-fun clearResponseCache() {
-    HttpClientFactory.clearResponseCache()
-}
