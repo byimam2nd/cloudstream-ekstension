@@ -715,87 +715,60 @@ open class Odnoklassniki : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        // ✅ OPTIMIZED: Gunakan helper untuk headers (reuse + session UA)
         val headers = ExtractorHelpers.getStandardHeaders(mainUrl)
-        
+
         val embedUrl = url.replace("/video/", "/videoembed/")
         val html = app.get(embedUrl, headers = headers).text
 
-        // Try to extract from data-options attribute (modern OK.ru embed format)
-        val dataOptions = Regex("""data-options="([^"]+)""").find(html)?.groupValues?.get(1)
-            ?.replace("&quot;", "\"")
+        // Decode &quot; entities — result still has \"name\":\"mobile\" etc
+        val decoded = html.replace("&quot;", "\"")
+
+        // Regex to match: \"name\":\"mobile\",\"url\":\"https://...\"
+        val videoPattern = Regex("""\\"name\\":\\"(mobile|lowest|low|sd|hd|full)\\".*?\\"url\\":\\"(https://[^\\"]+)""")
         
-        if (dataOptions != null) {
-            try {
-                val optionsObj = JSONObject(dataOptions)
-                val flashvars = optionsObj.optJSONObject("flashvars")
-                if (flashvars != null) {
-                    val metadataStr = flashvars.optString("metadata", "")
-                    if (metadataStr.isNotEmpty()) {
-                        // metadata is doubly-escaped JSON
-                        val metadataObj = JSONObject(metadataStr.replace("\\\"", "\""))
-                        val videosArr = metadataObj.optJSONArray("videos")
-                        if (videosArr != null && videosArr.length() > 0) {
-                            for (i in 0 until videosArr.length()) {
-                                val video = videosArr.getJSONObject(i)
-                                val videoUrl = video.optString("url")
-                                val qualityName = video.optString("name", "sd")
-                                if (videoUrl.isNotEmpty()) {
-                                    val quality = qualityName.toQuality()
-                                    callback.invoke(
-                                        newExtractorLink(
-                                            source = this.name,
-                                            name = this.name,
-                                            url = videoUrl,
-                                            type = INFER_TYPE
-                                        ) {
-                                            this.referer = "$mainUrl/"
-                                            this.quality = quality
-                                            this.headers = headers
-                                        }
-                                    )
-                                }
-                            }
-                            return
-                        }
+        var linkCount = 0
+        for (match in videoPattern.findAll(decoded)) {
+            val qualityName = match.groupValues[1]
+            val videoUrl = match.groupValues[2]
+                .replace("\\u0026", "&")
+            if (videoUrl.isNotEmpty()) {
+                val quality = qualityName.toQuality()
+                callback.invoke(
+                    newExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = videoUrl,
+                        type = INFER_TYPE
+                    ) {
+                        this.referer = "$mainUrl/"
+                        this.quality = quality
+                        this.headers = headers
                     }
-                }
-            } catch (e: Exception) {
-                Log.w("OkRu", "Failed to parse data-options: ${e.message}")
+                )
+                linkCount++
             }
         }
 
-        // Fallback: legacy regex-based extraction
-        val videoReq = html
-            .replace("&quot;", "\"")
-            .replace("\\&quot;", "\"")
-            .replace("\\\\", "\\")
-            .replace(CompiledRegexPatterns.UNICODE_ESCAPE) { matchResult ->
-                Integer.parseInt(matchResult.groupValues[1], 16).toChar().toString()
+        // Fallback: Try HLS manifest URL if no video links found
+        if (linkCount == 0) {
+            val hlsPattern = Regex("""\\"hlsManifestUrl\\":\\"(https://[^\\"]+m3u8[^\\"]*)""")
+            val hlsMatch = hlsPattern.find(decoded)
+            if (hlsMatch != null) {
+                val hlsUrl = hlsMatch.groupValues[1]
+                    .replace("\\u0026", "&")
+                callback.invoke(
+                    newExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = hlsUrl,
+                        type = ExtractorLinkType.M3U8
+                    ) {
+                        this.referer = "$mainUrl/"
+                        this.quality = 1080
+                        this.headers = headers
+                    }
+                )
             }
-
-        val videosStr = Regex("""\"videos\":(\[[^]]*])""").find(videoReq)?.groupValues?.get(1)
-            ?: return
-        val videos = tryParseJson<List<OkRuVideo>>(videosStr) ?: return
-
-        for (video in videos) {
-            val videoUrl = if (video.url.startsWith("//")) "https:${video.url}" else video.url
-
-            // ✅ OPTIMIZED: Gunakan extension function untuk quality detection
-            val quality = video.name.toQuality()
-
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = this.name,
-                    url = videoUrl,
-                    type = INFER_TYPE
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = quality
-                    this.headers = headers
-                }
-            )
         }
     }
 
