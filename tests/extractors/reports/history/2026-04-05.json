@@ -1132,5 +1132,482 @@
       "score": 100,
       "issues": []
     }
+  },
+  {
+    "group": "okru",
+    "url": "https://ok.ru/videoembed/5989442652850",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473531113&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=4&sig=O_eCdqbs5Sw&ct=0&urls=178.237.23.29%3B45.136.22.78&clientType=0&zs=43&id=4957649177266",
+          "quality": 144,
+          "qualityName": "mobile"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473531113&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=0&sig=b2cTcIgs6-g&ct=0&urls=178.237.23.29%3B45.136.22.78&clientType=0&zs=43&id=4957649177266",
+          "quality": 240,
+          "qualityName": "lowest"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473531113&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=1&sig=dzPBPdkiIM0&ct=0&urls=178.237.23.29%3B45.136.22.78&clientType=0&zs=43&id=4957649177266",
+          "quality": 360,
+          "qualityName": "low"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473531113&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=2&sig=23A4AV3DK58&ct=0&urls=178.237.23.29%3B45.136.22.78&clientType=0&zs=43&id=4957649177266",
+          "quality": 480,
+          "qualityName": "sd"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473531113&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=3&sig=Uik9TtCpDyQ&ct=0&urls=178.237.23.29%3B45.136.22.78&clientType=0&zs=43&id=4957649177266",
+          "quality": 720,
+          "qualityName": "hd"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473531113&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=5&sig=3pllS7LeOds&ct=0&urls=178.237.23.29%3B45.136.22.78&clientType=0&zs=43&id=4957649177266",
+          "quality": 1080,
+          "qualityName": "full"
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "okru",
+    "url": "https://ok.ru/videoembed/5557876755122",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473533457&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=4&sig=7Ko0iGNc9rU&ct=0&urls=95.163.35.28%3B185.180.203.12&clientType=0&zs=43&id=4474207865522",
+          "quality": 144,
+          "qualityName": "mobile"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473533457&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=0&sig=VQ_U7DYOLx8&ct=0&urls=95.163.35.28%3B185.180.203.12&clientType=0&zs=43&id=4474207865522",
+          "quality": 240,
+          "qualityName": "lowest"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473533457&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=1&sig=2qYejjlHdSY&ct=0&urls=95.163.35.28%3B185.180.203.12&clientType=0&zs=43&id=4474207865522",
+          "quality": 360,
+          "qualityName": "low"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473533457&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=2&sig=I17GeovPWZA&ct=0&urls=95.163.35.28%3B185.180.203.12&clientType=0&zs=43&id=4474207865522",
+          "quality": 480,
+          "qualityName": "sd"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473533457&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=3&sig=PD9ZqfRIyuY&ct=0&urls=95.163.35.28%3B185.180.203.12&clientType=0&zs=43&id=4474207865522",
+          "quality": 720,
+          "qualityName": "hd"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473533457&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=5&sig=nOxcQ2cKQz8&ct=0&urls=95.163.35.28%3B185.180.203.12&clientType=0&zs=43&id=4474207865522",
+          "quality": 1080,
+          "qualityName": "full"
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "okru",
+    "url": "https://ok.ru/videoembed/13158821399218",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473538211&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=4&sig=-tgErlYTqX8&ct=0&urls=185.226.53.38%3B45.136.22.80&clientType=0&zs=43&id=12860996324018",
+          "quality": 144,
+          "qualityName": "mobile"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473538211&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=0&sig=q5d1zo4qSrw&ct=0&urls=185.226.53.38%3B45.136.22.80&clientType=0&zs=43&id=12860996324018",
+          "quality": 240,
+          "qualityName": "lowest"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473538211&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=1&sig=ASkzP4lIKb8&ct=0&urls=185.226.53.38%3B45.136.22.80&clientType=0&zs=43&id=12860996324018",
+          "quality": 360,
+          "qualityName": "low"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473538211&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=2&sig=H0YjgCATFGI&ct=0&urls=185.226.53.38%3B45.136.22.80&clientType=0&zs=43&id=12860996324018",
+          "quality": 480,
+          "qualityName": "sd"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473538211&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=3&sig=TKn2DnRGX2k&ct=0&urls=185.226.53.38%3B45.136.22.80&clientType=0&zs=43&id=12860996324018",
+          "quality": 720,
+          "qualityName": "hd"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473538211&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=5&sig=yUkPdZs8038&ct=0&urls=185.226.53.38%3B45.136.22.80&clientType=0&zs=43&id=12860996324018",
+          "quality": 1080,
+          "qualityName": "full"
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "okru",
+    "url": "https://ok.ru/videoembed/13124981164722",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473542838&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=4&sig=xqUeGJOIMLs&ct=0&urls=176.112.172.19%3B185.226.53.34&clientType=0&zs=43&id=12856367188658",
+          "quality": 144,
+          "qualityName": "mobile"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473542838&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=0&sig=XCC4ny6IvX0&ct=0&urls=176.112.172.19%3B185.226.53.34&clientType=0&zs=43&id=12856367188658",
+          "quality": 240,
+          "qualityName": "lowest"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473542838&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=1&sig=_E6WeZCFm_Y&ct=0&urls=176.112.172.19%3B185.226.53.34&clientType=0&zs=43&id=12856367188658",
+          "quality": 360,
+          "qualityName": "low"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473542838&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=2&sig=buHgZganVD4&ct=0&urls=176.112.172.19%3B185.226.53.34&clientType=0&zs=43&id=12856367188658",
+          "quality": 480,
+          "qualityName": "sd"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473542838&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=3&sig=Q4UYjydphWg&ct=0&urls=176.112.172.19%3B185.226.53.34&clientType=0&zs=43&id=12856367188658",
+          "quality": 720,
+          "qualityName": "hd"
+        },
+        {
+          "url": "https://ok6-5.vkuser.net/?expires=1775473542838&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.132&type=5&sig=X9wOqt-d29o&ct=0&urls=176.112.172.19%3B185.226.53.34&clientType=0&zs=43&id=12856367188658",
+          "quality": 1080,
+          "qualityName": "full"
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "okru",
+    "url": "https://ok.ru/videoembed/13103348386482",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://ok6-9.vkuser.net/?expires=1775473545936&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.136&type=4&sig=f1F7SaF94vA&ct=0&urls=45.136.22.99%3B185.226.52.83&clientType=0&zs=43&id=12752685632178",
+          "quality": 144,
+          "qualityName": "mobile"
+        },
+        {
+          "url": "https://ok6-9.vkuser.net/?expires=1775473545936&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.136&type=0&sig=qF2z16lxUDE&ct=0&urls=45.136.22.99%3B185.226.52.83&clientType=0&zs=43&id=12752685632178",
+          "quality": 240,
+          "qualityName": "lowest"
+        },
+        {
+          "url": "https://ok6-9.vkuser.net/?expires=1775473545936&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.136&type=1&sig=xS10RIP1jHk&ct=0&urls=45.136.22.99%3B185.226.52.83&clientType=0&zs=43&id=12752685632178",
+          "quality": 360,
+          "qualityName": "low"
+        },
+        {
+          "url": "https://ok6-9.vkuser.net/?expires=1775473545936&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.136&type=2&sig=K7iFCbjYQbQ&ct=0&urls=45.136.22.99%3B185.226.52.83&clientType=0&zs=43&id=12752685632178",
+          "quality": 480,
+          "qualityName": "sd"
+        },
+        {
+          "url": "https://ok6-9.vkuser.net/?expires=1775473545936&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.136&type=3&sig=nAKErliNDak&ct=0&urls=45.136.22.99%3B185.226.52.83&clientType=0&zs=43&id=12752685632178",
+          "quality": 720,
+          "qualityName": "hd"
+        },
+        {
+          "url": "https://ok6-9.vkuser.net/?expires=1775473545936&srcIp=103.130.117.1&pr=10&srcAg=CHROME&ms=95.142.206.136&type=5&sig=qtFCLR3O_S4&ct=0&urls=45.136.22.99%3B185.226.52.83&clientType=0&zs=43&id=12752685632178",
+          "quality": 1080,
+          "qualityName": "full"
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "dailymotion",
+    "url": "https://geo.dailymotion.com/player/xid0t.html?video=k4vm0zG3hIy4EYz4Vu1",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://cdndirector.dailymotion.com/cdn/manifest/video/x8klyd5.m3u8?sec=6wm8s_Q8KE_tToqTwGDMRx93Idf1YSAk0ughyQJqdubCHYibIXHFW64u-CgwMFFmZNeJnT9d3dGXGvsKLH8hWA",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "dailymotion",
+    "url": "https://geo.dailymotion.com/player/xid0t.html?video=k1l9ujy1KqApITzcWnm",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://cdndirector.dailymotion.com/cdn/manifest/video/x8lqw68.m3u8?sec=g-Jdkir3Ethsu8C4U92gT_5tJv-Ld_gNJyNLOZ_KQFySy092nYlF5IbxjvnXWNzfn7H2KXbJl0cYnY5vGmQvxg",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "dailymotion",
+    "url": "https://geo.dailymotion.com/player/xid0t.html?video=k6W4CKqOutx6glFp5T2",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://cdndirector.dailymotion.com/cdn/manifest/video/xa49834.m3u8?sec=UJqgwPdy32RI2Gzf76lwtLUysy17xWkC6IJ1H5NUdcU1o0fzwxQaRx3-0fjvUNn5ndt9mmEGTGknl2hFttPQBw",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "dailymotion",
+    "url": "https://geo.dailymotion.com/player/xid0t.html?video=k5C2FAJ7vJz3tzFow6g",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://cdndirector.dailymotion.com/cdn/manifest/video/xa469xw.m3u8?sec=Ndtqw-RkCh6ZG4TmrPZh8JOGaE9BBlXWTUdJBuYbR8BAobG9P55PLLw4FrcrLsa1XZT8eN5ghv7R0ZwJhdFkIQ",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "dailymotion",
+    "url": "https://geo.dailymotion.com/player/xid0t.html?video=k50BBCpxBBbk6rFoG3e",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://cdndirector.dailymotion.com/cdn/manifest/video/xa473gg.m3u8?sec=EWi4t0q0uNXLN0PjjwbpKQ_eY4fO4dlVo1IrADVpvbtAI74BTx3qHXgsdt4B3zzQXHMyw-PQr-ljlmGYtDJv7A",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "doodstream",
+    "url": "https://doods.pro/e/b4ivd8wg8iwx",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://doods.pro/download?token=03py385nj7vu8hy2yyq887s4&pass=_md5/98139260-103-130-1775387157-93a713511f9de10e2fc63cf354762100/03py385nj7vu8hy2yyq887s4",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "streamruby",
+    "url": "https://rubyvidhub.com/embed-uu0enqwd51wl.html",
+    "result": {
+      "success": false,
+      "links": [],
+      "reason": "No m3u8 found"
+    },
+    "validation": {
+      "score": 0,
+      "issues": [
+        "Extractor failed: No m3u8 found"
+      ]
+    }
+  },
+  {
+    "group": "streamruby",
+    "url": "https://rubyvidhub.com/embed-fk3niu5m65ms.html",
+    "result": {
+      "success": false,
+      "links": [],
+      "reason": "No m3u8 found"
+    },
+    "validation": {
+      "score": 0,
+      "issues": [
+        "Extractor failed: No m3u8 found"
+      ]
+    }
+  },
+  {
+    "group": "streamruby",
+    "url": "https://rubyvidhub.com/embed-yk48r3fgjnuz.html",
+    "result": {
+      "success": false,
+      "links": [],
+      "reason": "No m3u8 found"
+    },
+    "validation": {
+      "score": 0,
+      "issues": [
+        "Extractor failed: No m3u8 found"
+      ]
+    }
+  },
+  {
+    "group": "streamruby",
+    "url": "https://rubyvidhub.com/embed-gair6dsgoyyz.html",
+    "result": {
+      "success": false,
+      "links": [],
+      "reason": "No m3u8 found"
+    },
+    "validation": {
+      "score": 0,
+      "issues": [
+        "Extractor failed: No m3u8 found"
+      ]
+    }
+  },
+  {
+    "group": "streamruby",
+    "url": "https://rubyvidhub.com/embed-apo004h5yo1r.html",
+    "result": {
+      "success": false,
+      "links": [],
+      "reason": "No m3u8 found"
+    },
+    "validation": {
+      "score": 0,
+      "issues": [
+        "Extractor failed: No m3u8 found"
+      ]
+    }
+  },
+  {
+    "group": "rumble",
+    "url": "https://rumble.com/embed/v75uxgy/?pub=2li51c",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://rumble.com/hls-vod/75uxgy/playlist.m3u8",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "rumble",
+    "url": "https://rumble.com/embed/v75tbts/?pub=2li51c",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://rumble.com/hls-vod/75tbts/playlist.m3u8",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "rumble",
+    "url": "https://rumble.com/embed/v75tc58/?pub=2li51c",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://rumble.com/hls-vod/75tc58/playlist.m3u8",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "rumble",
+    "url": "https://rumble.com/embed/v75ohuc/?pub=2li51c",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://rumble.com/hls-vod/75ohuc/playlist.m3u8",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
+  },
+  {
+    "group": "rumble",
+    "url": "https://rumble.com/embed/v75rxoi/?pub=2li51c",
+    "result": {
+      "success": true,
+      "links": [
+        {
+          "url": "https://rumble.com/hls-vod/75rxoi/playlist.m3u8",
+          "quality": 0
+        }
+      ]
+    },
+    "validation": {
+      "score": 100,
+      "issues": []
+    }
   }
 ]

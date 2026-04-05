@@ -52,7 +52,7 @@
 
 | Metric | Previous | Current | Trend |
 |--------|----------|---------|-------|
-| Working URLs | 20 | 16 | 📉 Regressed |
+| Working URLs | 36 | 16 | 📉 Regressed |
 
 ## Recommendations
 

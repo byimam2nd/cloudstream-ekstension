@@ -7,7 +7,11 @@
   "extractors": [
     {
       "group": "okru",
-      "extractors": ["Odnoklassniki", "OkRuSSL", "OkRuHTTP"],
+      "extractors": [
+        "Odnoklassniki",
+        "OkRuSSL",
+        "OkRuHTTP"
+      ],
       "urls": [
         "https://ok.ru/videoembed/5989442652850",
         "https://ok.ru/videoembed/5557876755122",
@@ -17,26 +21,37 @@
       ],
       "expectedMinLinks": 6,
       "expectedMaxLinks": 6,
-      "expectedQualities": [144, 240, 360, 480, 720, 1080],
+      "expectedQualities": [
+        144,
+        240,
+        360,
+        480,
+        720,
+        1080
+      ],
       "notes": "OK.ru encode \\u0026 dalam URL. Butuh Origin header."
     },
     {
       "group": "dailymotion",
-      "extractors": ["Dailymotion"],
+      "extractors": [
+        "Dailymotion"
+      ],
       "urls": [
+        "https://geo.dailymotion.com/player/xid0t.html?video=k4vm0zG3hIy4EYz4Vu1",
+        "https://geo.dailymotion.com/player/xid0t.html?video=k1l9ujy1KqApITzcWnm",
         "https://geo.dailymotion.com/player/xid0t.html?video=k6W4CKqOutx6glFp5T2",
         "https://geo.dailymotion.com/player/xid0t.html?video=k5C2FAJ7vJz3tzFow6g",
-        "https://geo.dailymotion.com/player/xid0t.html?video=k50BBCpxBBbk6rFoG3e",
-        "https://geo.dailymotion.com/player/xid0t.html?video=k43OLYnCGAcMicFkS58",
-        "https://geo.dailymotion.com/player/xid0t.html?video=k1E9bvlpqNFPA3Fos32"
+        "https://geo.dailymotion.com/player/xid0t.html?video=k50BBCpxBBbk6rFoG3e"
       ],
       "expectedMinLinks": 1,
       "expectedMaxLinks": 10,
-      "notes": "geo.dailymotion.com player URLs lebih reliable."
+      "notes": "Gunakan geo.dailymotion.com, bukan www.dailymotion.com (redirect/timeout)."
     },
     {
       "group": "doodstream",
-      "extractors": ["DoodStream"],
+      "extractors": [
+        "DoodStream"
+      ],
       "urls": [
         "https://doods.pro/e/b4ivd8wg8iwx"
       ],
@@ -47,7 +62,11 @@
     },
     {
       "group": "streamruby",
-      "extractors": ["StreamRuby", "svanila", "svilla"],
+      "extractors": [
+        "StreamRuby",
+        "svanila",
+        "svilla"
+      ],
       "urls": [
         "https://rubyvidhub.com/embed-uu0enqwd51wl.html",
         "https://rubyvidhub.com/embed-fk3niu5m65ms.html",
@@ -62,7 +81,9 @@
     },
     {
       "group": "rumble",
-      "extractors": ["Rumble"],
+      "extractors": [
+        "Rumble"
+      ],
       "urls": [
         "https://rumble.com/embed/v75uxgy/?pub=2li51c",
         "https://rumble.com/embed/v75tbts/?pub=2li51c",
@@ -76,7 +97,9 @@
     },
     {
       "group": "krakenfiles",
-      "extractors": ["GDFlix"],
+      "extractors": [
+        "GDFlix"
+      ],
       "urls": [
         "https://krakenfiles.com/embed-video/fftpwWYkNC"
       ],
