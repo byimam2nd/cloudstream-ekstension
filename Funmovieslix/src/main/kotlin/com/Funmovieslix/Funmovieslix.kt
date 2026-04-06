@@ -96,7 +96,7 @@ class Funmovieslix : MainAPI() {
             rateLimitDelay()
             app.get(
                 "$mainUrl/${request.data}/page/$page",
-                timeout = 5000L,
+                timeout = AutoUsedConstants.FAST_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -150,9 +150,6 @@ class Funmovieslix : MainAPI() {
             this.score=Score.from10(score)
         }
     }
-
-    // Standard timeout (10 detik)
-    private val requestTimeout = 10_000L
 
     // ========================================
     // SEARCH
@@ -312,7 +309,7 @@ class Funmovieslix : MainAPI() {
             rateLimitDelay()
             app.get(
                 data,
-                timeout = 5000L,
+                timeout = AutoUsedConstants.FAST_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }

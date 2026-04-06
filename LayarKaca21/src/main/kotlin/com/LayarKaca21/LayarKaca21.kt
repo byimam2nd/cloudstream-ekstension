@@ -60,9 +60,6 @@ class LayarKaca21 : MainAPI() {
         TvType.AsianDrama
     )
 
-    // Standard timeout untuk semua request (10 detik)
-    private val requestTimeout = 10_000L
-
     // ========================================
     // MAIN PAGE CATEGORIES
     // ========================================

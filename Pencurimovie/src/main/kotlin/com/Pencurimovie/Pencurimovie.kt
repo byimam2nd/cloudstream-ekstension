@@ -228,9 +228,6 @@ class Pencurimovie : MainAPI() {
     }
 
 
-    // Standard timeout (10 detik)
-    private val requestTimeout = 10_000L
-
     override suspend fun search(query: String): List<SearchResponse> {
         val document = executeWithRetry {
             rateLimitDelay(moduleName = "Pencurimovie")

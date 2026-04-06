@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 // ========================================
 // CACHE INSTANCES
-// Uses CacheManager from master/MasterCacheManager.kt
+// Uses CacheManager from master/MasterCaches.kt
 // ========================================
 private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 5 * 60 * 1000L)
 private val loadCache = CacheManager<LoadResponse>(defaultTtl = 10 * 60 * 1000L)
@@ -57,30 +57,12 @@ private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 3 * 60 *
 
 // ========================================
 // RETRY LOGIC
+// Using centralized executeWithRetry from master/MasterUtils.kt
 // ========================================
-suspend fun <T> executeWithRetry(
-    maxRetries: Int = 3,
-    initialDelay: Long = 1000L,
-    block: suspend () -> T
-): T {
-    var lastException: Exception? = null
-    repeat(maxRetries) { attempt ->
-        try {
-            return block()
-        } catch (e: Exception) {
-            lastException = e
-            Log.w("Animasu", "Attempt ${attempt + 1}/$maxRetries failed: ${e.message}")
-            if (attempt < maxRetries - 1) {
-                delay(initialDelay * (attempt + 1))
-            }
-        }
-    }
-    throw lastException ?: Exception("Unknown error")
-}
 
 // ========================================
 // LOGGING
-// Uses logError() from SyncUtils.kt
+// Uses logError() from master/MasterUtils.kt
 // ========================================
 
 // ========================================
