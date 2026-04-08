@@ -55,22 +55,57 @@ object WebViewScraper {
     private var webView: WebView? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    private var cachedContext: android.content.Context? = null
+
+    /**
+     * Get Android context secara otomatis via reflection.
+     * CloudStream app menyimpan Application instance di static field.
+     */
+    private fun getContext(): android.content.Context? {
+        cachedContext?.let { return it }
+
+        try {
+            // Try to get context from ActivityThread
+            val activityThread = Class.forName("android.app.ActivityThread")
+                .getMethod("currentActivityThread").invoke(null)
+
+            val app = activityThread::class.java
+                .getMethod("getApplication").invoke(activityThread) as? android.app.Application
+
+            if (app != null) {
+                cachedContext = app
+                return app
+            }
+        } catch (_: Exception) {}
+
+        try {
+            // Alternative: get from LoadedApk
+            val activityThread = Class.forName("android.app.ActivityThread")
+                .getMethod("currentActivityThread").invoke(null)
+
+            val context = activityThread::class.java
+                .getMethod("getSystemContext").invoke(activityThread) as? android.content.Context
+
+            if (context != null) {
+                cachedContext = context
+                return context
+            }
+        } catch (_: Exception) {}
+
+        return null
+    }
+
     /**
      * Scrape halaman main page / kategori.
-     *
-     * @param url URL halaman target
-     * @param jsExtract JavaScript yang return array of objects dengan keys: title, poster, href
-     * @param context Android context (untuk buat WebView)
-     * @param timeout Timeout dalam ms (default: 15000)
-     * @return List of ScrapeItem atau empty list jika gagal
      */
     suspend fun scrapeMainPage(
         url: String,
         jsExtract: String,
-        context: Context,
-        timeout: Long = 15000L
+        context: android.content.Context? = null,
+        timeout: Long = 20000L
     ): List<ScrapeItem> {
-        return scrapeWithWebView(context, url, jsExtract, timeout)
+        val ctx = context ?: getContext() ?: return emptyList()
+        return scrapeWithWebView(ctx, url, jsExtract, timeout)
     }
 
     /**
