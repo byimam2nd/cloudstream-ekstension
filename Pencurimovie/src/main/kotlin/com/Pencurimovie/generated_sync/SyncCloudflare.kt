@@ -17,6 +17,8 @@ package com.Pencurimovie.generated_sync
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.NiceResponse
+
+typealias CFResponse = NiceResponse
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -38,7 +40,7 @@ import org.jsoup.nodes.Document
  * @param body Response body sebagai string
  * @return true jika terkena Cloudflare challenge
  */
-fun isCloudflareChallenge(response: NiceResponse?, body: String? = null): Boolean {
+fun isCloudflareChallenge(response: CFResponse?, body: String? = null): Boolean {
     // Check HTTP status
     if (response != null) {
         if (response.code == 503 || response.code == 403) {
@@ -116,7 +118,7 @@ object CloudflareSolver {
         referer: String? = null,
         userAgent: String? = null,
         maxRetries: Int = 2
-    ): NiceResponse? {
+    ): CFResponse? {
         return try {
             // Attempt 1: Normal request
             val response = app.get(
@@ -174,7 +176,7 @@ object CloudflareSolver {
         data: Map<String, String> = emptyMap(),
         referer: String? = null,
         headers: Map<String, String> = emptyMap()
-    ): NiceResponse? {
+    ): CFResponse? {
         return try {
             val response = app.post(url, data = data, referer = referer, headers = headers)
 
@@ -203,7 +205,7 @@ object CloudflareSolver {
      * @param response Response dari cloudflareGet
      * @return Jsoup Document atau null
      */
-    fun parseDocument(response: NiceResponse?): Document? {
+    fun parseDocument(response: CFResponse?): Document? {
         return response?.let {
             try {
                 Jsoup.parse(it.text)
