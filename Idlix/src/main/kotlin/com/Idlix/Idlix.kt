@@ -15,6 +15,8 @@ package com.Idlix
 // ============================================
 import com.Idlix.generated_sync.*
 import com.Idlix.generated_sync.CloudflareSolver
+import com.Idlix.generated_sync.WebViewScraper
+import com.Idlix.generated_sync.ScrapeItem
 
 // ============================================
 // GROUP 2: CloudStream Library
@@ -109,7 +111,6 @@ class Idlix : MainAPI() {
     ): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Simple cache check (no fingerprint overhead)
         mainPageCache.get(cacheKey)?.let { cached ->
             logDebug("Idlix", "Cache HIT for $cacheKey")
             return cached
@@ -128,26 +129,80 @@ class Idlix : MainAPI() {
             "${url.first()}$page/"
         }
 
+        // Try WebView-based scraping for SPA website
+        val scrapedItems = WebViewScraper.scrapeMainPage(
+            url = fetchUrl,
+            jsExtract = """
+                (function() {
+                    var items = [];
+                    var selectors = [
+                        'a[href*="/movie/"], a[href*="/tv/"], a[href*="/series/"]',
+                        '.movie-card a, .tv-card a, .item a',
+                        '[class*="card"] a, [class*="item"] a',
+                        'article a, .card a'
+                    ];
+                    for (var s = 0; s < selectors.length; s++) {
+                        var elements = document.querySelectorAll(selectors[s]);
+                        if (elements.length > 0) {
+                            elements.forEach(function(el) {
+                                var img = el.querySelector('img');
+                                var title = el.getAttribute('title') || 
+                                           el.querySelector('[class*="title"]')?.textContent ||
+                                           img?.getAttribute('alt') ||
+                                           el.textContent.trim().substring(0, 50);
+                                if (title && title.length > 2) {
+                                    items.push({
+                                        title: title,
+                                        poster: img?.src || img?.getAttribute('data-src') || '',
+                                        href: el.href || el.getAttribute('href') || ''
+                                    });
+                                }
+                            });
+                            if (items.length > 0) break;
+                        }
+                    }
+                    return items.slice(0, 40);
+                })()
+            """.trimIndent(),
+            timeout = 20000L
+        )
+
+        if (scrapedItems.isNotEmpty()) {
+            val home = scrapedItems.mapNotNull { item ->
+                if (item.title.isBlank() || item.href.isBlank()) null
+                else newMovieSearchResponse(item.title, item.href, TvType.Movie) {
+                    this.posterUrl = item.posterUrl
+                }
+            }
+
+            if (home.isNotEmpty()) {
+                val response = newHomePageResponse(request.name, home)
+                mainPageCache.put(cacheKey, response)
+                logDebug("Idlix", "WebView scrape success: ${home.size} items for ${request.name}")
+                return response
+            }
+        }
+
+        // Fallback: HTTP scraping
+        logDebug("Idlix", "WebView scraping returned empty, trying HTTP fallback")
+        return fallbackHttpGet(fetchUrl, cacheKey, request)
+    }
+
+    private suspend fun fallbackHttpGet(
+        fetchUrl: String,
+        cacheKey: String,
+        request: MainPageRequest
+    ): HomePageResponse {
+        val url = fetchUrl.split("?")
+        val nonPaged = request.name == "Featured" && url[0] == request.data
+
         val req = executeWithRetry(maxRetries = 3) {
             rateLimitDelay()
-            val html = CloudflareSolver.cloudflareGet(
-                url = fetchUrl,
-                referer = mainUrl,
+            app.get(
+                fetchUrl,
+                timeout = requestTimeout,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             )
-            if (html != null && !isCloudflareChallenge(html)) {
-                app.get(
-                    fetchUrl,
-                    timeout = requestTimeout,
-                    headers = mapOf("User-Agent" to getRandomUserAgent())
-                )
-            } else {
-                app.get(
-                    fetchUrl,
-                    timeout = requestTimeout,
-                    headers = mapOf("User-Agent" to getRandomUserAgent())
-                )
-            }
         }
 
         mainUrl = getBaseUrl(req.url)
@@ -162,10 +217,7 @@ class Idlix : MainAPI() {
         }
 
         val response = newHomePageResponse(request.name, home)
-
-        // Cache the result
         mainPageCache.put(cacheKey, response)
-
         return response
     }
 
