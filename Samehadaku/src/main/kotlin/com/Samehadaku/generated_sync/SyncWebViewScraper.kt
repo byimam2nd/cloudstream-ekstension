@@ -97,39 +97,20 @@ object WebViewScraper {
     }
 
     /**
-     * Scrape halaman detail (title, poster, description, episodes).
-     *
-     * @param url URL detail page
-     * @param jsExtract JavaScript yang return object dengan keys: title, poster, description, episodes
-     * @param context Android context
-     * @param timeout Timeout dalam ms
-     * @return ScrapeDetail atau null jika gagal
-     */
-    suspend fun scrapeDetail(
-        url: String,
-        jsExtract: String,
-        context: Context,
-        timeout: Long = 15000L
-    ): ScrapeDetail? {
-        val result = scrapeWithWebView(context, url, jsExtract, timeout, isDetail = true)
-        return result.firstOrNull() as? ScrapeDetail
-    }
-
-    /**
      * Scrape video links dari episode page.
      *
      * @param url URL episode page
      * @param jsExtract JavaScript yang return array of objects dengan keys: server, url
      * @param context Android context
      * @param timeout Timeout dalam ms
-     * @return List of ServerLink
+     * @return List of ScrapeItem (dengan server dan url di field yang sesuai)
      */
     suspend fun scrapeVideoLinks(
         url: String,
         jsExtract: String,
         context: Context,
         timeout: Long = 15000L
-    ): List<ServerLink> {
+    ): List<ScrapeItem> {
         return scrapeWithWebView(context, url, jsExtract, timeout)
     }
 
@@ -143,10 +124,10 @@ object WebViewScraper {
         jsExtract: String,
         timeout: Long,
         isDetail: Boolean = false
-    ): List<Any> {
+    ): List<ScrapeItem> {
         return withContext(Dispatchers.Main) {
             try {
-                val result = CompletableDeferred<List<Any>>()
+                val result = CompletableDeferred<List<ScrapeItem>>()
 
                 // Create WebView
                 val wv = WebView(context).apply {
@@ -205,7 +186,7 @@ object WebViewScraper {
     private fun executeExtraction(
         webView: WebView,
         jsExtract: String,
-        result: CompletableDeferred<List<Any>>,
+        result: CompletableDeferred<List<ScrapeItem>>,
         isDetail: Boolean
     ) {
         val wrapperJs = """
@@ -225,11 +206,7 @@ object WebViewScraper {
                     Log.w(TAG, "JS extraction returned error or null")
                     result.complete(emptyList())
                 } else {
-                    val parsed = if (isDetail) {
-                        listOf(parseDetailJson(jsonResult))
-                    } else {
-                        parseListJson(jsonResult)
-                    }
+                    val parsed = parseListJson(jsonResult)
                     result.complete(parsed)
                 }
             } catch (e: Exception) {
@@ -265,40 +242,6 @@ object WebViewScraper {
             Log.e(TAG, "parseListJson failed: ${e.message}")
         }
         return items
-    }
-
-    /**
-     * Parse detail JSON ke ScrapeDetail.
-     */
-    private fun parseDetailJson(json: String): ScrapeDetail {
-        try {
-            val obj = org.json.JSONObject(json)
-            return ScrapeDetail(
-                title = obj.optString("title", ""),
-                posterUrl = obj.optString("poster", obj.optString("posterUrl", "")),
-                description = obj.optString("description", ""),
-                year = obj.optString("year", "").toIntOrNull(),
-                rating = obj.optString("rating", "").toDoubleOrNull(),
-                episodes = try {
-                    obj.optJSONArray("episodes")?.let { arr ->
-                        List(arr.length()) { i ->
-                            val ep = arr.getJSONObject(i)
-                            EpisodeData(
-                                name = ep.optString("name", ""),
-                                href = ep.optString("href", ep.optString("url", "")),
-                                episode = ep.optString("episode", "").toIntOrNull(),
-                                season = ep.optString("season", "").toIntOrNull()
-                            )
-                        }
-                    } ?: emptyList()
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "parseDetailJson failed: ${e.message}")
-            return ScrapeDetail()
-        }
     }
 
     /**
