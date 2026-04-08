@@ -64,6 +64,11 @@ MASTER_FILES+=(
     "MasterCloudflare.kt:SyncCloudflare.kt"
 )
 
+# v4.1: WebView scraper for SPA websites
+MASTER_FILES+=(
+    "MasterWebViewScraper.kt:SyncWebViewScraper.kt"
+)
+
 echo "📋 Master files to sync:"
 for master_entry in "${MASTER_FILES[@]}"; do
     master_file="${master_entry%%:*}"
