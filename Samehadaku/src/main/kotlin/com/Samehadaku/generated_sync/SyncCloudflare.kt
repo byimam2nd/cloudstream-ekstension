@@ -16,8 +16,8 @@ package com.Samehadaku.generated_sync
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.NiceResponse
 import com.lagradost.cloudstream3.network.CloudflareKiller
-import okhttp3.Response
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
@@ -38,11 +38,10 @@ import org.jsoup.nodes.Document
  * @param body Response body sebagai string
  * @return true jika terkena Cloudflare challenge
  */
-fun isCloudflareChallenge(response: Response?, body: String? = null): Boolean {
+fun isCloudflareChallenge(response: NiceResponse?, body: String? = null): Boolean {
     // Check HTTP status
     if (response != null) {
         if (response.code == 503 || response.code == 403) {
-            // Check for Cloudflare challenge indicators
             val challengeHeaders = listOf("cf-chl-bypass", "cf-browser-verification")
             if (response.headers.names().any { it.lowercase() in challengeHeaders }) {
                 return true
@@ -51,7 +50,7 @@ fun isCloudflareChallenge(response: Response?, body: String? = null): Boolean {
     }
 
     // Check response body
-    val html = body ?: response?.body?.string() ?: return false
+    val html = body ?: response?.text ?: return false
     return html.contains("cf-browser-verification", ignoreCase = true) ||
            html.contains("cf-challenge", ignoreCase = true) ||
            html.contains("Checking your browser", ignoreCase = true) ||
@@ -92,7 +91,7 @@ fun isLikelyCloudflareProtected(url: String): Boolean {
  * Usage:
  * ```kotlin
  * val response = cloudflareGet(url, referer)
- * val document = response.documentLarge
+ * val document = response?.documentLarge
  * ```
  */
 object CloudflareSolver {
@@ -117,7 +116,7 @@ object CloudflareSolver {
         referer: String? = null,
         userAgent: String? = null,
         maxRetries: Int = 2
-    ): Response? {
+    ): NiceResponse? {
         return try {
             // Attempt 1: Normal request
             val response = app.get(
@@ -175,7 +174,7 @@ object CloudflareSolver {
         data: Map<String, String> = emptyMap(),
         referer: String? = null,
         headers: Map<String, String> = emptyMap()
-    ): Response? {
+    ): NiceResponse? {
         return try {
             val response = app.post(url, data = data, referer = referer, headers = headers)
 
@@ -204,7 +203,7 @@ object CloudflareSolver {
      * @param response Response dari cloudflareGet
      * @return Jsoup Document atau null
      */
-    fun parseDocument(response: Response?): Document? {
+    fun parseDocument(response: NiceResponse?): Document? {
         return response?.let {
             try {
                 Jsoup.parse(it.text)
