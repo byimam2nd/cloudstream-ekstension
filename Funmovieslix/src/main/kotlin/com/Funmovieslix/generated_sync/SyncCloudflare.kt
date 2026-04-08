@@ -16,13 +16,9 @@ package com.Funmovieslix.generated_sync
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.NiceResponse
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-
-// Type alias for sync compatibility
-typealias CFResponse = NiceResponse
 
 // ============================================
 // REGION: CLOUDFLARE DETECTION
@@ -31,52 +27,15 @@ typealias CFResponse = NiceResponse
 /**
  * Deteksi apakah response terkena Cloudflare challenge.
  *
- * Indikator:
- * - Status 503 + "Checking your browser" 
- * - Status 403 + "Access Denied"
- * - Response mengandung "cf-chl-bypass"
- * - Response mengandung "cf-browser-verification"
- *
- * @param response HTTP response
  * @param body Response body sebagai string
  * @return true jika terkena Cloudflare challenge
  */
-fun isCloudflareChallenge(response: CFResponse?, body: String? = null): Boolean {
-    // Check HTTP status
-    if (response != null) {
-        if (response.code == 503 || response.code == 403) {
-            val challengeHeaders = listOf("cf-chl-bypass", "cf-browser-verification")
-            if (response.headers.names().any { it.lowercase() in challengeHeaders }) {
-                return true
-            }
-        }
-    }
-
-    // Check response body
-    val html = body ?: response?.text ?: return false
-    return html.contains("cf-browser-verification", ignoreCase = true) ||
-           html.contains("cf-challenge", ignoreCase = true) ||
-           html.contains("Checking your browser", ignoreCase = true) ||
-           html.contains("Just a moment", ignoreCase = true) ||
-           html.contains("jschl_answer", ignoreCase = true)
-}
-
-/**
- * Deteksi apakah URL mengarah ke Cloudflare-protected site.
- *
- * @param url URL untuk dicek
- * @return true jika kemungkinan dilindungi Cloudflare
- */
-fun isLikelyCloudflareProtected(url: String): Boolean {
-    val protectedDomains = listOf(
-        "cloudflare",
-        "idlixian",     // Idlix
-        "lk21",         // LayarKaca
-        "dramacool",
-        "gomovies",
-        "fmovies"
-    )
-    return protectedDomains.any { url.contains(it, ignoreCase = true) }
+fun isCloudflareChallenge(body: String): Boolean {
+    return body.contains("cf-browser-verification", ignoreCase = true) ||
+           body.contains("cf-challenge", ignoreCase = true) ||
+           body.contains("Checking your browser", ignoreCase = true) ||
+           body.contains("Just a moment", ignoreCase = true) ||
+           body.contains("jschl_answer", ignoreCase = true)
 }
 
 // ============================================
@@ -85,17 +44,6 @@ fun isLikelyCloudflareProtected(url: String): Boolean {
 
 /**
  * Cloudflare solver menggunakan CloudflareKiller bawaan CloudStream.
- *
- * Cara kerja:
- * 1. Detect Cloudflare challenge
- * 2. Gunakan CloudflareKiller untuk solve JS challenge
- * 3. Retry request dengan cookie cf-clearance
- *
- * Usage:
- * ```kotlin
- * val response = cloudflareGet(url, referer)
- * val document = response?.documentLarge
- * ```
  */
 object CloudflareSolver {
 
@@ -104,59 +52,28 @@ object CloudflareSolver {
 
     /**
      * GET request dengan Cloudflare bypass.
-     *
-     * Jika response pertama terkena CF challenge,
-     * otomatis retry dengan CloudflareKiller.
-     *
-     * @param url Target URL
-     * @param referer Referer header
-     * @param userAgent Custom User-Agent (optional)
-     * @param maxRetries Maksimal retry (default: 2)
-     * @return Response object
      */
     suspend fun cloudflareGet(
         url: String,
         referer: String? = null,
-        userAgent: String? = null,
-        maxRetries: Int = 2
-    ): CFResponse? {
+        headers: Map<String, String> = emptyMap()
+    ): String? {
         return try {
-            // Attempt 1: Normal request
-            val response = app.get(
+            val response = app.get(url, referer = referer, headers = headers)
+            val body = response.text
+
+            if (!isCloudflareChallenge(body)) {
+                return body
+            }
+
+            Log.d(TAG, "Cloudflare challenge detected, retrying with CloudflareKiller")
+            val cfResponse = app.get(
                 url,
                 referer = referer,
-                headers = userAgent?.let { mapOf("User-Agent" to it) } ?: emptyMap()
+                interceptor = cloudflareKiller,
+                headers = headers
             )
-
-            val body = response.text
-            if (!isCloudflareChallenge(response, body)) {
-                return response  // Success, not CF-protected
-            }
-
-            Log.d(TAG, "Cloudflare challenge detected for $url")
-
-            // Attempt 2+: Retry with CloudflareKiller
-            var cfResponse = response
-            repeat(maxRetries) { attempt ->
-                Log.d(TAG, "CloudflareKiller attempt ${attempt + 1}/$maxRetries")
-
-                val cfResponseInner = app.get(
-                    url,
-                    referer = referer,
-                    interceptor = cloudflareKiller,
-                    headers = userAgent?.let { mapOf("User-Agent" to it) } ?: emptyMap()
-                )
-
-                val cfBody = cfResponseInner.text
-                if (!isCloudflareChallenge(cfResponseInner, cfBody)) {
-                    Log.d(TAG, "Cloudflare bypassed on attempt ${attempt + 1}")
-                    return cfResponseInner
-                }
-                cfResponse = cfResponseInner
-            }
-
-            Log.w(TAG, "Cloudflare bypass failed after $maxRetries attempts")
-            cfResponse
+            cfResponse.text
         } catch (e: Exception) {
             Log.e(TAG, "cloudflareGet failed: ${e.message}")
             null
@@ -165,35 +82,30 @@ object CloudflareSolver {
 
     /**
      * POST request dengan Cloudflare bypass.
-     *
-     * @param url Target URL
-     * @param data POST body
-     * @param referer Referer header
-     * @param headers Additional headers
-     * @return Response object
      */
     suspend fun cloudflarePost(
         url: String,
         data: Map<String, String> = emptyMap(),
         referer: String? = null,
         headers: Map<String, String> = emptyMap()
-    ): CFResponse? {
+    ): String? {
         return try {
             val response = app.post(url, data = data, referer = referer, headers = headers)
-
             val body = response.text
-            if (!isCloudflareChallenge(response, body)) {
-                return response
+
+            if (!isCloudflareChallenge(body)) {
+                return body
             }
 
-            Log.d(TAG, "Cloudflare challenge on POST $url")
-            app.post(
+            Log.d(TAG, "Cloudflare challenge on POST, retrying with CloudflareKiller")
+            val cfResponse = app.post(
                 url,
                 data = data,
                 referer = referer,
                 interceptor = cloudflareKiller,
                 headers = headers
             )
+            cfResponse.text
         } catch (e: Exception) {
             Log.e(TAG, "cloudflarePost failed: ${e.message}")
             null
@@ -201,48 +113,16 @@ object CloudflareSolver {
     }
 
     /**
-     * Parse response menjadi Document.
-     *
-     * @param response Response dari cloudflareGet
-     * @return Jsoup Document atau null
+     * Parse HTML string menjadi Document.
      */
-    fun parseDocument(response: CFResponse?): Document? {
-        return response?.let {
+    fun parseHtml(html: String?): Document? {
+        return html?.let {
             try {
-                Jsoup.parse(it.text)
+                Jsoup.parse(it)
             } catch (e: Exception) {
-                Log.e(TAG, "parseDocument failed: ${e.message}")
+                Log.e(TAG, "parseHtml failed: ${e.message}")
                 null
             }
         }
-    }
-
-    /**
-     * Get cf-clearance cookie dari CloudflareKiller.
-     *
-     * Cookie ini bisa disimpan dan dipakai ulang
-     * untuk request berikutnya (TTL ~30 menit).
-     *
-     * @return cf-clearance cookie value atau null
-     */
-    fun getCfClearanceCookie(): String? {
-        return cloudflareKiller.cookies.firstOrNull { it.name == "cf-clearance" }?.value
-    }
-
-    /**
-     * Set cf-clearance cookie manual.
-     *
-     * Berguna jika user memberikan cookie manual.
-     *
-     * @param token cf-clearance token
-     * @param domain Domain target
-     */
-    fun setCfClearanceCookie(token: String, domain: String) {
-        val cookie = okhttp3.Cookie.Builder()
-            .name("cf-clearance")
-            .value(token)
-            .domain(domain)
-            .build()
-        cloudflareKiller.cookies.add(cookie)
     }
 }

@@ -120,29 +120,29 @@ class Idlix : MainAPI() {
         val url = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1
 
+        val fetchUrl = if (nonPaged) {
+            request.data
+        } else if (url.size > 1) {
+            "${url.first()}$page/?${url.last()}"
+        } else {
+            "${url.first()}$page/"
+        }
+
         val req = executeWithRetry(maxRetries = 3) {
             rateLimitDelay()
-            if (nonPaged) {
-                val response = CloudflareSolver.cloudflareGet(
-                    url = request.data,
-                    referer = mainUrl
-                )
-                if (response != null) response else app.get(
-                    request.data,
+            val html = CloudflareSolver.cloudflareGet(
+                url = fetchUrl,
+                referer = mainUrl,
+                headers = mapOf("User-Agent" to getRandomUserAgent())
+            )
+            if (html != null && !isCloudflareChallenge(html)) {
+                app.get(
+                    fetchUrl,
                     timeout = requestTimeout,
                     headers = mapOf("User-Agent" to getRandomUserAgent())
                 )
             } else {
-                val fetchUrl = if (url.size > 1) {
-                    "${url.first()}$page/?${url.last()}"
-                } else {
-                    "${url.first()}$page/"
-                }
-                val response = CloudflareSolver.cloudflareGet(
-                    url = fetchUrl,
-                    referer = mainUrl
-                )
-                if (response != null) response else app.get(
+                app.get(
                     fetchUrl,
                     timeout = requestTimeout,
                     headers = mapOf("User-Agent" to getRandomUserAgent())
