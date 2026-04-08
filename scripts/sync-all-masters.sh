@@ -59,6 +59,11 @@ MASTER_FILES+=(
     "MasterAutoUsed.kt:SyncAutoUsed.kt"
 )
 
+# v4.0: Cloudflare bypass
+MASTER_FILES+=(
+    "MasterCloudflare.kt:SyncCloudflare.kt"
+)
+
 echo "📋 Master files to sync:"
 for master_entry in "${MASTER_FILES[@]}"; do
     master_file="${master_entry%%:*}"

@@ -14,6 +14,7 @@ package com.Idlix
 // GROUP 1: Generated Sync Imports
 // ============================================
 import com.Idlix.generated_sync.*
+import com.Idlix.generated_sync.CloudflareSolver
 
 // ============================================
 // GROUP 2: CloudStream Library
@@ -122,14 +123,27 @@ class Idlix : MainAPI() {
         val req = executeWithRetry(maxRetries = 3) {
             rateLimitDelay()
             if (nonPaged) {
-                app.get(
+                val response = CloudflareSolver.cloudflareGet(
+                    url = request.data,
+                    referer = mainUrl
+                )
+                if (response != null) response else app.get(
                     request.data,
                     timeout = requestTimeout,
                     headers = mapOf("User-Agent" to getRandomUserAgent())
                 )
             } else {
-                app.get(
-                    "${url.first()}$page/?${url.lastOrNull()}",
+                val fetchUrl = if (url.size > 1) {
+                    "${url.first()}$page/?${url.last()}"
+                } else {
+                    "${url.first()}$page/"
+                }
+                val response = CloudflareSolver.cloudflareGet(
+                    url = fetchUrl,
+                    referer = mainUrl
+                )
+                if (response != null) response else app.get(
+                    fetchUrl,
                     timeout = requestTimeout,
                     headers = mapOf("User-Agent" to getRandomUserAgent())
                 )
