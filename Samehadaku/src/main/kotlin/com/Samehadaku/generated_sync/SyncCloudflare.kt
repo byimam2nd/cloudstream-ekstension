@@ -17,11 +17,12 @@ package com.Samehadaku.generated_sync
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.NiceResponse
-
-typealias CFResponse = NiceResponse
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+
+// Type alias for sync compatibility
+typealias CFResponse = NiceResponse
 
 // ============================================
 // REGION: CLOUDFLARE DETECTION
