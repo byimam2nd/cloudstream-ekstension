@@ -11,6 +11,7 @@ class IdlixPlugin: BasePlugin() {
     override fun load() {
         // Set WebViewScraper context untuk SPA scraping
         WebViewScraper.appContext = ctx
+        Idlix.appContext = ctx
 
         registerMainAPI(Idlix())
 

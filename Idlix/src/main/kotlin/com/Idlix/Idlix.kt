@@ -74,6 +74,10 @@ class Idlix : MainAPI() {
         TvType.AsianDrama
     )
 
+    companion object {
+        var appContext: android.content.Context? = null
+    }
+
     // Standard timeout untuk semua request (10 detik)
     private val requestTimeout = 10_000L
 
@@ -130,42 +134,48 @@ class Idlix : MainAPI() {
         }
 
         // Try WebView-based scraping for SPA website
-        val scrapedItems = WebViewScraper.scrapeMainPage(
-            url = fetchUrl,
-            jsExtract = """
-                (function() {
-                    var items = [];
-                    var selectors = [
-                        'a[href*="/movie/"], a[href*="/tv/"], a[href*="/series/"]',
-                        '.movie-card a, .tv-card a, .item a',
-                        '[class*="card"] a, [class*="item"] a',
-                        'article a, .card a'
-                    ];
-                    for (var s = 0; s < selectors.length; s++) {
-                        var elements = document.querySelectorAll(selectors[s]);
-                        if (elements.length > 0) {
-                            elements.forEach(function(el) {
-                                var img = el.querySelector('img');
-                                var title = el.getAttribute('title') || 
-                                           el.querySelector('[class*="title"]')?.textContent ||
-                                           img?.getAttribute('alt') ||
-                                           el.textContent.trim().substring(0, 50);
-                                if (title && title.length > 2) {
-                                    items.push({
-                                        title: title,
-                                        poster: img?.src || img?.getAttribute('data-src') || '',
-                                        href: el.href || el.getAttribute('href') || ''
-                                    });
-                                }
-                            });
-                            if (items.length > 0) break;
+        val ctx = appContext
+        val scrapedItems = if (ctx != null) {
+            WebViewScraper.scrapeMainPage(
+                url = fetchUrl,
+                jsExtract = """
+                    (function() {
+                        var items = [];
+                        var selectors = [
+                            'a[href*="/movie/"], a[href*="/tv/"], a[href*="/series/"]',
+                            '.movie-card a, .tv-card a, .item a',
+                            '[class*="card"] a, [class*="item"] a',
+                            'article a, .card a'
+                        ];
+                        for (var s = 0; s < selectors.length; s++) {
+                            var elements = document.querySelectorAll(selectors[s]);
+                            if (elements.length > 0) {
+                                elements.forEach(function(el) {
+                                    var img = el.querySelector('img');
+                                    var title = el.getAttribute('title') || 
+                                               el.querySelector('[class*="title"]')?.textContent ||
+                                               img?.getAttribute('alt') ||
+                                               el.textContent.trim().substring(0, 50);
+                                    if (title && title.length > 2) {
+                                        items.push({
+                                            title: title,
+                                            poster: img?.src || img?.getAttribute('data-src') || '',
+                                            href: el.href || el.getAttribute('href') || ''
+                                        });
+                                    }
+                                });
+                                if (items.length > 0) break;
+                            }
                         }
-                    }
-                    return items.slice(0, 40);
-                })()
-            """.trimIndent(),
-            timeout = 20000L
-        )
+                        return items.slice(0, 40);
+                    })()
+                """.trimIndent(),
+                context = ctx,
+                timeout = 20000L
+            )
+        } else {
+            emptyList()
+        }
 
         if (scrapedItems.isNotEmpty()) {
             val home = scrapedItems.mapNotNull { item ->
