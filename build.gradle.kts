@@ -13,6 +13,13 @@ buildscript {
         gradlePluginPortal()
     }
 
+    configurations.all {
+        resolutionStrategy {
+            // Force jadb to use stable version instead of master-SNAPSHOT
+            force("com.github.vidstige:jadb:v1.2.1")
+        }
+    }
+
     dependencies {
         classpath("com.android.tools.build:gradle:8.13.2")
         classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
@@ -25,6 +32,13 @@ buildscript {
 }
 
 allprojects {
+    configurations.all {
+        resolutionStrategy {
+            // Force jadb to use stable version instead of master-SNAPSHOT
+            force("com.github.vidstige:jadb:v1.2.1")
+        }
+    }
+
     repositories {
         google()
         mavenCentral()
