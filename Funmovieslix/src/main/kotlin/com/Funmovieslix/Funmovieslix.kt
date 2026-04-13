@@ -324,12 +324,14 @@ class Funmovieslix : MainAPI() {
             .firstOrNull { it.contains("const embeds") }
 
         if (scriptContent != null) {
-            val regex = Regex("""https:\/\/[^"]+""")
+            val regex = Regex("""https:\\/\\/[^"]+""")
             urls = regex.findAll(scriptContent)
                 .map { it.value.replace("\\/", "/").replace("\\", "") }
-                .filter { it.isNotBlank() && (it.contains("youtube") || it.contains("drive") || it.contains("stream") || it.contains("mp4")) }
+                .filter { it.isNotBlank() }
                 .toList()
         }
+        
+        logDebug("Funmovieslix", "Found ${urls.size} URLs from const embeds: $urls")
 
         // Strategy 2: Fallback - extract iframe URLs directly from HTML
         if (urls.isEmpty()) {
