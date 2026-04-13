@@ -306,36 +306,31 @@ class Funmovieslix : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Use CloudflareKiller to bypass Cloudflare protection
-        val cloudflareKiller = CloudflareKiller()
-
-        val document = executeWithRetry(maxRetries = 3) {
+        val document = executeWithRetry {
             rateLimitDelay()
-            val response = app.get(
+            app.get(
                 data,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
-                interceptor = cloudflareKiller,
+                timeout = AutoUsedConstants.FAST_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
-            )
-            response.documentLarge
+            ).documentLarge
         }
 
         // FIXED: Multiple strategies untuk extract embed URLs
         var urls = emptyList<String>()
-        
+
         // Strategy 1: Extract from "const embeds" in script tags
         val scriptContent = document.select("script")
             .map { it.data() }
             .firstOrNull { it.contains("const embeds") }
-        
+
         if (scriptContent != null) {
             val regex = Regex("""https:\/\/[^"]+""")
             urls = regex.findAll(scriptContent)
-                .map { it.value.replace("\\/", "/").replace("\\", "") } // unescape \/ → / and remove \
+                .map { it.value.replace("\\/", "/").replace("\\", "") }
                 .filter { it.isNotBlank() && (it.contains("youtube") || it.contains("drive") || it.contains("stream") || it.contains("mp4")) }
                 .toList()
         }
-        
+
         // Strategy 2: Fallback - extract iframe URLs directly from HTML
         if (urls.isEmpty()) {
             urls = document.select("iframe[src]")
@@ -343,7 +338,7 @@ class Funmovieslix : MainAPI() {
                 .filter { it.isNotBlank() }
                 .map { it.replace("\\/", "/").replace("\\", "") }
         }
-        
+
         // Strategy 3: Extract from data attributes
         if (urls.isEmpty()) {
             urls = document.select("[data-src], [data-url], [data-link]")
@@ -356,8 +351,7 @@ class Funmovieslix : MainAPI() {
             return false
         }
 
-        // OPTIMIZED: Parallel link extraction (extract all servers simultaneously)
-        // 5x faster for episodes with multiple servers
+        // OPTIMIZED: Parallel link extraction
         val loadedLinks = mutableListOf<String>()
         val mutex = Mutex()
 
@@ -365,7 +359,6 @@ class Funmovieslix : MainAPI() {
             urls.map { url ->
                 async {
                     try {
-                        // FIXED: Better URL fixing with scheme validation
                         var fixedUrl = url
                         if (!fixedUrl.startsWith("http://") && !fixedUrl.startsWith("https://")) {
                             fixedUrl = when {
@@ -384,7 +377,6 @@ class Funmovieslix : MainAPI() {
                         )
                         if (!loaded) {
                             logError("Funmovieslix", "loadExtractorWithFallback failed for $fixedUrl")
-                            // P1 Fallback: Try direct link extraction as last resort
                             MasterLinkGenerator.createLink(
                                 source = "Funmovieslix",
                                 url = fixedUrl,

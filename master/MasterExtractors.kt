@@ -2595,58 +2595,11 @@ class HUBCDN : ExtractorApi() {
 // 16 extractors matching user's 8 providers
 // ========================================
 
-// --- VideyV2 (from Phisher/Funmovieslix) ---
-// AES/CBC decryption, API-based (api.lixstreamingcaio.com)
-class VideyV2 : ExtractorApi() {
+// --- VideyV2 (from ExtCloud/Funmovieslix) ---
+// Extend LixstreamExtractor (built-in CloudStream) - no API call needed
+class VideyV2 : LixstreamExtractor() {
     override var name = "Videy"
     override var mainUrl = "https://videy.tv"
-    override val requiresReferer = false
-
-    private val apiBase = "https://api.lixstreamingcaio.com/v2"
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val sid = url.substringAfterLast("/")
-        val infoRes = app.post(
-            "$apiBase/s/home/resources/$sid",
-            data = mapOf(),
-            headers = mapOf("Content-Type" to "application/json")
-        ).text
-
-        val info = runCatching { JSONObject(infoRes) }.getOrNull() ?: return
-        val suid = info.optString("suid") ?: return
-        val files = info.optJSONArray("files") ?: return
-        if (files.length() == 0) return
-        val file = files.optJSONObject(0) ?: return
-        val fid = file.optString("id") ?: return
-        val assetRes = app.get("$apiBase/s/assets/f?id=$fid&uid=$suid").text
-        val asset = runCatching { JSONObject(assetRes) }.getOrNull() ?: return
-        val encryptedUrl = asset.optString("url")
-        if (encryptedUrl.isNullOrEmpty()) return
-
-        val key = "GNgN1lHXIFCQd8hSEZIeqozKInQTFNXj".toByteArray(Charsets.UTF_8)
-        val iv = "2Xk4dLo38c9Z2Q2a".toByteArray(Charsets.UTF_8)
-        val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
-
-        val decrypted = runCatching {
-            val decoded = base64DecodeArray(encryptedUrl)
-            String(cipher.doFinal(decoded), Charsets.UTF_8)
-        }.getOrNull() ?: return
-
-        callback.invoke(
-            newExtractorLink(this.name, this.name, decrypted,
-                if (decrypted.contains(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
-            ) {
-                this.referer = url
-                this.quality = Qualities.P1080.value
-            }
-        )
-    }
 }
 
 // --- ByseSX (from Phisher/Funmovieslix) ---
