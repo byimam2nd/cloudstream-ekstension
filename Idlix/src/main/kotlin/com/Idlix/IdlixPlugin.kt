@@ -9,8 +9,6 @@ import com.Idlix.generated_sync.SyncExtractors
 class IdlixPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Idlix())
-
-        // DYNAMIC REGISTER: Auto-register ALL extractors
         SyncExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }

@@ -66,7 +66,6 @@ MASTER_FILES+=(
 
 # v4.1: WebView scraper for SPA websites
 MASTER_FILES+=(
-    "MasterWebViewScraper.kt:SyncWebViewScraper.kt"
 )
 
 echo "📋 Master files to sync:"
