@@ -66,7 +66,7 @@ class Melolo : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val isSearchCategory = request.data.startsWith("q:", ignoreCase = true)
         if (page > 1 && !isSearchCategory) {
-            return newHomePageRequest(HomePageList(request.name, emptyList()), hasNext = false)
+            return newHomePageResponse(HomePageList(request.name, emptyList()), hasNext = false)
         }
 
         val (books, hasNext) = if (isSearchCategory) {
@@ -153,35 +153,37 @@ class Melolo : MainAPI() {
     ): Boolean {
         val ep = tryParseJson<EpisodeData>(data) ?: return false
 
-        val body = buildPlayerBody(ep).toJson()
+        val payload = mapOf(
+            "video_id" to ep.vid,
+            "biz_param" to mapOf(
+                "video_id_type" to 0,
+                "device_level" to 1,
+                "video_platform" to ep.videoPlatform
+            ),
+            "NovelCommonParam" to mapOf(
+                "app_language" to "id",
+                "sys_language" to "id",
+                "user_language" to "id",
+                "ui_language" to "id",
+                "language" to "id",
+                "region" to "ID",
+                "current_region" to "ID",
+                "app_region" to "ID",
+                "sys_region" to "ID",
+                "carrier_region" to "ID",
+                "carrier_region_v2" to "ID",
+                "fake_priority_region" to "ID",
+                "time_zone" to "Asia/Jakarta",
+                "mcc_mnc" to "51011"
+            )
+        )
+
         val apiUrl = "$mainUrl/novel/player/video_model/v1/?aid=$aid"
+        val jsonBody = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().writeValueAsString(payload)
 
         val respText = app.post(
             apiUrl,
-            data = mapOf(
-                "video_id" to ep.vid,
-                "biz_param" to mapOf(
-                    "video_id_type" to 0,
-                    "device_level" to 1,
-                    "video_platform" to ep.videoPlatform
-                ),
-                "NovelCommonParam" to mapOf(
-                    "app_language" to "id",
-                    "sys_language" to "id",
-                    "user_language" to "id",
-                    "ui_language" to "id",
-                    "language" to "id",
-                    "region" to "ID",
-                    "current_region" to "ID",
-                    "app_region" to "ID",
-                    "sys_region" to "ID",
-                    "carrier_region" to "ID",
-                    "carrier_region_v2" to "ID",
-                    "fake_priority_region" to "ID",
-                    "time_zone" to "Asia/Jakarta",
-                    "mcc_mnc" to "51011"
-                )
-            ),
+            requestBody = jsonBody.toRequestBody("application/json".toMediaType()),
             headers = mapOf(
                 "Content-Type" to "application/json",
                 "X-Xs-From-Web" to "false",
