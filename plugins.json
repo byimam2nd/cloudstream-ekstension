@@ -60,6 +60,27 @@
         "name": "Donghuastream"
     },
     {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=donghub.vip&sz=%size",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/byimam2nd/oce",
+        "fileSize": 208808,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Imam2nd"
+        ],
+        "tvTypes": [
+            "Anime",
+            "TvSeries",
+            "Movie"
+        ],
+        "version": 1,
+        "internalName": "Donghub",
+        "description": "\ud83d\udc09 Donghub - Platform streaming Donghua (Chinese Animation) dengan subtitle Indonesia!",
+        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Donghub.cs3",
+        "name": "Donghub"
+    },
+    {
         "iconUrl": "https://raw.githubusercontent.com/imam2nd/TVVVV/refs/heads/main/Icons/Funmovieslix.png",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
