@@ -36,7 +36,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLEncoder
 
 class Melolo : MainAPI() {
-    override var mainUrl = Endpoints.apiBase
+    override var mainUrl = "https://api.tmthreader.com"
     override var name = "Melolo😶"
     override var lang = "id"
     override val hasMainPage = true
@@ -45,7 +45,7 @@ class Melolo : MainAPI() {
     override val supportedTypes = setOf(TvType.TvSeries, TvType.AsianDrama)
 
     private val aid = "645713"
-    private val catalogBase = Endpoints.catalogBase
+    private val catalogBase = "https://melolo-api-azure.vercel.app/api/melolo"
 
     override val mainPage = mainPageOf(
         "latest" to "Terbaru",
@@ -270,8 +270,4 @@ class Melolo : MainAPI() {
     data class PlayerVideoModelData(@JsonProperty("main_url") val main_url: String? = null, @JsonProperty("backup_url") val backup_url: String? = null, @JsonProperty("expire_time") val expire_time: Long? = null)
     data class EpisodeData(@JsonProperty("bookId") val bookId: String, @JsonProperty("seriesId") val seriesId: String, @JsonProperty("vid") val vid: String, @JsonProperty("episode") val episode: Int, @JsonProperty("videoPlatform") val videoPlatform: Int = 3)
 
-    private object Endpoints {
-        val apiBase: String = "https://api.tmthreader.com"
-        val catalogBase: String = "https://melolo-api-azure.vercel.app/api/melolo"
-    }
 }
