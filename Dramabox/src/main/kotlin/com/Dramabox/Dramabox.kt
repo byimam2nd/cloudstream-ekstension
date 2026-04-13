@@ -105,13 +105,15 @@ class Dramabox : MainAPI() {
             }
         }
 
-        val title = localTitle?.takeIf { it.isNotBlank() }
+        val rawTitle = localTitle?.takeIf { it.isNotBlank() }
             ?: detail?.data?.title?.takeIf { it.isNotBlank() }
             ?: "DramaBox"
+        val title = cleanTitle(rawTitle)
+        val poster = localPoster?.takeIf { it.isNotBlank() } ?: detail?.data?.coverImage
         val safeUrl = buildDramaUrl(dramaId)
 
         return newTvSeriesLoadResponse(title, safeUrl, TvType.AsianDrama, episodes) {
-            this.posterUrl = localPoster?.takeIf { it.isNotBlank() } ?: detail?.data?.coverImage
+            this.posterUrl = poster
             this.plot = localIntro?.takeIf { it.isNotBlank() } ?: detail?.data?.introduction
             this.tags = localTags ?: detail?.data?.tags
         }
@@ -193,12 +195,28 @@ class Dramabox : MainAPI() {
 
     private fun DramaItem.toSearchResult(): SearchResponse? {
         val id = getPreferredDramaId(this)
-        val title = title?.trim().orEmpty()
-        if (id.isBlank() || title.isBlank()) return null
+        val rawTitle = title?.trim().orEmpty()
+        if (id.isBlank() || rawTitle.isBlank()) return null
 
-        return newTvSeriesSearchResponse(title, buildDramaUrl(dramaId = id, title = title, coverImage = coverImage, introduction = introduction, tags = tags, episodeCount = episodeCount), TvType.AsianDrama) {
+        // Clean title: remove (Sulih Suara), (Dub Indo), etc
+        val cleanTitle = cleanTitle(rawTitle)
+
+        return newTvSeriesSearchResponse(cleanTitle, buildDramaUrl(dramaId = id, title = cleanTitle, coverImage = coverImage, introduction = introduction, tags = tags, episodeCount = episodeCount), TvType.AsianDrama) {
             this.posterUrl = coverImage
         }
+    }
+
+    private fun cleanTitle(raw: String): String {
+        return raw
+            .replace(Regex("\\(Sulih Suara\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\(Dub Indo\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\(Indonesian Sub\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\(Sub Indo\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\(Bahasa Indonesia\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\s{2,}"), " ")
+            .trim()
+            .trim('(', ')', '-', '_')
+            .trim()
     }
 
     private fun getPreferredDramaId(item: DramaItem): String {
