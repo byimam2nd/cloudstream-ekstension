@@ -98,23 +98,25 @@ class Dramabox : MainAPI() {
         val episodeCount = localEpisodeCount ?: detail?.data?.episodeCount ?: inferEpisodeCount(dramaId)
         if (episodeCount <= 0) throw ErrorLoadingException("Episode tidak ditemukan")
 
-        val episodes = (1..episodeCount).map { episodeNo ->
-            newEpisode(LoadData(bookId = dramaId, episodeNo = episodeNo).toJson()) {
-                this.name = "Episode $episodeNo"
-                this.episode = episodeNo
-            }
-        }
-
         val rawTitle = localTitle?.takeIf { it.isNotBlank() }
             ?: detail?.data?.title?.takeIf { it.isNotBlank() }
             ?: "DramaBox"
         val title = cleanTitle(rawTitle)
-        val poster = localPoster?.takeIf { it.isNotBlank() } ?: detail?.data?.coverImage
+        val poster = cleanPosterUrl(localPoster) ?: cleanPosterUrl(detail?.data?.coverImage)
+        val description = cleanText(localIntro) ?: cleanText(detail?.data?.introduction)
+
+        val episodes = (1..episodeCount).map { episodeNo ->
+            newEpisode(LoadData(bookId = dramaId, episodeNo = episodeNo).toJson()) {
+                this.name = "Episode $episodeNo"
+                this.episode = episodeNo
+                this.posterUrl = poster
+            }
+        }
         val safeUrl = buildDramaUrl(dramaId)
 
         return newTvSeriesLoadResponse(title, safeUrl, TvType.AsianDrama, episodes) {
             this.posterUrl = poster
-            this.plot = localIntro?.takeIf { it.isNotBlank() } ?: detail?.data?.introduction
+            this.plot = description
             this.tags = localTags ?: detail?.data?.tags
         }
     }
@@ -198,12 +200,19 @@ class Dramabox : MainAPI() {
         val rawTitle = title?.trim().orEmpty()
         if (id.isBlank() || rawTitle.isBlank()) return null
 
-        // Clean title: remove (Sulih Suara), (Dub Indo), etc
         val cleanTitle = cleanTitle(rawTitle)
+        val cleanPoster = cleanPosterUrl(coverImage)
 
         return newTvSeriesSearchResponse(cleanTitle, buildDramaUrl(dramaId = id, title = cleanTitle, coverImage = coverImage, introduction = introduction, tags = tags, episodeCount = episodeCount), TvType.AsianDrama) {
-            this.posterUrl = coverImage
+            this.posterUrl = cleanPoster
         }
+    }
+
+    private fun cleanPosterUrl(url: String?): String? {
+        if (url.isNullOrBlank()) return null
+        // Remove query parameters that may break image loading
+        return url.split("?", "@").firstOrNull()
+            ?.takeIf { it.startsWith("http") }
     }
 
     private fun cleanTitle(raw: String): String {
@@ -216,6 +225,14 @@ class Dramabox : MainAPI() {
             .replace(Regex("\\s{2,}"), " ")
             .trim()
             .trim('(', ')', '-', '_')
+            .trim()
+    }
+
+    private fun cleanText(text: String?): String? {
+        if (text.isNullOrBlank()) return null
+        return text
+            .replace(Regex("\\s{2,}"), " ")
+            .replace(Regex("\\n{3,}"), "\n\n")
             .trim()
     }
 
