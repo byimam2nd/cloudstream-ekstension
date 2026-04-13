@@ -27,6 +27,8 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 // ============================================
 // GROUP 3: Java Standard Library
@@ -153,37 +155,37 @@ class Melolo : MainAPI() {
     ): Boolean {
         val ep = tryParseJson<EpisodeData>(data) ?: return false
 
-        val payload = mapOf(
-            "video_id" to ep.vid,
-            "biz_param" to mapOf(
-                "video_id_type" to 0,
-                "device_level" to 1,
-                "video_platform" to ep.videoPlatform
-            ),
-            "NovelCommonParam" to mapOf(
-                "app_language" to "id",
-                "sys_language" to "id",
-                "user_language" to "id",
-                "ui_language" to "id",
-                "language" to "id",
-                "region" to "ID",
-                "current_region" to "ID",
-                "app_region" to "ID",
-                "sys_region" to "ID",
-                "carrier_region" to "ID",
-                "carrier_region_v2" to "ID",
-                "fake_priority_region" to "ID",
-                "time_zone" to "Asia/Jakarta",
-                "mcc_mnc" to "51011"
-            )
-        )
+        val bodyJson = """
+            {
+                "video_id": "${ep.vid}",
+                "biz_param": {
+                    "video_id_type": 0,
+                    "device_level": 1,
+                    "video_platform": ${ep.videoPlatform}
+                },
+                "NovelCommonParam": {
+                    "app_language": "id",
+                    "sys_language": "id",
+                    "user_language": "id",
+                    "ui_language": "id",
+                    "language": "id",
+                    "region": "ID",
+                    "current_region": "ID",
+                    "app_region": "ID",
+                    "sys_region": "ID",
+                    "carrier_region": "ID",
+                    "carrier_region_v2": "ID",
+                    "fake_priority_region": "ID",
+                    "time_zone": "Asia/Jakarta",
+                    "mcc_mnc": "51011"
+                }
+            }
+        """.trimIndent()
 
         val apiUrl = "$mainUrl/novel/player/video_model/v1/?aid=$aid"
-        val jsonBody = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().writeValueAsString(payload)
-
         val respText = app.post(
             apiUrl,
-            requestBody = jsonBody.toRequestBody("application/json".toMediaType()),
+            requestBody = bodyJson.toRequestBody("application/json".toMediaType()),
             headers = mapOf(
                 "Content-Type" to "application/json",
                 "X-Xs-From-Web" to "false",
@@ -196,18 +198,20 @@ class Melolo : MainAPI() {
         val main = resp?.data?.main_url
         val backup = resp?.data?.backup_url
 
-        fun emit(url: String) {
-            callback(
-                newExtractorLink(name, "Melolo", url, ExtractorLinkType.VIDEO) {
-                    this.quality = Qualities.Unknown.value
-                    this.referer = "$mainUrl/"
-                    this.headers = mapOf("User-Agent" to "okhttp/4.9.3")
-                }
-            )
+        if (!main.isNullOrBlank()) {
+            callback(newExtractorLink(name, "Melolo", main, ExtractorLinkType.VIDEO) {
+                this.quality = Qualities.Unknown.value
+                this.referer = "$mainUrl/"
+                this.headers = mapOf("User-Agent" to "okhttp/4.9.3")
+            })
         }
-
-        if (!main.isNullOrBlank()) emit(main)
-        if (!backup.isNullOrBlank() && backup != main) emit(backup)
+        if (!backup.isNullOrBlank() && backup != main) {
+            callback(newExtractorLink(name, "Melolo", backup, ExtractorLinkType.VIDEO) {
+                this.quality = Qualities.Unknown.value
+                this.referer = "$mainUrl/"
+                this.headers = mapOf("User-Agent" to "okhttp/4.9.3")
+            })
+        }
 
         return !main.isNullOrBlank() || !backup.isNullOrBlank()
     }
