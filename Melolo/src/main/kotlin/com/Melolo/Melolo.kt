@@ -271,8 +271,7 @@ class Melolo : MainAPI() {
     data class EpisodeData(@JsonProperty("bookId") val bookId: String, @JsonProperty("seriesId") val seriesId: String, @JsonProperty("vid") val vid: String, @JsonProperty("episode") val episode: Int, @JsonProperty("videoPlatform") val videoPlatform: Int = 3)
 
     private object Endpoints {
-        private fun d(s: String): String = String(android.util.Base64.decode(s, android.util.Base64.NO_WRAP), Charsets.UTF_8)
-        val apiBase: String = d("aHR0cHM6Ly9hcGkudG10cmVhZGVyLmNvbQ==")
-        val catalogBase: String = d("aHR0cHM6Ly9tZWxvbG8tYXBpLWF6dXJlLnZlcmNlbC5hcHAvYXBpL21lbG9sbw==")
+        val apiBase: String = "https://api.tmthreader.com"
+        val catalogBase: String = "https://melolo-api-azure.vercel.app/api/melolo"
     }
 }
