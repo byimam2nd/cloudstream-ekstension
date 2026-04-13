@@ -99,6 +99,16 @@ class Idlix : MainAPI() {
         }
     }
 
+    /**
+     * Extract episode number from text like "214.5", "237", "01".
+     * Returns floor integer value (214.5 → 214).
+     */
+    private fun extractEpisodeNumber(text: String): Int? {
+        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
+        return numberMatch?.groupValues?.get(1)
+            ?.split(".")?.firstOrNull()?.toIntOrNull()
+    }
+
     // ========================================
     // GET MAIN PAGE
     // ========================================
@@ -441,8 +451,9 @@ class Idlix : MainAPI() {
                 val href = it.select("a").attr("href")
                 val name = fixTitle(it.select("div.episodiotitle > a").text().trim())
                 val image = it.select("div.imagen > img").attr("src")
-                val episode = it.select("div.numerando").text().replace(" ", "").split("-").last().toIntOrNull()
-                val season = it.select("div.numerando").text().replace(" ", "").split("-").first().toIntOrNull()
+                val numerando = it.select("div.numerando").text().replace(" ", "").split("-")
+                val episode = extractEpisodeNumber(numerando.lastOrNull() ?: "")
+                val season = numerando.firstOrNull()?.toIntOrNull()
 
                 newEpisode(href) {
                     this.name = name

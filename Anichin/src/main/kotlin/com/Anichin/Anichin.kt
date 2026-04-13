@@ -167,7 +167,8 @@ open class Anichin : MainAPI() {
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
             doc.select(".eplister li[data-index]").mapNotNull { ep ->
-                ep.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
+                val epText = ep.selectFirst(".epl-num")?.text()?.trim().orEmpty()
+                extractEpisodeNumber(epText)
             }.maxOrNull()
         }.getOrNull()
 
@@ -188,6 +189,17 @@ open class Anichin : MainAPI() {
             this.hasAttr("src") -> this.attr("src")
             else -> this.attr("src")
         }
+    }
+
+    /**
+     * Extract episode number from text like "214.5", "237 END", "01", "214.5 END".
+     * Returns floor integer value (214.5 → 214).
+     */
+    private fun extractEpisodeNumber(text: String): Int? {
+        // Match first number (integer or decimal) from text
+        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
+        return numberMatch?.groupValues?.get(1)
+            ?.split(".")?.firstOrNull()?.toIntOrNull()
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -296,10 +308,9 @@ open class Anichin : MainAPI() {
                 val href1 = info.select("a").attr("href")
                 if (href1.isEmpty()) return@mapNotNull null
 
-                // FIXED: Extract episode number more robustly
+                // Fix: Extract episode number properly (support "214.5", "237 END", "01")
                 val episodeText = info.selectFirst(".epl-num")?.text()?.trim().orEmpty()
-                // Try to extract number from text like "52", "52 END", "END", etc.
-                val episodeNumber = episodeText.replace(Regex("[^0-9]"), "").toIntOrNull()
+                val episodeNumber = extractEpisodeNumber(episodeText)
 
                 val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
                 val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()

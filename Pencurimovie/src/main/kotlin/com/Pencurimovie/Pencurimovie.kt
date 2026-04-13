@@ -210,21 +210,31 @@ class Pencurimovie : MainAPI() {
         // FIXED: Fallback strategy untuk title (2-layer)
         val title = this.select("a").attr("oldtitle").substringBefore("(")
             .ifEmpty { this.select("a").attr("title").substringBefore("(") }
-        
+
         val href = fixUrl(this.select("a").attr("href"))
-        
+
         // FIXED: Fallback strategy untuk poster (3-layer)
         val posterUrl = fixUrlNull(
             this.select("a img").attr("data-original")
                 .ifEmpty { this.select("a img").attr("data-src") }
                 .ifEmpty { this.select("a img").attr("src") }
         )
-        
+
         val quality = getQualityFromString(this.select("span.mli-quality").text())
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = quality
         }
+    }
+
+    /**
+     * Extract episode number from text like "Episode 214.5", "237 END", "01".
+     * Returns floor integer value (214.5 → 214).
+     */
+    private fun extractEpisodeNumber(text: String): Int? {
+        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
+        return numberMatch?.groupValues?.get(1)
+            ?.split(".")?.firstOrNull()?.toIntOrNull()
     }
 
 
@@ -292,18 +302,17 @@ class Pencurimovie : MainAPI() {
             document.select("div.tvseason").amap { info ->
                 val season = info.select("strong").text().substringAfter("Season").trim().toIntOrNull()
                 info.select("div.les-content a").forEach { it ->
-                    Log.d("Phis","$it")
                     val name = it.select("a").text().substringAfter("-").trim()
                     val href = it.select("a").attr("href") ?: ""
-                    val Rawepisode = it.select("a").text().substringAfter("Episode")
-                            .substringBefore("-")
-                            .trim().toIntOrNull()
+                    val epText = it.select("a").text().substringAfter("Episode")
+                        .substringBefore("-").trim()
+                    val Rawepisode = extractEpisodeNumber(epText)
                     episodes.add(
                         newEpisode(href)
                         {
-                            this.episode=Rawepisode
-                            this.name=name
-                            this.season=season
+                            this.episode = Rawepisode
+                            this.name = name
+                            this.season = season
                         }
                     )
                 }

@@ -88,6 +88,16 @@ class Samehadaku : MainAPI() {
             ""
         ).trim()
 
+    /**
+     * Extract episode number from text like "Episode 214.5", "Ep 237 END", "01".
+     * Returns floor integer value (214.5 → 214).
+     */
+    private fun extractEpisodeNumber(text: String): Int? {
+        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
+        return numberMatch?.groupValues?.get(1)
+            ?.split(".")?.firstOrNull()?.toIntOrNull()
+    }
+
     private fun String.fixQuality(): Int = when (uppercase()) {
         "4K" -> Qualities.P2160.value
         "FULLHD" -> Qualities.P1080.value
@@ -183,11 +193,7 @@ class Samehadaku : MainAPI() {
                     val episodeHref = fixUrl(anchor.attr("href"))
                     val posterUrl = fixUrlNull(li.selectFirst("img")?.attr("src"))
 
-                    val epNum = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
-                        .find(li.text())
-                        ?.groupValues
-                        ?.getOrNull(2)
-                        ?.toIntOrNull()
+                    val epNum = extractEpisodeNumber(li.text())
 
                     newAnimeSearchResponse(cleanTitle, episodeHref, TvType.Anime) {
                         this.posterUrl = posterUrl
@@ -304,11 +310,7 @@ class Samehadaku : MainAPI() {
             .mapNotNull {
                 val a = it.selectFirst("a") ?: return@mapNotNull null
 
-                val epNum = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
-                    .find(a.text())
-                    ?.groupValues
-                    ?.getOrNull(2)
-                    ?.toIntOrNull()
+                val epNum = extractEpisodeNumber(a.text())
 
                 newEpisode(fixUrl(a.attr("href"))) {
                     episode = epNum

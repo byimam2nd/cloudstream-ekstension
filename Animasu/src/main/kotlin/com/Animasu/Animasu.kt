@@ -154,6 +154,16 @@ class Animasu : MainAPI() {
         }
     }
 
+    /**
+     * Extract episode number from text like "Episode 214.5", "Episode 237 END", "Ep 01".
+     * Returns floor integer value (214.5 → 214).
+     */
+    private fun extractEpisodeNumber(text: String): Int? {
+        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
+        return numberMatch?.groupValues?.get(1)
+            ?.split(".")?.firstOrNull()?.toIntOrNull()
+    }
+
     // ========================================
     // GET MAIN PAGE
     // ========================================
@@ -280,7 +290,8 @@ class Animasu : MainAPI() {
             val anchor = it.selectFirst("a") ?: return@mapNotNull null
             val link = fixUrl(anchor.attr("href"))
             val name = it.selectFirst("a")?.text() ?: return@mapNotNull null
-            val episode = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            // Fix: Support "Episode 214.5", "Episode 237 END", "Ep 01"
+            val episode = extractEpisodeNumber(name)
             newEpisode(link) { this.episode = episode }
         }.reversed()
 

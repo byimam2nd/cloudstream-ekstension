@@ -106,6 +106,16 @@ open class Donghuastream : MainAPI() {
         }
     }
 
+    /**
+     * Extract episode number from text like "Episode 214.5", "237 END", "01".
+     * Returns floor integer value (214.5 → 214).
+     */
+    private fun extractEpisodeNumber(text: String): Int? {
+        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
+        return numberMatch?.groupValues?.get(1)
+            ?.split(".")?.firstOrNull()?.toIntOrNull()
+    }
+
 
     override suspend fun search(query: String): List<SearchResponse> {
         // CACHING: Check cache first (instant load for 5 minutes)
@@ -202,7 +212,8 @@ open class Donghuastream : MainAPI() {
                 doc.select("div.episodelist > ul > li").map { info ->
                     async {
                         val href1 = info.select("a").attr("href")
-                        val episode = info.select("a span").text().substringAfter("-").substringBeforeLast("-")
+                        val episodeText = info.select("a span").text().substringAfter("-").substringBeforeLast("-")
+                        val episode = extractEpisodeNumber(episodeText)
                         
                         // FIXED: Fallback strategy untuk episode poster (3-layer)
                         var posterr = info.selectFirst("a img")?.attr("data-src")
