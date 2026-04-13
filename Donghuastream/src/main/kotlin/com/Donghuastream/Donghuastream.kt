@@ -214,7 +214,7 @@ open class Donghuastream : MainAPI() {
                         val href1 = info.select("a").attr("href")
                         val episodeText = info.select("a span").text().substringAfter("-").substringBeforeLast("-")
                         val episode = extractEpisodeNumber(episodeText)
-                        
+
                         // FIXED: Fallback strategy untuk episode poster (3-layer)
                         var posterr = info.selectFirst("a img")?.attr("data-src")
                             ?: info.selectFirst("a img")?.attr("src")
@@ -227,9 +227,11 @@ open class Donghuastream : MainAPI() {
                             posterr = optimizeImageUrl(posterr, 500)
                         }
 
+                        val epTitle = episodeText.replace(Regex("[^0-9.]"), "").trim()
+
                         newEpisode(href1) {
-                            this.name = episode.replace(title, "", ignoreCase = true)
-                            this.episode = episode.toIntOrNull()
+                            this.name = epTitle.replace(title, "", ignoreCase = true)
+                            this.episode = episode
                             this.posterUrl = posterr
                         }
                     }
