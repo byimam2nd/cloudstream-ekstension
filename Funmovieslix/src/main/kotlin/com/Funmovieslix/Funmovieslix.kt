@@ -13,6 +13,7 @@ package com.Funmovieslix
 // GROUP 1: Generated Sync Imports
 // ============================================
 import com.Funmovieslix.generated_sync.*
+import com.lagradost.cloudstream3.network.CloudflareKiller
 
 // ============================================
 // GROUP 2: CloudStream Library
@@ -305,13 +306,18 @@ class Funmovieslix : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = executeWithRetry {
+        // Use CloudflareKiller to bypass Cloudflare protection
+        val cloudflareKiller = CloudflareKiller()
+
+        val document = executeWithRetry(maxRetries = 3) {
             rateLimitDelay()
-            app.get(
+            val response = app.get(
                 data,
-                timeout = AutoUsedConstants.FAST_TIMEOUT,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                interceptor = cloudflareKiller,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
-            ).documentLarge
+            )
+            response.documentLarge
         }
 
         // FIXED: Multiple strategies untuk extract embed URLs
