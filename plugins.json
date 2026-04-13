@@ -86,10 +86,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=dramabox.com&sz=%size",
-        "fileHash": "sha256-0954514e40485b52609a35b590a73802d7ae906d482385345635f9efd54baa35",
+        "fileHash": "sha256-6ec8d2de788b6de75a92fb1f2df8a1a7ce984d0bd359b1d884012db448498501",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 219859,
+        "fileSize": 220201,
         "status": 1,
         "language": "id",
         "authors": [
@@ -173,10 +173,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=tmthreader.com&sz=%size",
-        "fileHash": "sha256-2d7a9a0f4298d10a00925b72e71a8068ba4e7021d9bb8db3cbdebfede640ec35",
+        "fileHash": "sha256-9426a92ddf676a6800fd8940e51187188b225a342f734fac24fa34863fd5e8a5",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 220903,
+        "fileSize": 220650,
         "status": 1,
         "language": "id",
         "authors": [
