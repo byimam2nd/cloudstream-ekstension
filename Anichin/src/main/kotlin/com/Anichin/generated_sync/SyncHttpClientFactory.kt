@@ -329,6 +329,7 @@ object HttpClientFactory {
      */
     suspend fun preWarmConnection(url: String) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val start = System.currentTimeMillis()
             try {
                 val client = getClient()
                 val request = okhttp3.Request.Builder()
@@ -338,14 +339,17 @@ object HttpClientFactory {
 
                 // HEAD request — ringan, hanya buka koneksi tanpa download body
                 client.newCall(request).execute().use { response ->
-                    if (DEBUG_MODE) {
-                        android.util.Log.d("HttpClientFactory", "🔥 Pre-warmed: $url (${response.code})")
+                    val duration = System.currentTimeMillis() - start
+                    if (duration > 500) {
+                        android.util.Log.w("HttpClientFactory", "🔥 Pre-warm slow: $url (${duration}ms)")
+                    } else if (DEBUG_MODE) {
+                        android.util.Log.d("HttpClientFactory", "🔥 Pre-warmed: $url (${duration}ms)")
                     }
                 }
             } catch (e: Exception) {
-                // Pre-warm gagal — bukan error kritis, video tetap bisa diputar
-                if (DEBUG_MODE) {
-                    android.util.Log.w("HttpClientFactory", "Pre-warm failed: $url — ${e.message}")
+                val duration = System.currentTimeMillis() - start
+                if (duration > 1000 || DEBUG_MODE) {
+                    android.util.Log.w("HttpClientFactory", "🔥 Pre-warm failed: $url (${duration}ms) — ${e.message}")
                 }
             }
         }

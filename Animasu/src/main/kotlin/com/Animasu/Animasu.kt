@@ -141,7 +141,7 @@ class Animasu : MainAPI() {
         
         // FIXED: Fallback strategy untuk poster (3-layer)
         val posterUrl = fixUrlNull(
-            this.selectFirst("img")?.getImageAttr()
+            this.selectFirst("img")?.extractImageAttr()
                 ?: this.selectFirst("img[data-src]")?.attr("data-src")
                 ?: this.selectFirst("meta[property=og:image]")?.attr("content")
         )
@@ -158,11 +158,6 @@ class Animasu : MainAPI() {
      * Extract episode number from text like "Episode 214.5", "Episode 237 END", "Ep 01".
      * Returns floor integer value (214.5 → 214).
      */
-    private fun extractEpisodeNumber(text: String): Int? {
-        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
-        return numberMatch?.groupValues?.get(1)
-            ?.split(".")?.firstOrNull()?.toIntOrNull()
-    }
 
     // ========================================
     // GET MAIN PAGE
@@ -207,11 +202,11 @@ class Animasu : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = searchCache.get(query)
         if (cached != null) {
-            Log.d("Animasu", "Cache HIT for search: $query")
+            logDebug("Animasu", "Cache HIT for search: $query")
             return cached
         }
         
-        Log.d("Animasu", "Cache MISS for search: $query")
+        logDebug("Animasu", "Cache MISS for search: $query")
         
         // Fetch dengan retry logic
         val document = executeWithRetry {
@@ -240,11 +235,11 @@ class Animasu : MainAPI() {
         // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
         val cached = loadCache.get(url)
         if (cached != null) {
-            Log.d("Animasu", "Cache HIT for load: $url")
+            logDebug("Animasu", "Cache HIT for load: $url")
             return cached
         }
         
-        Log.d("Animasu", "Cache MISS for load: $url")
+        logDebug("Animasu", "Cache MISS for load: $url")
         
         // Fetch dengan retry logic
         val document = executeWithRetry {
@@ -267,7 +262,7 @@ class Animasu : MainAPI() {
             ?: ""
 
         // FIXED: Fallback strategy untuk poster (4-layer)
-        val poster = document.selectFirst("div.bigcontent img")?.getImageAttr()
+        val poster = document.selectFirst("div.bigcontent img")?.extractImageAttr()
             ?: document.selectFirst("meta[property=og:image]")?.attr("content")
             ?: document.selectFirst("div.thumb img")?.attr("src")
             ?: document.selectFirst("img[data-src]")?.attr("data-src")
@@ -403,7 +398,7 @@ class Animasu : MainAPI() {
         }
 
         if (!loaded) {
-            Log.e("Animasu", "loadFixedExtractor failed for $url")
+            logError("Animasu", "loadFixedExtractor failed for $url")
         }
     }
 

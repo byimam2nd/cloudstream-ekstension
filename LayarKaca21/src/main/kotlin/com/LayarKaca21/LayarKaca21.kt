@@ -39,8 +39,8 @@ import java.net.URI
 // Using shared CacheManager from generated_sync
 // Search results cached for 5 minutes
 // Main page results cached for 3 minutes
-private val searchCache = CacheManager<List<SearchResponse>>()
-private val mainPageCache = CacheManager<HomePageResponse>()
+private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 30 * 60 * 1000L)
+private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 5 * 60 * 1000L)
 
 // ========================================
 // MAIN PROVIDER CLASS
@@ -154,7 +154,7 @@ class LayarKaca21 : MainAPI() {
         
         // FIXED: Fallback strategy untuk poster (3-layer)
         val posterUrl = fixUrlNull(
-            this.selectFirst("img")?.getImageAttr()
+            this.selectFirst("img")?.extractImageAttr()
                 ?: this.selectFirst("img[data-src]")?.attr("data-src")
                 ?: this.selectFirst("img[src]")?.attr("src")
         )
@@ -368,7 +368,7 @@ class LayarKaca21 : MainAPI() {
                         callback = callback
                     )
                     if (!loaded) {
-                        Log.e("LayarKaca21", "loadExtractorWithFallback failed for $finalIframe")
+                        logError("LayarKaca21", "loadExtractorWithFallback failed for $finalIframe")
                         // P1 Fallback: Try direct link extraction as last resort
                         MasterLinkGenerator.createLink(
                             source = "LayarKaca",
@@ -385,7 +385,7 @@ class LayarKaca21 : MainAPI() {
                         callback = callback
                     )
                     if (!loaded) {
-                        Log.e("LayarKaca21", "loadExtractorWithFallback failed for $iframe")
+                        logError("LayarKaca21", "loadExtractorWithFallback failed for $iframe")
                         // P1 Fallback: Try direct link extraction as last resort
                         MasterLinkGenerator.createLink(
                             source = "LayarKaca",
@@ -463,13 +463,6 @@ class LayarKaca21 : MainAPI() {
         }
     }
 
-    private fun Element.getImageAttr(): String {
-        return when {
-            this.hasAttr("src") -> this.attr("src")
-            this.hasAttr("data-src") -> this.attr("data-src")
-            else -> this.attr("src")
-        }
-    }
 
     fun getBaseUrl(url: String?): String {
         if (url.isNullOrEmpty()) return mainUrl

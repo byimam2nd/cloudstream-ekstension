@@ -32,8 +32,8 @@ import org.jsoup.nodes.Element
 import java.util.concurrent.ConcurrentHashMap
 
 // Cache instances
-private val searchCache = CacheManager<List<SearchResponse>>()
-private val mainPageCache = CacheManager<HomePageResponse>()
+private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 30 * 60 * 1000L)
+private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 5 * 60 * 1000L)
 
 // Smart Cache Monitor for fingerprint-based cache validation
 class AnichinMonitor : SmartCacheMonitor() {
@@ -150,7 +150,7 @@ open class Anichin : MainAPI() {
         
         // FIXED: Fallback strategy untuk poster image (3-layer)
         val posterUrl = fixUrlNull(
-            this.selectFirst("div.bsx a img")?.getImageAttr()
+            this.selectFirst("div.bsx a img")?.extractImageAttr()
                 ?: this.selectFirst("div.bsx img")?.attr("data-src")
                 ?: this.selectFirst("div.bsx img")?.attr("src")
         )
@@ -168,7 +168,7 @@ open class Anichin : MainAPI() {
             ).documentLarge
             doc.select(".eplister li[data-index]").mapNotNull { ep ->
                 val epText = ep.selectFirst(".epl-num")?.text()?.trim().orEmpty()
-                extractEpisodeNumber(epText)
+                extractEpisodeNumberLocal(epText)
             }.maxOrNull()
         }.getOrNull()
 
@@ -183,24 +183,12 @@ open class Anichin : MainAPI() {
         }
     }
 
-    private fun Element.getImageAttr(): String {
-        return when {
-            this.hasAttr("data-src") -> this.attr("data-src")
-            this.hasAttr("src") -> this.attr("src")
-            else -> this.attr("src")
-        }
-    }
 
     /**
      * Extract episode number from text like "214.5", "237 END", "01", "214.5 END".
      * Returns floor integer value (214.5 → 214).
      */
-    private fun extractEpisodeNumber(text: String): Int? {
-        // Match first number (integer or decimal) from text
-        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
-        return numberMatch?.groupValues?.get(1)
-            ?.split(".")?.firstOrNull()?.toIntOrNull()
-    }
+    private fun extractEpisodeNumberLocal(text: String): Int? = extractEpisodeNumber(text)
 
     override suspend fun search(query: String): List<SearchResponse> {
         // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
@@ -310,7 +298,7 @@ open class Anichin : MainAPI() {
 
                 // Fix: Extract episode number properly (support "214.5", "237 END", "01")
                 val episodeText = info.selectFirst(".epl-num")?.text()?.trim().orEmpty()
-                val episodeNumber = extractEpisodeNumber(episodeText)
+                val episodeNumber = extractEpisodeNumberLocal(episodeText)
 
                 val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
                 val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()

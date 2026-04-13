@@ -26,8 +26,8 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 // Caching using shared CacheManager from CacheManager.kt
-private val searchCache = CacheManager<List<SearchResponse>>()
-private val mainPageCache = CacheManager<HomePageResponse>()
+private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 30 * 60 * 1000L)
+private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 5 * 60 * 1000L)
 
 open class Donghuastream : MainAPI() {
     override var mainUrl = "https://donghuastream.org"
@@ -88,7 +88,7 @@ open class Donghuastream : MainAPI() {
         
         // FIXED: Fallback strategy untuk poster (3-layer)
         val posterUrl = fixUrlNull(
-            this.selectFirst("div.bsx a img")?.getImageAttr()
+            this.selectFirst("div.bsx a img")?.extractImageAttr()
                 ?: this.selectFirst("div.bsx img")?.attr("data-src")
                 ?: this.selectFirst("div.bsx img")?.attr("src")
         )

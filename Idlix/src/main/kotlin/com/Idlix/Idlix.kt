@@ -54,8 +54,8 @@ import java.util.concurrent.ConcurrentHashMap
 // Using shared CacheManager from generated_sync
 // Search results cached for 5 minutes
 // Main page results cached for 3 minutes
-private val searchCache = CacheManager<List<SearchResponse>>()
-private val mainPageCache = CacheManager<HomePageResponse>()
+private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 30 * 60 * 1000L)
+private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 5 * 60 * 1000L)
 
 // ========================================
 // MAIN PROVIDER CLASS

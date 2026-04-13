@@ -244,6 +244,34 @@ internal object Logger {
 // Backward compatibility functions
 internal fun logDebug(tag: String, message: String) = Logger.debug(tag, message)
 internal fun logError(tag: String, message: String, error: Throwable? = null) = Logger.error(tag, message, error)
+internal fun logWarning(tag: String, message: String) = Logger.info(tag, "⚠️ $message")
+
+// ============================================
+// REGION: SHARED HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Extract image URL dari element dengan fallback strategy.
+ * Cek data-src → data-lazy-src → src.
+ */
+fun org.jsoup.nodes.Element.extractImageAttr(): String {
+    return when {
+        this.hasAttr("data-src") -> this.attr("data-src")
+        this.hasAttr("data-lazy-src") -> this.attr("data-lazy-src")
+        this.hasAttr("src") -> this.attr("src")
+        else -> ""
+    }
+}
+
+/**
+ * Extract episode number dari text seperti "214.5", "237 END", "01", "Ep 5".
+ * Returns floor integer (214.5 → 214).
+ */
+fun extractEpisodeNumber(text: String): Int? {
+    val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
+    return numberMatch?.groupValues?.get(1)
+        ?.split(".")?.firstOrNull()?.toIntOrNull()
+}
 
 // ============================================
 // REGION: TRANSLATION UTILS (251-400)

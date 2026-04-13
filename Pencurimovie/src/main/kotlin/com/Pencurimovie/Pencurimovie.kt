@@ -143,7 +143,7 @@ class Pencurimovie : MainAPI() {
             
             String(decrypted)
         } catch (e: Exception) {
-            Log.e("Pencurimovie", "AES decrypt error: ${e.message}")
+            logError("Pencurimovie", "AES decrypt error: ${e.message}")
             null
         }
     }
@@ -231,11 +231,6 @@ class Pencurimovie : MainAPI() {
      * Extract episode number from text like "Episode 214.5", "237 END", "01".
      * Returns floor integer value (214.5 → 214).
      */
-    private fun extractEpisodeNumber(text: String): Int? {
-        val numberMatch = Regex("""(\d+(?:\.\d+)?)""").find(text)
-        return numberMatch?.groupValues?.get(1)
-            ?.split(".")?.firstOrNull()?.toIntOrNull()
-    }
 
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -435,7 +430,7 @@ class Pencurimovie : MainAPI() {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("Pencurimovie", "Error resolving: $link")
+                    logError("Pencurimovie", "Error resolving: $link")
                 }
             }
             
@@ -537,7 +532,7 @@ class Pencurimovie : MainAPI() {
             }
             
         } catch (e: Exception) {
-            Log.e("Pencurimovie", "Deep resolve error: $url")
+            logError("Pencurimovie", "Deep resolve error: $url")
         }
         
         // Dedup + normalize
@@ -563,11 +558,11 @@ class Pencurimovie : MainAPI() {
                 callback = callback
             )
             if (!loaded) {
-                Log.e("Pencurimovie", "loadExtractorWithFallback failed for $url")
+                logError("Pencurimovie", "loadExtractorWithFallback failed for $url")
             }
             return loaded
         } catch (e: Exception) {
-            Log.e("Pencurimovie", "Extract error: $url - ${e.message}")
+            logError("Pencurimovie", "Extract error: $url - ${e.message}")
             return false
         }
     }
@@ -617,12 +612,12 @@ class Pencurimovie : MainAPI() {
 
             false
         } catch (e: Exception) {
-            Log.e("Pencurimovie", "Universal extract error: $url")
+            logError("Pencurimovie", "Universal extract error: $url")
             false
         }
     }
 }
 
 // Cache instances
-private val searchCache = CacheManager<List<SearchResponse>>()
-private val mainPageCache = CacheManager<HomePageResponse>()
+private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 30 * 60 * 1000L)
+private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 5 * 60 * 1000L)
