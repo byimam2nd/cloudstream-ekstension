@@ -173,10 +173,14 @@ open class Donghuastream : MainAPI() {
             ?: document.selectFirst("meta[property=og:title]")?.attr("content")
             ?: "Unknown Title"
 
-        // FIXED: Fallback strategy untuk poster (4-layer)
-        var poster = document.selectFirst("div.thumb > img")?.attr("src")
-            ?: document.selectFirst("div.thumb img")?.attr("src")
+        // FIXED: Fallback strategy untuk poster (5-layer)
+        // IMPORTANT: Check data-src FIRST (lazy-loaded images), then src
+        var poster = document.selectFirst("div.thumb > img")?.attr("data-src")
+            ?: document.selectFirst("div.thumb img")?.attr("data-src")
             ?: document.selectFirst("div.ime > img")?.attr("data-src")
+            ?: document.selectFirst("img.ts-post-image")?.attr("data-src")
+            ?: document.selectFirst("div.thumb > img")?.attr("src")
+            ?: document.selectFirst("div.thumb img")?.attr("src")
             ?: document.selectFirst("img.ts-post-image")?.attr("src")
             ?: document.selectFirst("meta[property=og:image]")?.attr("content")
             ?: ""
