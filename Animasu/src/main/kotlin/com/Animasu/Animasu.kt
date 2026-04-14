@@ -251,21 +251,36 @@ class Animasu : MainAPI() {
             ).document
         }
         
-        // FIXED: Fallback strategy untuk title (3-layer)
+        // FIXED: Fallback strategy untuk title (4-layer)
+        // Selector utama di atas, alternatif di bawah
         val title = document.selectFirst("div.infox h1")?.text()
             ?.toString()
             ?.replace("Sub Indo", "")
             ?.trim()
             .orEmpty()
-            .ifEmpty { document.selectFirst("h1.entry-title")?.text()?.replace("Sub Indo", "")?.trim().orEmpty() }
-            .ifEmpty { document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty() }
+            .ifEmpty { 
+                // Alternatif 1: itemprop headline (SEO optimized sites)
+                document.selectFirst("h1[itemprop=headline]")?.text()?.replace("Sub Indo", "")?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Alternatif 2: WordPress default entry-title
+                document.selectFirst("h1.entry-title")?.text()?.replace("Sub Indo", "")?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Fallback terakhir: Open Graph meta
+                document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty() 
+            }
             ?: ""
 
-        // FIXED: Fallback strategy untuk poster (4-layer)
-        val poster = document.selectFirst("div.bigcontent img")?.extractImageAttr()
-            ?: document.selectFirst("meta[property=og:image]")?.attr("content")
+        // FIXED: Fallback strategy untuk poster (5-layer)
+        // IMPORTANT: Check data-src FIRST (lazy-loaded images), then src
+        val poster = document.selectFirst("div.bigcontent img")?.attr("data-src")
+            ?: document.selectFirst("div.bigcontent img")?.attr("src")
+            ?: document.selectFirst("div.thumb img")?.attr("data-src")
             ?: document.selectFirst("div.thumb img")?.attr("src")
             ?: document.selectFirst("img[data-src]")?.attr("data-src")
+            ?: document.selectFirst("img[src]")?.attr("src")
+            ?: document.selectFirst("meta[property=og:image]")?.attr("content")
 
         val table = document.selectFirst("div.infox div.spe")
         val type = getType(table?.selectFirst("span:contains(Jenis:)")?.ownText())

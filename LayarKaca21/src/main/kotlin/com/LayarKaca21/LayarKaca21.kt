@@ -239,17 +239,30 @@ class LayarKaca21 : MainAPI() {
 
         val baseUrl = fetchURL(fixUrl)
         
-        // FIXED: Fallback strategy untuk title (3-layer)
-        val title = document.selectFirst("div.movie-info h1")?.text()?.trim()
-            ?: document.selectFirst("h1.title")?.text()?.trim()
-            ?: document.selectFirst("meta[property=og:title]")?.attr("content")
+        // FIXED: Fallback strategy untuk title (4-layer)
+        // Selector utama di atas, alternatif di bawah
+        val title = document.selectFirst("div.movie-info h1")?.text()?.trim().orEmpty()
+            .ifEmpty { 
+                // Alternatif 1: WordPress default entry-title
+                document.selectFirst("h1.entry-title")?.text()?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Alternatif 2: Title class
+                document.selectFirst("h1.title")?.text()?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Fallback terakhir: Open Graph meta
+                document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty() 
+            }
             ?: ""
         
-        // FIXED: Fallback strategy untuk poster (4-layer)
-        val poster = document.select("meta[property=og:image]").attr("content")
+        // FIXED: Fallback strategy untuk poster (5-layer)
+        // IMPORTANT: Check data-src FIRST (lazy-loaded images), then src
+        val poster = document.selectFirst("div.poster img")?.attr("data-src").orEmpty()
             .ifEmpty { document.selectFirst("div.poster img")?.attr("src").orEmpty() }
             .ifEmpty { document.selectFirst("img[data-src]")?.attr("data-src").orEmpty() }
             .ifEmpty { document.selectFirst("img[src]")?.attr("src").orEmpty() }
+            .ifEmpty { document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty() }
         
         val tags = document.select("div.tag-list span").map { it.text() }
         val posterHeaders = mapOf("Referer" to getBaseUrl(poster))

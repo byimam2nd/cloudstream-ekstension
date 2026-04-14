@@ -209,23 +209,50 @@ class Funmovieslix : MainAPI() {
             ).documentLarge
         }
         
-        // FIXED: Fallback strategy untuk title (3-layer)
-        val title = document.select("meta[property=og:title]").attr("content")
-            .ifEmpty { document.selectFirst("h1.title")?.text().orEmpty() }
-            .ifEmpty { document.selectFirst("h1.entry-title")?.text().orEmpty() }
+        // FIXED: Fallback strategy untuk title (4-layer)
+        // Selector utama di atas, alternatif di bawah
+        val title = document.selectFirst("h1")?.text()?.trim().orEmpty()
+            .ifEmpty { 
+                // Alternatif 1: WordPress default entry-title
+                document.selectFirst("h1.entry-title")?.text()?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Alternatif 2: Title class
+                document.selectFirst("h1.title")?.text()?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Fallback terakhir: Open Graph meta
+                document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty() 
+            }
             .substringBefore("(").substringBefore("-").trim()
         
-        // FIXED: Fallback strategy untuk poster (4-layer)
-        val poster = document.select("meta[property=og:image]").attr("content")
+        // FIXED: Fallback strategy untuk poster (5-layer)
+        // IMPORTANT: Check data-src FIRST (lazy-loaded images), then src
+        val poster = document.selectFirst("div.poster img")?.attr("data-src").orEmpty()
             .ifEmpty { document.selectFirst("div.poster img")?.attr("src").orEmpty() }
             .ifEmpty { document.selectFirst("img[data-src]")?.attr("data-src").orEmpty() }
             .ifEmpty { document.selectFirst("img[src]")?.attr("src").orEmpty() }
+            .ifEmpty { document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty() }
         
         // FIXED: Fallback strategy untuk description (4-layer)
-        val description = document.select("div.desc-box p,div.entry-content p").text()
-            .ifEmpty { document.selectFirst("div.synopsis")?.text().orEmpty() }
-            .ifEmpty { document.selectFirst("div.description")?.text().orEmpty() }
-            .ifEmpty { document.selectFirst("meta[name=description]")?.attr("content").orEmpty() }
+        // Selector utama di atas, alternatif di bawah
+        val description = document.selectFirst("div.desc-box p")?.text()?.trim().orEmpty()
+            .ifEmpty { 
+                // Alternatif 1: WordPress default entry-content
+                document.selectFirst("div.entry-content p")?.text()?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Alternatif 2: Synopsis div
+                document.selectFirst("div.synopsis")?.text()?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Alternatif 3: Description div
+                document.selectFirst("div.description")?.text()?.trim().orEmpty() 
+            }
+            .ifEmpty { 
+                // Fallback terakhir: Open Graph description
+                document.selectFirst("meta[name=description]")?.attr("content").orEmpty() 
+            }
         
         val actors=document.select("div.cast-grid a").map { it.text() }
         val type = if (url.contains("tv")) TvType.TvSeries else TvType.Movie
