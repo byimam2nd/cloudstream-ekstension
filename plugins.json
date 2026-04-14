@@ -63,28 +63,6 @@
         "name": "Donghuastream"
     },
     {
-        "iconUrl": "https://www.google.com/s2/favicons?domain=donghub.vip&sz=%size",
-        "fileHash": "sha256-8d22affd53dafd05da379b9c1038dddde54eae8f5fc7ab12642ac2a5f23b8d89",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 208808,
-        "status": 1,
-        "language": "id",
-        "authors": [
-            "Imam2nd"
-        ],
-        "tvTypes": [
-            "Anime",
-            "TvSeries",
-            "Movie"
-        ],
-        "version": 1,
-        "internalName": "Donghub",
-        "description": "\ud83d\udc09 Donghub - Platform streaming Donghua (Chinese Animation) dengan subtitle Indonesia!",
-        "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/Donghub.cs3",
-        "name": "Donghub"
-    },
-    {
         "iconUrl": "https://www.google.com/s2/favicons?domain=dramabox.com&sz=%size",
         "fileHash": "sha256-942c48636c9ef6cdf2ecf3348bbadcdb24d989344ddd4536a94c00c8dfd254bc",
         "apiVersion": 1,
