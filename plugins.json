@@ -86,10 +86,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=dramabox.com&sz=%size",
-        "fileHash": "sha256-a41de0f93cdd96bb58169d52d588839f9bc4b6a3c0c3bffccdc344f115e2c792",
+        "fileHash": "sha256-942c48636c9ef6cdf2ecf3348bbadcdb24d989344ddd4536a94c00c8dfd254bc",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 220360,
+        "fileSize": 218062,
         "status": 1,
         "language": "id",
         "authors": [
