@@ -162,102 +162,102 @@ open class Donghuastream : MainAPI() {
             rateLimitDelay()
             app.get(
                 url,
-                timeout = AutoUsedConstants.FAST_TIMEOUT,
+                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
-        
+
         // FIXED: Fallback strategy untuk title (3-layer)
         val title = document.selectFirst("h1.entry-title")?.text()?.trim()
             ?: document.selectFirst("h1.title")?.text()?.trim()
             ?: document.selectFirst("meta[property=og:title]")?.attr("content")
             ?: "Unknown Title"
-        
-        val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
-        
+
         // FIXED: Fallback strategy untuk poster (4-layer)
-        var poster = document.selectFirst("div.ime > img")?.attr("data-src")
+        var poster = document.selectFirst("div.thumb > img")?.attr("src")
             ?: document.selectFirst("div.thumb img")?.attr("src")
+            ?: document.selectFirst("div.ime > img")?.attr("data-src")
             ?: document.selectFirst("img.ts-post-image")?.attr("src")
             ?: document.selectFirst("meta[property=og:image]")?.attr("content")
             ?: ""
-        
+
         // FIXED: Fallback strategy untuk description (4-layer)
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
             ?: document.selectFirst("div.description")?.text()?.trim()
             ?: document.selectFirst("div.synopsis")?.text()?.trim()
             ?: document.selectFirst("meta[name=description]")?.attr("content")
             ?: ""
-        
-        // FIXED: Fallback strategy untuk type (3-layer)
+
+        // FIXED: Robust type detection dengan fallback strategy
         val type = document.selectFirst(".spe")?.text()
             ?: document.selectFirst(".meta .type")?.text()
             ?: document.selectFirst("span.type")?.text()
             ?: ""
-        val tvtag = if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
-        return if (tvtag == TvType.TvSeries) {
-            val Eppage= fixUrl(document.selectFirst(".eplister li > a")?.attr("href") ?:"")
-            val doc= executeWithRetry {
-                rateLimitDelay()
-                app.get(
-                    Eppage,
-                    timeout = AutoUsedConstants.FAST_TIMEOUT,
-                    headers = mapOf("User-Agent" to getRandomUserAgent())
-                ).documentLarge
-            }
-            
-            // OPTIMIZED: Parallel episode loading (all episodes at once)
-            // 5-10x faster for anime with many episodes
-            val episodes = coroutineScope {
-                doc.select("div.episodelist > ul > li").map { info ->
-                    async {
-                        val href1 = info.select("a").attr("href")
-                        val episodeText = info.select("a span").text().substringAfter("-").substringBeforeLast("-")
-                        val episode = extractEpisodeNumber(episodeText)
+        val isMovie = type.contains("Movie", ignoreCase = true) || url.contains("-movie-", ignoreCase = true)
+        val tvType = if (isMovie) TvType.AnimeMovie else TvType.Anime
 
-                        // FIXED: Fallback strategy untuk episode poster (3-layer)
-                        var posterr = info.selectFirst("a img")?.attr("data-src")
-                            ?: info.selectFirst("a img")?.attr("src")
-                            ?: info.selectFirst("img[data-lazy-src]")?.attr("data-lazy-src")
-                            ?: ""
+        // FIXED: Robust status detection dengan fallback
+        val statusText = document.select(".spe").text().lowercase()
+            .ifEmpty { document.select(".meta .status").text().lowercase() }
+            .ifEmpty { document.select("span.status").text().lowercase() }
+        val showStatus = when {
+            "ongoing" in statusText || "continuing" in statusText -> ShowStatus.Ongoing
+            "completed" in statusText || "finished" in statusText -> ShowStatus.Completed
+            else -> null
+        }
 
-                        // OPTIMIZED: Resize poster for mobile screens (prevent breaking)
-                        // Max 500px width for better quality on non-Android TV
-                        if (posterr.isNotEmpty()) {
-                            posterr = optimizeImageUrl(posterr, 500)
-                        }
+        return if (tvType == TvType.Anime) {
+            // FIXED: Parse episodes directly from detail page .eplister li
+            // (NOT from episode page like the old broken code)
+            val allEpisodes = document.select(".eplister li")
 
-                        val epTitle = episodeText.replace(Regex("[^0-9.]"), "").trim()
+            val episodes = allEpisodes.mapNotNull { info ->
+                val epLink = info.selectFirst("a")?.attr("href")
+                if (epLink.isNullOrBlank()) return@mapNotNull null
 
-                        newEpisode(href1) {
-                            this.name = epTitle.replace(title, "", ignoreCase = true)
-                            this.episode = episode
-                            this.posterUrl = posterr
-                        }
-                    }
-                }.awaitAll()
+                // Fix: Extract episode number from .epl-num (format: "3[72]", "2[71]", "1[70]")
+                val episodeText = info.selectFirst(".epl-num")?.text()?.trim().orEmpty()
+                val episodeNumber = extractEpisodeNumber(episodeText)
+
+                // Get episode title from .epl-title
+                val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
+                val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()
+
+                // FIXED: Fallback strategy untuk episode poster (3-layer)
+                var posterr = info.selectFirst("a img")?.attr("data-src")
+                    ?: info.selectFirst("a img")?.attr("src")
+                    ?: info.selectFirst("img[data-lazy-src]")?.attr("data-lazy-src")
+                    ?: ""
+
+                // Image optimization
+                if (posterr.isNotEmpty()) {
+                    posterr = optimizeImageUrl(posterr)
+                }
+
+                newEpisode(epLink) {
+                    this.name = cleanName.ifEmpty { "Episode ${episodeNumber ?: "?"}" }
+                    this.episode = episodeNumber
+                    this.posterUrl = posterr
+                }
             }.reversed()
-
-            // 🎯 PRE-FETCH: Start fetching links in background for first 10 episodes
 
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
-            } else {
-                // OPTIMIZED: Resize main poster for mobile screens
-                poster = optimizeImageUrl(poster, 500)
             }
+
             newTvSeriesLoadResponse(title, url, TvType.Anime, episodes) {
                 this.posterUrl = poster
                 this.plot = description
             }
         } else {
+            // Movie
+            val movieLink = document.selectFirst(".eplister li > a")?.attr("href") ?: url
+
             if (poster.isEmpty()) {
                 poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim().toString()
-            } else {
-                // OPTIMIZED: Resize movie poster for mobile screens
-                poster = optimizeImageUrl(poster, 500)
             }
-            newMovieLoadResponse(title, url, TvType.Movie, href) {
+
+            newMovieLoadResponse(title, url, TvType.AnimeMovie, movieLink) {
                 this.posterUrl = poster
                 this.plot = description
             }
