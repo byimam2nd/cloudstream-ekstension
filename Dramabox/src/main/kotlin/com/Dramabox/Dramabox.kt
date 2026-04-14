@@ -5,33 +5,18 @@
 // Type: Asian Drama (Short-form)
 // Language: Indonesian (id)
 // Standard: cloudstream-ekstension
-// Reference: ExtCloud/Dramabox
-//
-// API-based (no HTML scraping):
-// - API: https://db.hafizhibnusyam.my.id (obfuscated)
-// - Video links directly from API (multiple qualities)
+// Reference: ExtCloud/Dramabox, styled like Melolo
 // ========================================
 
 package com.Dramabox
 
-// ============================================
-// GROUP 1: Generated Sync Imports
-// ============================================
 import com.Dramabox.generated_sync.*
-
-// ============================================
-// GROUP 2: CloudStream Library
-// ============================================
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-
-// ============================================
-// GROUP 3: Java Standard Library
-// ============================================
 import java.net.URLEncoder
 
 class Dramabox : MainAPI() {
@@ -84,26 +69,15 @@ class Dramabox : MainAPI() {
         val dramaId = extractDramaId(url)
         if (dramaId.isBlank()) throw ErrorLoadingException("ID tidak ditemukan")
 
-        val localTitle = getQueryParam(url, "title")
-        val localPoster = getQueryParam(url, "poster")
-        val localIntro = getQueryParam(url, "intro")
-        val localTags = getQueryParam(url, "tags")
-            ?.split("|")
-            ?.map { it.trim() }
-            ?.filter { it.isNotBlank() }
-        val localEpisodeCount = getQueryParam(url, "ep")?.toIntOrNull()
+        val detail = fetchDramaDetail(dramaId)
+        val drama = detail?.data ?: throw ErrorLoadingException("Drama tidak ditemukan")
 
-        val needDetail = localEpisodeCount == null || localTitle.isNullOrBlank() || localPoster.isNullOrBlank() || localIntro.isNullOrBlank()
-        val detail = if (needDetail) fetchDramaDetail(dramaId) else null
-        val episodeCount = localEpisodeCount ?: detail?.data?.episodeCount ?: inferEpisodeCount(dramaId)
+        val title = cleanTitle(drama.title ?: "DramaBox")
+        val poster = drama.coverImage
+        val description = drama.introduction
+        val tags = drama.tags
+        val episodeCount = drama.episodeCount ?: inferEpisodeCount(dramaId)
         if (episodeCount <= 0) throw ErrorLoadingException("Episode tidak ditemukan")
-
-        val rawTitle = localTitle?.takeIf { it.isNotBlank() }
-            ?: detail?.data?.title?.takeIf { it.isNotBlank() }
-            ?: "DramaBox"
-        val title = cleanTitle(rawTitle)
-        val poster = cleanPosterUrl(localPoster) ?: cleanPosterUrl(detail?.data?.coverImage)
-        val description = cleanText(localIntro) ?: cleanText(detail?.data?.introduction)
 
         val episodes = (1..episodeCount).map { episodeNo ->
             newEpisode(LoadData(bookId = dramaId, episodeNo = episodeNo).toJson()) {
@@ -112,12 +86,13 @@ class Dramabox : MainAPI() {
                 this.posterUrl = poster
             }
         }
-        val safeUrl = buildDramaUrl(dramaId)
+
+        val safeUrl = "$mainUrl/drama/_$dramaId"
 
         return newTvSeriesLoadResponse(title, safeUrl, TvType.AsianDrama, episodes) {
             this.posterUrl = poster
             this.plot = description
-            this.tags = localTags ?: detail?.data?.tags
+            this.tags = tags
         }
     }
 
@@ -164,6 +139,35 @@ class Dramabox : MainAPI() {
         return true
     }
 
+    private fun encodeQuery(value: String): String = URLEncoder.encode(value, "UTF-8")
+
+    private fun extractDramaId(url: String): String {
+        return url.substringAfterLast("_").substringBefore("?").trim()
+    }
+
+    private fun cleanTitle(raw: String): String {
+        return raw
+            .replace(Regex("\\(Sulih Suara\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\(Dub Indo\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\(Indonesian Sub\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\(Sub Indo\\)", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\s{2,}"), " ")
+            .trim()
+    }
+
+    private fun DramaItem.toSearchResult(): SearchResponse? {
+        val id = id?.trim().orEmpty()
+        val rawTitle = title?.trim().orEmpty()
+        if (id.isBlank() || rawTitle.isBlank()) return null
+
+        val cleanTitle = cleanTitle(rawTitle)
+
+        return newTvSeriesSearchResponse(cleanTitle, "$mainUrl/drama/_$id", TvType.AsianDrama) {
+            this.posterUrl = coverImage
+            this.year = null
+        }
+    }
+
     private suspend fun fetchDramaList(path: String, page: Int): DramaListResponse? {
         val prefix = if (path.startsWith("http", true)) path else "$apiUrl$path"
         val join = if (prefix.contains("?")) "&" else "?"
@@ -195,95 +199,8 @@ class Dramabox : MainAPI() {
             .maxOrNull() ?: 0
     }
 
-    private fun DramaItem.toSearchResult(): SearchResponse? {
-        val id = getPreferredDramaId(this)
-        val rawTitle = title?.trim().orEmpty()
-        if (id.isBlank() || rawTitle.isBlank()) return null
-
-        val cleanTitle = cleanTitle(rawTitle)
-        val cleanPoster = cleanPosterUrl(coverImage)
-
-        return newTvSeriesSearchResponse(cleanTitle, buildDramaUrl(dramaId = id, title = cleanTitle, coverImage = coverImage, introduction = introduction, tags = tags, episodeCount = episodeCount), TvType.AsianDrama) {
-            this.posterUrl = cleanPoster
-        }
-    }
-
-    private fun cleanPosterUrl(url: String?): String? {
-        if (url.isNullOrBlank()) return null
-        // Remove query parameters that may break image loading
-        return url.split("?", "@").firstOrNull()
-            ?.takeIf { it.startsWith("http") }
-    }
-
-    private fun cleanTitle(raw: String): String {
-        return raw
-            .replace(Regex("\\(Sulih Suara\\)", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("\\(Dub Indo\\)", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("\\(Indonesian Sub\\)", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("\\(Sub Indo\\)", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("\\(Bahasa Indonesia\\)", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("\\s{2,}"), " ")
-            .trim()
-            .trim('(', ')', '-', '_')
-            .trim()
-    }
-
-    private fun cleanText(text: String?): String? {
-        if (text.isNullOrBlank()) return null
-        return text
-            .replace(Regex("\\s{2,}"), " ")
-            .replace(Regex("\\n{3,}"), "\n\n")
-            .trim()
-    }
-
-    private fun getPreferredDramaId(item: DramaItem): String {
-        val fromCover = extractIdFromCover(item.coverImage)
-        if (!fromCover.isNullOrBlank()) return fromCover
-        return item.id?.trim().orEmpty()
-    }
-
-    private fun extractIdFromCover(coverUrl: String?): String? {
-        if (coverUrl.isNullOrBlank()) return null
-        val pattern = Regex("/(\\d+)/\\d+\\.jpg")
-        return pattern.find(coverUrl)?.groupValues?.getOrNull(1)
-    }
-
-    private fun encodeQuery(value: String): String = URLEncoder.encode(value, "UTF-8")
-
-    private fun extractDramaId(url: String): String {
-        return getQueryParam(url, "id")
-            ?: url.substringAfterLast("/").substringBefore("?").substringAfter("_").trim()
-    }
-
-    private fun getQueryParam(url: String, key: String): String? {
-        return url.toRegex().find(url)?.groupValues?.getOrNull(1)
-            ?: runCatching {
-                val uri = java.net.URI(url)
-                uri.rawQuery?.split("&")?.find { it.startsWith("$key=") }?.substringAfter("=")
-            }.getOrNull()
-    }
-
-    private fun buildDramaUrl(
-        dramaId: String,
-        title: String? = null,
-        coverImage: String? = null,
-        introduction: String? = null,
-        tags: List<String>? = null,
-        episodeCount: Int? = null,
-    ): String {
-        val params = mutableListOf<String>()
-        title?.let { params += "title=${encodeQuery(it)}" }
-        coverImage?.let { params += "poster=${encodeQuery(it)}" }
-        introduction?.let { params += "intro=${encodeQuery(it)}" }
-        tags?.joinToString("|")?.let { params += "tags=${encodeQuery(it)}" }
-        episodeCount?.let { params += "ep=$it" }
-        return "$mainUrl/drama/_${dramaId}${if (params.isNotEmpty()) "?${params.joinToString("&")}" else ""}"
-    }
-
-
-
     // ========================================
-    // DATA CLASSES (JSON responses)
+    // DATA CLASSES
     // ========================================
 
     data class DramaListResponse(
