@@ -44,10 +44,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/Kohi-den/extensions-source/927f9c68fd64ce52f6212ae633d0f0585eca3545/src/en/donghuastream/res/mipmap-xxxhdpi/ic_launcher.png",
-        "fileHash": "sha256-78f9b25e9674a79e49ed20538b08f6faea0d4dfc840d80b566b0df8d0ba58e50",
+        "fileHash": "sha256-909abc5e3f6f2885ec85757ac197aa73fd206318d6e2b0427fe0d9dd6632de47",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 212128,
+        "fileSize": 212197,
         "status": 1,
         "language": "id",
         "authors": [
