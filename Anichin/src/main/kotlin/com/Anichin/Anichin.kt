@@ -129,9 +129,9 @@ open class Anichin : MainAPI() {
                 this.addSub(episodeCount.toInt())
             }
             if (isOngoing) {
-                this.status = ShowStatus.Ongoing
+                this.showStatus = ShowStatus.Ongoing
             } else if (statusText.contains("Completed", ignoreCase = true)) {
-                this.status = ShowStatus.Completed
+                this.showStatus = ShowStatus.Completed
             }
         }
     }

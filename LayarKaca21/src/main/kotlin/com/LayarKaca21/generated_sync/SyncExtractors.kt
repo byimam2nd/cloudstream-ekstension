@@ -1386,7 +1386,7 @@ class Megacloud : ExtractorApi() {
     override val requiresReferer = false
 
     // Gunakan HttpClientFactory untuk koneksi optimal
-    private val client = app
+    private val client = com.lagradost.cloudstream3.app.baseClient
     private val gson = com.google.gson.Gson()
 
     private fun fetchUrl(url: String, headers: Map<String, String> = emptyMap()): String? {
