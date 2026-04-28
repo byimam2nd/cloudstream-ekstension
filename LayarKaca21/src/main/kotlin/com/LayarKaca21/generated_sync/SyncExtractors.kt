@@ -80,7 +80,6 @@ import javax.crypto.spec.GCMParameterSpec
 //
 // Script sync akan otomatis update semua import paths
 // ========================================
-import com.LayarKaca21.generated_sync.HttpClientFactory
 import com.LayarKaca21.generated_sync.CompiledRegexPatterns
 
 // ========================================
@@ -173,7 +172,7 @@ object ExtractorHelpers {
      */
     fun getStandardHeaders(domain: String): Map<String, String> {
         return ExtractorConstants.DEFAULT_HEADERS + 
-            ("User-Agent" to HttpClientFactory.getUserAgentForDomain(domain)) +
+            ("User-Agent" to UserAgentRotator.getRandom()) +
             ("Origin" to domain)
     }
     
@@ -1387,7 +1386,7 @@ class Megacloud : ExtractorApi() {
     override val requiresReferer = false
 
     // Gunakan HttpClientFactory untuk koneksi optimal
-    private val client = HttpClientFactory.getClient()
+    private val client = app
     private val gson = com.google.gson.Gson()
 
     private fun fetchUrl(url: String, headers: Map<String, String> = emptyMap()): String? {
@@ -2157,7 +2156,7 @@ object MasterLinkGenerator {
         val response = app.get(
             m3u8Url,
             headers = headers,
-            timeout = AutoUsedConstants.DEFAULT_TIMEOUT
+            timeout = 30000L
         )
         return response.text
     }
@@ -2315,7 +2314,7 @@ object SmartM3U8Parser {
         val response = app.get(
             m3u8Url,
             headers = headers,
-            timeout = AutoUsedConstants.DEFAULT_TIMEOUT
+            timeout = 30000L
         )
         
         // Inline parsing logic
@@ -2404,7 +2403,7 @@ object SmartM3U8Parser {
             val response = app.head(
                 url,
                 headers = headers,
-                timeout = AutoUsedConstants.FAST_TIMEOUT
+                timeout = 10000L
             )
             
             val contentLength = response.headers["Content-Length"]?.toLongOrNull()
@@ -2434,7 +2433,7 @@ object SmartM3U8Parser {
             val response = app.get(
                 variantUrl,
                 headers = headers,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT
+                timeout = 30000L
             )
             
             // Extract .ts segment URLs dari variant playlist

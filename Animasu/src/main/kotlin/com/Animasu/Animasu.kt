@@ -178,7 +178,7 @@ class Animasu : MainAPI() {
             rateLimitDelay(moduleName = "Animasu")
             app.get(
                 "$mainUrl/pencarian/?${request.data}&halaman=$page",
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -213,7 +213,7 @@ class Animasu : MainAPI() {
             rateLimitDelay(moduleName = "Animasu")
             app.get(
                 "$mainUrl/?s=$query",
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -246,7 +246,7 @@ class Animasu : MainAPI() {
             rateLimitDelay(moduleName = "Animasu")
             app.get(
                 url,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -345,7 +345,7 @@ class Animasu : MainAPI() {
             rateLimitDelay(moduleName = "Animasu")
             app.get(
                 data,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }

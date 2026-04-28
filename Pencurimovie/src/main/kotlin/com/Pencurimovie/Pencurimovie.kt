@@ -238,7 +238,7 @@ class Pencurimovie : MainAPI() {
             rateLimitDelay(moduleName = "Pencurimovie")
             app.get(
                 "${mainUrl}?s=$query",
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -251,7 +251,7 @@ class Pencurimovie : MainAPI() {
             rateLimitDelay(moduleName = "Pencurimovie")
             app.get(
                 url,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -354,7 +354,7 @@ class Pencurimovie : MainAPI() {
                 rateLimitDelay(moduleName = "Pencurimovie")
                 app.get(
                     data,
-                    timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                    timeout = 30000L,
                     headers = mapOf("User-Agent" to getRandomUserAgent())
                 ).document
             }
@@ -463,7 +463,7 @@ class Pencurimovie : MainAPI() {
             )
             
             // Step 1: Initial request (get cookies) - WITH TIMEOUT
-            val res = app.get(url, headers = headers, allowRedirects = true, timeout = AutoUsedConstants.DEFAULT_TIMEOUT)
+            val res = app.get(url, headers = headers, allowRedirects = true, timeout = 30000L)
             val text = res.text
             val finalUrl = res.url
             

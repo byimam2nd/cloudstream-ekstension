@@ -59,7 +59,7 @@ open class Donghuastream : MainAPI() {
             rateLimitDelay()
             app.get(
                 "$mainUrl/${request.data}$page",
-                timeout = AutoUsedConstants.FAST_TIMEOUT,
+                timeout = 10000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -139,7 +139,7 @@ open class Donghuastream : MainAPI() {
                             rateLimitDelay()
                             app.get(
                                 "${mainUrl}/pagg/$page/?s=$query",
-                                timeout = AutoUsedConstants.FAST_TIMEOUT,
+                                timeout = 10000L,
                                 headers = mapOf("User-Agent" to getRandomUserAgent())
                             ).documentLarge
                         }
@@ -162,7 +162,7 @@ open class Donghuastream : MainAPI() {
             rateLimitDelay()
             app.get(
                 url,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -293,7 +293,7 @@ open class Donghuastream : MainAPI() {
             rateLimitDelay()
             app.get(
                 data,
-                timeout = AutoUsedConstants.FAST_TIMEOUT,
+                timeout = 10000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }

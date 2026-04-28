@@ -97,7 +97,7 @@ class Funmovieslix : MainAPI() {
             rateLimitDelay()
             app.get(
                 "$mainUrl/${request.data}/page/$page",
-                timeout = AutoUsedConstants.FAST_TIMEOUT,
+                timeout = 10000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -176,7 +176,7 @@ class Funmovieslix : MainAPI() {
                             rateLimitDelay()
                             app.get(
                                 "${mainUrl}?s=$query&page=$page",
-                                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                                timeout = 30000L,
                                 headers = mapOf("User-Agent" to getRandomUserAgent())
                             ).documentLarge
                         }
@@ -204,7 +204,7 @@ class Funmovieslix : MainAPI() {
             rateLimitDelay()
             app.get(
                 url,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -337,7 +337,7 @@ class Funmovieslix : MainAPI() {
             rateLimitDelay()
             app.get(
                 data,
-                timeout = AutoUsedConstants.FAST_TIMEOUT,
+                timeout = 10000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }

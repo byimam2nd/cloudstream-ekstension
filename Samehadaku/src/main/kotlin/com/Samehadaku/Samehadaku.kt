@@ -173,7 +173,7 @@ class Samehadaku : MainAPI() {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
                 url,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             )
         }
@@ -236,7 +236,7 @@ class Samehadaku : MainAPI() {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
                 "$mainUrl/?s=$query",
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -268,7 +268,7 @@ class Samehadaku : MainAPI() {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
                 url,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }
@@ -355,7 +355,7 @@ class Samehadaku : MainAPI() {
             rateLimitDelay(moduleName = "Samehadaku")
             app.get(
                 data,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).document
         }

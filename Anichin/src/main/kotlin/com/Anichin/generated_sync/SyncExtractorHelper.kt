@@ -435,7 +435,6 @@ object EpisodePreFetcher {
             launch {
                 try {
                     // Pre-warm connection dulu (TCP/TLS handshake)
-                    HttpClientFactory.preWarmConnection(nextEpisode.data)
 
                     // Jika marathon, langsung extract links
                     if (isMarathon) {
@@ -496,7 +495,6 @@ object EpisodePreFetcher {
                 launch {
                     try {
                         // Hanya pre-warm connection, tidak extract links
-                        HttpClientFactory.preWarmConnection(episode.data)
                     } catch (_: Exception) {
                         // Ignore per-episode failures
                     }

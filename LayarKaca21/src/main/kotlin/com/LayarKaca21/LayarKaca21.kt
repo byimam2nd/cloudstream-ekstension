@@ -101,7 +101,7 @@ class LayarKaca21 : MainAPI() {
             rateLimitDelay() // Only delay for network requests
             app.get(
                 "${request.data}$page",
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -126,7 +126,7 @@ class LayarKaca21 : MainAPI() {
             rateLimitDelay()
             val res = app.get(
                 url,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
 
@@ -232,7 +232,7 @@ class LayarKaca21 : MainAPI() {
             rateLimitDelay()
             app.get(
                 fixUrl,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -422,7 +422,7 @@ class LayarKaca21 : MainAPI() {
             val response = app.get(
                 this,
                 referer = "$seriesUrl/",
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             )
             val document = response.documentLarge
@@ -459,7 +459,7 @@ class LayarKaca21 : MainAPI() {
             val res = app.get(
                 url,
                 allowRedirects = false,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             )
             val href = res.headers["location"]
