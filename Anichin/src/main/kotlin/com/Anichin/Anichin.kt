@@ -106,10 +106,6 @@ open class Anichin : MainAPI() {
                 ?: this.selectFirst("div.bsx img")?.attr("src")
         )
 
-        // Fix: Use correct selector - .epx for status (Ongoing/Completed)
-        val statusText = this.selectFirst("div.bsx .epx")?.text() ?: ""
-        val isOngoing = statusText.contains("Ongoing", ignoreCase = true)
-
         // Fetch episode count from detail page for badge display
         val episodeCount = runCatching {
             val doc = app.get(
@@ -127,11 +123,6 @@ open class Anichin : MainAPI() {
             this.posterUrl = posterUrl
             if (episodeCount != null) {
                 this.addSub(episodeCount.toInt())
-            }
-            if (isOngoing) {
-                this.showStatus = ShowStatus.Ongoing
-            } else if (statusText.contains("Completed", ignoreCase = true)) {
-                this.showStatus = ShowStatus.Completed
             }
         }
     }
@@ -289,7 +280,7 @@ open class Anichin : MainAPI() {
                             logDebug("Anichin", "Found iframe for $label: $iframeUrl")
                             
                             // loadExtractorWithFallback will extract iframe URL internally
-                            val loaded = com.Anichin.generated_sync.loadExtractorWithFallback(
+                            val loaded = loadExtractorWithFallback(
                                 url = iframeUrl,
                                 referer = data,
                                 subtitleCallback = subtitleCallback,
