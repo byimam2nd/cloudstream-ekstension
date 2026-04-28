@@ -1,6 +1,6 @@
-name: CI/CD - Sync & Build
+name: CI/CD - Build & Deploy
 
-# Combined workflow: Sync master files → Build all providers
+# Workflow optimized for Standalone & Persistent Providers (v4.0+)
 concurrency:
   group: "ci-cd"
   cancel-in-progress: true
@@ -10,210 +10,35 @@ on:
     branches: [ master, main ]
     paths-ignore:
       - '*.md'
+      - 'docs/**'
   pull_request:
     branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
   # ========================================
-  # JOB 1: SYNC MASTER FILES
-  # ========================================
-  sync:
-    runs-on: ubuntu-latest
-    outputs:
-      modules: ${{ steps.detect-modules.outputs.modules }}
-      module_count: ${{ steps.detect-modules.outputs.module_count }}
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
-
-    - name: Detect active modules dynamically
-      id: detect-modules
-      run: |
-        echo "🔍 Detecting active modules (folders with build.gradle.kts)..."
-
-        # Find all folders with build.gradle.kts (excluding root)
-        MODULES=""
-        for build_file in $(find . -maxdepth 2 -name "build.gradle.kts" | grep -v "^./build.gradle.kts"); do
-          module_dir=$(dirname "$build_file" | sed 's|^\./||')
-          MODULES="$MODULES $module_dir"
-        done
-
-        # Trim leading space
-        MODULES=$(echo $MODULES | xargs)
-
-        echo "MODULES=$MODULES"
-        echo "modules=$MODULES" >> $GITHUB_OUTPUT
-
-        MODULE_COUNT=$(echo $MODULES | wc -w)
-        echo "module_count=$MODULE_COUNT" >> $GITHUB_OUTPUT
-
-        echo "✅ Found $MODULE_COUNT active module(s): $MODULES"
-
-    - name: Sync All Master Files using script
-      run: |
-        echo "📦 Syncing All Master Files to all active modules..."
-        echo ""
-
-        # Make script executable
-        chmod +x scripts/sync-all-masters.sh
-
-        # Run the sync script
-        bash scripts/sync-all-masters.sh
-
-    - name: Verify all synced files
-      run: |
-        echo ""
-        echo "🔍 Verifying synced files..."
-        echo ""
-
-        MODULES="${{ steps.detect-modules.outputs.modules }}"
-        MODULE_COUNT=$(echo $MODULES | wc -w)
-        VALID_COUNT=0
-        ERRORS=0
-
-        # Files to verify (with Sync prefix)
-        SYNC_FILES=(
-          "SyncExtractors.kt"
-          "SyncUtils.kt"
-          "SyncCaches.kt"
-          "SyncMonitors.kt"
-          "SyncHttpClientFactory.kt"
-          "SyncCompiledRegexPatterns.kt"
-          "SyncCircuitBreaker.kt"
-          "SyncExtractorHelper.kt"
-          "SyncAutoUsed.kt"
-        )
-
-        for MODULE in $MODULES; do
-          echo "📋 Verifying $MODULE..."
-
-          # Auto-detect: Find the actual folder structure
-          SRC_DIR="$MODULE/src/main/kotlin/com"
-
-          if [ ! -d "$SRC_DIR" ]; then
-            echo "   ❌ Error: Source directory not found: $SRC_DIR"
-            ERRORS=$((ERRORS + 1))
-            continue
-          fi
-
-          # Get folder name
-          FOLDERS=$(ls -1 "$SRC_DIR" 2>/dev/null)
-          FOLDER_COUNT=$(echo "$FOLDERS" | wc -l)
-
-          if [ "$FOLDER_COUNT" -gt 1 ]; then
-            TARGET_FOLDER=""
-            for folder in $FOLDERS; do
-              if ls "$SRC_DIR/$folder"/*Plugin*.kt 1>/dev/null 2>&1 || \
-                 ls "$SRC_DIR/$folder"/*Provider*.kt 1>/dev/null 2>&1; then
-                TARGET_FOLDER="$folder"
-                break
-              fi
-            done
-            FOLDER="${TARGET_FOLDER:-$(echo "$FOLDERS" | head -1)}"
-          else
-            FOLDER="$FOLDERS"
-          fi
-
-          FOLDER=$(echo "$FOLDER" | xargs)
-          echo "   Found folder: com.$FOLDER"
-
-          # Check each sync file in generated_sync/ folder
-          for SYNC_FILE in "${SYNC_FILES[@]}"; do
-            FILE_PATH="$MODULE/src/main/kotlin/com/$FOLDER/generated_sync/$SYNC_FILE"
-
-            # Check if file exists
-            if [ ! -f "$FILE_PATH" ]; then
-              echo "   ❌ ERROR: $SYNC_FILE not found: $FILE_PATH"
-              ERRORS=$((ERRORS + 1))
-              continue
-            fi
-            echo "   ✅ $SYNC_FILE exists"
-
-            # Check if file has correct package
-            if ! head -10 "$FILE_PATH" | grep -q "^package com\\.$FOLDER\\.generated_sync"; then
-              echo "   ⚠️  WARNING: $SYNC_FILE package might be incorrect"
-            fi
-          done
-
-          echo "   ✅ $MODULE verification passed"
-          echo ""
-
-          VALID_COUNT=$((VALID_COUNT + 1))
-        done
-
-        echo "========================================"
-        echo "📊 Verification Summary"
-        echo "========================================"
-        echo "   Total modules: $MODULE_COUNT"
-        echo "   Verified: $VALID_COUNT"
-        echo "   Errors: $ERRORS"
-        echo ""
-
-        if [ "$ERRORS" -gt 0 ]; then
-          echo "❌ Verification FAILED: $ERRORS error(s) found"
-          exit 1
-        fi
-
-        if [ "$VALID_COUNT" -eq 0 ]; then
-          echo "❌ Verification FAILED: No modules verified"
-          exit 1
-        fi
-
-        echo "✅ Verification PASSED: All $VALID_COUNT module(s) have synced files"
-
-    - name: Commit and push generated_sync files
-      run: |
-        echo ""
-        echo "🔄 Committing generated_sync files..."
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-
-        # Force add generated_sync directories
-        git add -f */src/main/kotlin/com/*/generated_sync/ || true
-
-        # Check if any files were staged
-        if ! git diff --cached --quiet; then
-          echo "Generated files staged, committing..."
-          git commit -m "chore: update generated_sync files [auto-generated]"
-          git push
-          echo "✅ Generated files pushed successfully"
-        else
-          echo "ℹ️ No generated files to commit (already up-to-date)"
-        fi
-
-  # ========================================
-  # JOB 2: BUILD ALL PROVIDERS
+  # SINGLE JOB: BUILD ALL PROVIDERS
   # ========================================
   build:
-    needs: sync
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      - name: Wait for commit to propagate
-        run: sleep 10
-
-      - name: Checkout (with latest commit from sync job)
+      - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          path: "src"
-          ref: ${{ github.ref }}
           fetch-depth: 0
 
-      - name: Checkout builds
+      - name: Checkout builds branch
         uses: actions/checkout@v5
         with:
           ref: "builds"
-          path: "builds"
+          path: "builds_dir"
 
       - name: Clean old builds
         run: |
-          rm $GITHUB_WORKSPACE/builds/*.cs3 || true
-          rm $GITHUB_WORKSPACE/builds/*.jar || true
+          rm builds_dir/*.cs3 2>/dev/null || true
+          rm builds_dir/*.jar 2>/dev/null || true
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -225,89 +50,41 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Access Secrets
-        env:
-          TMDB_API: ${{ secrets.TMDB_API }}
-          DUMP_API: ${{ secrets.DUMP_API }}
-          DUMP_KEY: ${{ secrets.DUMP_KEY }}
-          ANICHI_API: ${{ secrets.ANICHI_API }}
-          ANICHI_SERVER: ${{ secrets.ANICHI_SERVER }}
-          ANICHI_ENDPOINT: ${{ secrets.ANICHI_ENDPOINT }}
-          ANICHI_APP: ${{ secrets.ANICHI_APP }}
-          ZSHOW_API: ${{ secrets.ZSHOW_API }}
-          SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
-          CINEMATV_API: ${{ secrets.CINEMATV_API }}
-          GHOSTX_API: ${{ secrets.GHOSTX_API }}
-          SUPERSTREAM_FIRST_API: ${{ secrets.SUPERSTREAM_FIRST_API }}
-          SUPERSTREAM_SECOND_API: ${{ secrets.SUPERSTREAM_SECOND_API }}
-          SUPERSTREAM_THIRD_API: ${{ secrets.SUPERSTREAM_THIRD_API }}
-          SUPERSTREAM_FOURTH_API: ${{ secrets.SUPERSTREAM_FOURTH_API }}
-          AsianDrama_API: ${{ secrets.AsianDrama_API }}
-          FanCode_API: ${{ secrets.FanCode_API }}
-          Whvx_API: ${{ secrets.Whvx_API }}
-          JapanIPTV: ${{ secrets.JapanIPTV }}
-          SonyIPTV: ${{ secrets.SonyIPTV }}
-          PirateIPTV: ${{ secrets.PirateIPTV }}
-          Su_sports: ${{ secrets.Su_sports }}
-          CatflixAPI: ${{ secrets.CatflixAPI }}
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          MAL_API: ${{ secrets.MAL_API }}
-          ANILIST_API: ${{ secrets.ANILIST_API }}
-          BDK_API: ${{ secrets.BDK_API }}
-          KISS_API: ${{ secrets.KISS_API }}
-          SHOWAPI_API: ${{ secrets.SHOWAPI_API }}
-          MOVIEBOX_SECRET_KEY_1: ${{ secrets.MOVIEBOX_SECRET_KEY_1 }}
-          MOVIEBOX_SECRET_KEY_2: ${{ secrets.MOVIEBOX_SECRET_KEY_2 }}
-          MOVIEBOX_SECRET_KEY_3: ${{ secrets.MOVIEBOX_SECRET_KEY_3 }}
-          KAIDEC: ${{ secrets.KAIDEC }}
-          KAIENC: ${{ secrets.KAIENC }}
-          KAISUB: ${{ secrets.KAISUB }}
-        run: |
-          echo "✅ Secrets loaded"
-
       - name: Build Plugins
         run: |
-          cd $GITHUB_WORKSPACE/src
           chmod +x ./gradlew
-          # Generate .cs3 files
+          # Generate .cs3 files for all modules
           ./gradlew make --no-daemon --stacktrace
           # Generate plugins.json
           ./gradlew makePluginsJson --no-daemon --stacktrace
           # Ensure jar compatibility
           ./gradlew ensureJarCompatibility --no-daemon --stacktrace || true
           
-          # Copy .cs3 and .jar files to builds folder
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
-          cp **/build/*.jar $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
-          cp build/plugins.json $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
+          # Copy artifacts to builds directory
+          cp **/build/*.cs3 builds_dir/ 2>/dev/null || true
+          cp **/build/*.jar builds_dir/ 2>/dev/null || true
+          cp build/plugins.json builds_dir/ 2>/dev/null || true
 
-      - name: Push builds
+      - name: Push Build Artifacts
         run: |
-          cd $GITHUB_WORKSPACE/builds
+          cd builds_dir
+          echo "📋 Final artifacts list:"
+          ls -la *.cs3 *.jar plugins.json 2>/dev/null || echo "No artifacts found"
 
-          # List files before commit
-          echo "📋 Files in builds folder:"
-          ls -la *.cs3 *.jar plugins.json 2>/dev/null || echo "Some files may be missing"
-
-          # Check if .cs3 files exist (primary artifacts)
           if ls *.cs3 1> /dev/null 2>&1; then
-            # Configure git user
             git config --local user.email "actions@github.com"
             git config --local user.name "GitHub Actions"
             
-            # Add all build artifacts
-            git add *.cs3 2>/dev/null || true
-            git add *.jar 2>/dev/null || true
-            git add plugins.json 2>/dev/null || true
+            git add *.cs3 *.jar plugins.json 2>/dev/null || true
             
             if ! git diff --cached --quiet; then
-              git commit -m "Build artifacts from $(date +'%Y-%m-%d %H:%M:%S')"
-              git push
-              echo "✅ Build artifacts pushed successfully"
+              git commit -m "Build artifacts: $(date +'%Y-%m-%d %H:%M:%S')"
+              git push origin builds
+              echo "✅ Artifacts pushed to 'builds' branch"
             else
-              echo "ℹ️ No new build artifacts to push"
+              echo "ℹ️ No changes detected in artifacts"
             fi
           else
-            echo "❌ No .cs3 build artifacts found"
+            echo "❌ CRITICAL: No .cs3 artifacts found. Build failed."
             exit 1
           fi

@@ -35,26 +35,6 @@ import java.util.concurrent.ConcurrentHashMap
 private val searchCache = CacheManager<List<SearchResponse>>(defaultTtl = 30 * 60 * 1000L)
 private val mainPageCache = CacheManager<HomePageResponse>(defaultTtl = 5 * 60 * 1000L)
 
-// Smart Cache Monitor for fingerprint-based cache validation
-class AnichinMonitor : SmartCacheMonitor() {
-    override suspend fun fetchTitles(url: String): List<String> {
-        val document = executeWithRetry {
-            rateLimitDelay(moduleName = "Anichin")
-            app.get(
-                url,
-                timeout = CHECK_TIMEOUT,
-                headers = mapOf("User-Agent" to getRandomUserAgent())
-            ).documentLarge
-        }
-        return document.select("div.listupd > article div.bsx > a")
-            .mapNotNull { it.attr("title").trim() }
-            .filter { it.isNotEmpty() }
-    }
-}
-
-private val monitor = AnichinMonitor()
-private val cacheFingerprints = ConcurrentHashMap<String, SmartCacheMonitor.CacheFingerprint>()
-
 open class Anichin : MainAPI() {
     override var mainUrl = "https://anichin.cafe"
     override var name = "Anichin"
@@ -75,33 +55,10 @@ open class Anichin : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cacheKey = "${request.data}${page}"
 
-        // Check cache with fingerprint validation
-        val cached = mainPageCache.get(cacheKey)
-        val storedFingerprint = cacheFingerprints[cacheKey]
-        
-        if (cached != null) {
-            if (storedFingerprint != null) {
-                // Validate cache with fingerprint
-                val validity = monitor.checkCacheValidity(mainUrl, storedFingerprint)
-                when (validity) {
-                    SmartCacheMonitor.CacheValidationResult.CACHE_VALID -> {
-                        logDebug("Anichin", "Cache HIT (validated) for $cacheKey")
-                        return cached
-                    }
-                    SmartCacheMonitor.CacheValidationResult.CACHE_INVALID -> {
-                        logDebug("Anichin", "Cache INVALID - refetching for $cacheKey")
-                        // Invalidate by putting null
-                        cacheFingerprints.remove(cacheKey)
-                    }
-                    else -> {
-                        logDebug("Anichin", "Cache validation failed, using cached for $cacheKey")
-                        return cached
-                    }
-                }
-            } else {
-                logDebug("Anichin", "Cache HIT (no fingerprint) for $cacheKey")
-                return cached
-            }
+        // Try cache first
+        mainPageCache.get(cacheKey)?.let { 
+            logDebug("Anichin", "Cache HIT for $cacheKey")
+            return it 
         }
 
         logDebug("Anichin", "Cache MISS for $cacheKey")
@@ -111,7 +68,7 @@ open class Anichin : MainAPI() {
             rateLimitDelay()
             app.get(
                 "$mainUrl/${request.data}$page",
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -129,12 +86,6 @@ open class Anichin : MainAPI() {
             hasNext = true
         )
 
-        // Generate and store fingerprint
-        val fingerprint = monitor.generateFingerprint(mainUrl)
-        if (fingerprint != null) {
-            cacheFingerprints[cacheKey] = fingerprint
-        }
-        
         // Cache the result
         mainPageCache.put(cacheKey, response)
 
@@ -163,7 +114,7 @@ open class Anichin : MainAPI() {
         val episodeCount = runCatching {
             val doc = app.get(
                 href,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
             doc.select(".eplister li[data-index]").mapNotNull { ep ->
@@ -174,31 +125,20 @@ open class Anichin : MainAPI() {
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            addDubStatus(
-                dubExist = false,
-                subExist = true,
-                dubEpisodes = null,
-                subEpisodes = episodeCount
-            )
+            if (episodeCount != null) {
+                this.addSub(episodeCount.toInt())
+            }
+            if (isOngoing) {
+                this.status = ShowStatus.Ongoing
+            } else if (statusText.contains("Completed", ignoreCase = true)) {
+                this.status = ShowStatus.Completed
+            }
         }
     }
 
-
-    /**
-     * Extract episode number from text like "214.5", "237 END", "01", "214.5 END".
-     * Returns floor integer value (214.5 → 214).
-     */
-    private fun extractEpisodeNumberLocal(text: String): Int? = extractEpisodeNumber(text)
-
     override suspend fun search(query: String): List<SearchResponse> {
-        // OPTIMIZED: Gunakan CacheManager dengan TTL 30 menit
         val cacheKey = "search_${query}"
-
-        // Check cache first (NO RATE LIMIT FOR CACHE HIT!)
-        val cached = searchCache.get(cacheKey)
-        if (cached != null) {
-            return cached
-        }
+        searchCache.get(cacheKey)?.let { return it }
 
         // OPTIMIZED: Parallel search dengan rate limiting
         val results = coroutineScope {
@@ -217,7 +157,7 @@ open class Anichin : MainAPI() {
 
                         val document = app.get(
                             searchUrl,
-                            timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                            timeout = 30000L,
                             headers = mapOf("User-Agent" to getRandomUserAgent())
                         ).documentLarge
 
@@ -225,16 +165,15 @@ open class Anichin : MainAPI() {
                             runCatching { it.toSearchResult() }.getOrElse { null }
                         }
                     } catch (e: Exception) {
-                        logError("Anichin", "Search page $page failed: ${e.message}", e)
                         emptyList<SearchResponse>()
                     }
                 }
             }.awaitAll().flatten().distinctBy { it.url }
         }
 
-        // Cache the result
-        searchCache.put(cacheKey, results)
-
+        if (results.isNotEmpty()) {
+            searchCache.put(cacheKey, results)
+        }
         return results
     }
 
@@ -243,7 +182,7 @@ open class Anichin : MainAPI() {
             rateLimitDelay()
             app.get(
                 url,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
@@ -251,68 +190,43 @@ open class Anichin : MainAPI() {
         // FIXED: Fallback strategy untuk title (3-layer)
         val title = document.selectFirst("h1.entry-title")?.text()?.trim()
             ?: document.selectFirst("h1.title")?.text()?.trim()
-            ?: document.selectFirst("meta[property=og:title]")?.attr("content")
+            ?: document.selectFirst(".infox h1")?.text()?.trim()
             ?: "Unknown Title"
 
-        val href = document.selectFirst(".eplister li > a")?.attr("href") ?: ""
-
-        // FIXED: Fallback strategy untuk poster (4-layer)
+        // FIXED: Fallback strategy untuk poster (2-layer)
         var poster = document.selectFirst("div.thumb > img")?.attr("src")
-            ?: document.selectFirst("div.thumb img")?.attr("src")
             ?: document.selectFirst("img.ts-post-image")?.attr("src")
-            ?: document.selectFirst("meta[property=og:image]")?.attr("content")
             ?: ""
 
-        // FIXED: Fallback strategy untuk description (4-layer)
-        val description = document.selectFirst("div.entry-content")?.text()?.trim()
-            ?: document.selectFirst("div.description")?.text()?.trim()
-            ?: document.selectFirst("div.synopsis")?.text()?.trim()
-            ?: document.selectFirst("meta[name=description]")?.attr("content")
-            ?: ""
+        val description = document.selectFirst("div.entry-content")?.text()?.trim() ?: ""
 
-        // FIXED: Robust type detection dengan fallback strategy
-        val type = document.selectFirst(".spe")?.text()
-            ?: document.selectFirst(".meta .type")?.text()
-            ?: document.selectFirst("span.type")?.text()
-            ?: ""
-        val isMovie = type.contains("Movie", ignoreCase = true) || url.contains("-movie-", ignoreCase = true)
-        val tvType = if (isMovie) TvType.AnimeMovie else TvType.Anime
-
-        // FIXED: Robust status detection dengan fallback
+        // Status parsing (Enhanced)
         val statusText = document.select(".spe").text().lowercase()
-            .ifEmpty { document.select(".meta .status").text().lowercase() }
-            .ifEmpty { document.select("span.status").text().lowercase() }
         val showStatus = when {
             "ongoing" in statusText || "continuing" in statusText -> ShowStatus.Ongoing
             "completed" in statusText || "finished" in statusText -> ShowStatus.Completed
             else -> null
         }
 
-        return if (tvType == TvType.Anime) {
-            // FIXED: Use more general selector to catch all episodes including "END" episodes
+        val type = document.selectFirst(".spe")?.text() ?: ""
+        val isMovie = type.contains("Movie", ignoreCase = true) || url.contains("-movie-", ignoreCase = true)
+
+        return if (!isMovie) {
             val allEpisodes = document.select(".eplister li")
 
             val episodes = allEpisodes.mapNotNull { info ->
                 val href1 = info.select("a").attr("href")
                 if (href1.isEmpty()) return@mapNotNull null
 
-                // Fix: Extract episode number properly (support "214.5", "237 END", "01")
                 val episodeText = info.selectFirst(".epl-num")?.text()?.trim().orEmpty()
                 val episodeNumber = extractEpisodeNumberLocal(episodeText)
 
                 val episodeTitle = info.selectFirst(".epl-title")?.text()?.trim() ?: ""
                 val cleanName = episodeTitle.replace(title, "", ignoreCase = true).trim()
                 
-                // FIXED: Fallback strategy untuk episode poster (3-layer)
                 var posterr = info.selectFirst("a img")?.attr("data-src")
                     ?: info.selectFirst("a img")?.attr("src")
-                    ?: info.selectFirst("img[data-lazy-src]")?.attr("data-lazy-src")
                     ?: ""
-
-                // Image optimization
-                if (posterr.isNotEmpty()) {
-                    posterr = optimizeImageUrl(posterr)
-                }
 
                 newEpisode(href1) {
                     this.name = cleanName.ifEmpty { episodeTitle }
@@ -321,35 +235,18 @@ open class Anichin : MainAPI() {
                 }
             }.reversed()
 
-            if (poster.isEmpty()) {
-                poster = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
-            } else {
-                poster = optimizeImageUrl(poster)
-            }
-
             newTvSeriesLoadResponse(title, url, TvType.Anime, episodes) {
                 this.posterUrl = poster
                 this.plot = description
                 this.showStatus = showStatus
             }
         } else {
-            if (poster.isEmpty()) {
-                poster = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
-            } else {
-                poster = optimizeImageUrl(poster)
-            }
+            // Anime Movie handling
+            val href = document.selectFirst(".eplister li > a")?.attr("href") ?: url
             newMovieLoadResponse(title, url, TvType.AnimeMovie, href) {
                 this.posterUrl = poster
                 this.plot = description
             }
-        }
-    }
-
-    // OPTIMIZED: Image URL optimizer
-    private fun optimizeImageUrl(url: String, maxWidth: Int = 500): String {
-        return when {
-            url.contains("anichin") -> url  // Anichin already optimizes
-            else -> url
         }
     }
 
@@ -364,109 +261,61 @@ open class Anichin : MainAPI() {
             rateLimitDelay()
             app.get(
                 data,
-                timeout = AutoUsedConstants.DEFAULT_TIMEOUT,
+                timeout = 30000L,
                 headers = mapOf("User-Agent" to getRandomUserAgent())
             ).documentLarge
         }
 
         // Try multiple selectors for video options
         val options = html.select("option[data-index]")
-            .ifEmpty { html.select("option[value]") }
             .ifEmpty { html.select("select option") }
+            .filter { it.attr("value").isNotBlank() }
 
-        logDebug("Anichin", "Found ${options.size} video options")
-
-        if (options.isEmpty()) {
-            logError("Anichin", "No video options found! Website structure may have changed.")
-            return false
-        }
-
-        // Track successful links
         var successCount = 0
 
-        // OPTIMIZED: Use supervisorScope for exception safety
         supervisorScope {
             options.map { option ->
                 async {
                     try {
                         val base64 = option.attr("value").trim()
-                        if (base64.isBlank()) {
-                            logDebug("Anichin", "Skipping empty value option")
-                            return@async
-                        }
-
                         val label = option.text().trim()
+                        
                         logDebug("Anichin", "Processing server: $label")
 
-                        val decodedHtml = try {
-                            base64Decode(base64)
-                        } catch (e: Exception) {
-                            logError("Anichin", "Base64 decode failed for $label: ${e.message}")
-                            return@async
-                        }
+                        val decodedHtml = base64Decode(base64)
+                        val iframeUrl = Jsoup.parse(decodedHtml).selectFirst("iframe")?.attr("src")?.let(::httpsify)
 
-                        val iframeUrl = Jsoup.parse(decodedHtml)
-                            .selectFirst("iframe")?.attr("src")
-                            ?.let(::httpsify)
-
-                        if (iframeUrl.isNullOrEmpty()) {
-                            logDebug("Anichin", "No iframe found for $label")
-                            return@async
-                        }
-
-                        logDebug("Anichin", "Found iframe URL for $label: ${iframeUrl.take(50)}...")
-
-                        // Handle different server types
-                        when {
-                            iframeUrl.endsWith(".mp4") -> {
-                                MasterLinkGenerator.createLink(
-                                    source = label,
-                                    url = iframeUrl,
-                                    referer = data,
-                                    quality = getQualityFromName(label)
-                                )?.let {
-                                    callback(it)
-                                    successCount++
-                                }
-                            }
-                            else -> {
-                                logDebug("Anichin", "Using loadExtractorWithFallback for $label")
-
-                                // ✅ USE loadExtractorWithFallback dengan CircuitBreaker
-                                // Note: Using loadExtractorWithFallback instead of preFetchExtractorLinks
-                                // because PreFetch always fails with page URL (anichin.cafe)
-                                // loadExtractorWithFallback will extract iframe URL internally
-                                val loaded = com.Anichin.generated_sync.loadExtractorWithFallback(
-                                    url = iframeUrl,
-                                    referer = data,
-                                    subtitleCallback = subtitleCallback,
-                                    callback = callback
-                                )
-
-                                if (loaded) {
-                                    successCount++
-                                    logDebug("Anichin", "✅ loadExtractorWithFallback succeeded")
-                                } else {
-                                    logDebug("Anichin", "⚠️ loadExtractorWithFallback returned no results")
-                                }
-                            }
+                        if (!iframeUrl.isNullOrEmpty()) {
+                            logDebug("Anichin", "Found iframe for $label: $iframeUrl")
+                            
+                            // loadExtractorWithFallback will extract iframe URL internally
+                            val loaded = com.Anichin.generated_sync.loadExtractorWithFallback(
+                                url = iframeUrl,
+                                referer = data,
+                                subtitleCallback = subtitleCallback,
+                                callback = callback
+                            )
+                            if (loaded) successCount++
                         }
                     } catch (e: Exception) {
-                        logError("Anichin", "Unexpected error processing server ${option.text()}: ${e.message}")
-                        // Continue to next server - don't fail all!
+                        logError("Anichin", "Server failed: ${e.message}")
                     }
                 }
             }.awaitAll()
         }
 
-        logDebug("Anichin", "loadLinks completed: $successCount/${options.size} servers working")
-
-        // 🎯 SMART PRE-FETCH: DISABLED - Always fails with page URL
-        // PreFetch requires iframe URL, not page URL
-        // Will be re-enabled when iframe extraction is implemented
-        // EpisodePreFetcher.preFetchEpisodes(episodes, mainUrl)
-
-        // Return true if at least 1 server works
         return successCount > 0
+    }
+
+    private fun extractEpisodeNumberLocal(text: String): Int? {
+        return Regex("""\d+""").find(text)?.value?.toIntOrNull()
+    }
+
+    private fun logDebug(tag: String, message: String) {
+        Log.d("$name:$tag", message)
+    }
+
+    private fun logError(tag: String, message: String) {
+        Log.e("$name:$tag", message)
     }
 }
