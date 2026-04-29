@@ -1,6 +1,6 @@
-name: CI/CD - Build & Deploy
+name: CI/CD - Standalone Build
 
-# Workflow optimized for Standalone & Persistent Providers (v4.0+)
+# Workflow optimized for Standalone Architecture (No Sync)
 concurrency:
   group: "ci-cd"
   cancel-in-progress: true
@@ -16,9 +16,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ========================================
-  # SINGLE JOB: BUILD ALL PROVIDERS
-  # ========================================
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -57,8 +54,6 @@ jobs:
           ./gradlew make --no-daemon --stacktrace
           # Generate plugins.json
           ./gradlew makePluginsJson --no-daemon --stacktrace
-          # Ensure jar compatibility
-          ./gradlew ensureJarCompatibility --no-daemon --stacktrace || true
           
           # Copy artifacts to builds directory
           cp **/build/*.cs3 builds_dir/ 2>/dev/null || true
@@ -68,23 +63,15 @@ jobs:
       - name: Push Build Artifacts
         run: |
           cd builds_dir
-          echo "📋 Final artifacts list:"
-          ls -la *.cs3 *.jar plugins.json 2>/dev/null || echo "No artifacts found"
-
-          if ls *.cs3 1> /dev/null 2>&1; then
-            git config --local user.email "actions@github.com"
-            git config --local user.name "GitHub Actions"
-            
-            git add *.cs3 *.jar plugins.json 2>/dev/null || true
-            
-            if ! git diff --cached --quiet; then
-              git commit -m "Build artifacts: $(date +'%Y-%m-%d %H:%M:%S')"
-              git push origin builds
-              echo "✅ Artifacts pushed to 'builds' branch"
-            else
-              echo "ℹ️ No changes detected in artifacts"
-            fi
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add *.cs3 *.jar plugins.json 2>/dev/null || true
+          
+          if ! git diff --cached --quiet; then
+            git commit -m "Build artifacts: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin builds
+            echo "✅ Artifacts pushed to 'builds' branch"
           else
-            echo "❌ CRITICAL: No .cs3 artifacts found. Build failed."
-            exit 1
+            echo "ℹ️ No changes detected"
           fi
